@@ -18,3 +18,20 @@ Validating marketplace manifest: <repo>/.claude-plugin/marketplace.json
 ```
 
 판정: 통과
+
+## V1b 이름 변경(claude-grounded) 후 validate 재실행
+
+실행: `claude plugin validate .`
+
+출력:
+```
+Validating marketplace manifest: <repo>/.claude-plugin/marketplace.json
+
+⚠ Found 1 warning:
+
+  ❯ plugins[0] plugin.json → version: No version specified. Consider adding a version following semver (e.g., "1.0.0")
+
+✔ Validation passed with warnings
+```
+
+판정: 통과 (version 경고 1건은 스펙 4.1의 의도된 상태)
