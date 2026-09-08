@@ -80,13 +80,18 @@ Validating marketplace manifest: <repo>/.claude-plugin/marketplace.json
 ✅ R1: 경로 언급만(단정 없음) → 통과
 ✅ R1: 경로 + 파일이 없다 → exit 2
 ✅ stderr에 [R1]
-❌ R1: 경로 + 에 있다 → exit 2 (기대=2 실측=0)
+✅ R1: 경로 + 에 있다 → exit 2
 ✅ R1: 경로 없어도 존재하지 않습니다 → exit 2
 
-실패 1건
+실패 0건
 ```
 
-알려진 갭: "R1: 경로 + 에 있다" 1건 실패. 원인은 `r1_hit`의 문장 분리가 `sed 's/[.!?。]/\n/g'`로 모든 마침표를 분리자로 쓰는데, `config/app.json` 같은 확장자 마침표까지 분리되어 `config/app`과 `json 에 있다`로 쪼개진다. 그 결과 어느 조각도 PATHRE(경로)와 R1STATE(상태 서술어)를 동시에 만족하지 못해 R1이 걸리지 않는다. 실제 `/usr/bin/grep`(BSD grep, GNU compatible 2.6.0-FreeBSD)과 `/usr/bin/sed`로 서브프로세스에서 재현 확인했다 — 대화형 셸의 `grep` 별칭(ugrep 래퍼)이 아니다. 이 분리 로직은 GNU sed에서도 동일하게 동작하므로(문자 클래스 리터럴 치환은 구현체 차이가 없음) macOS grep(BSD) 고유 동작이 아니라 브리프 Step 4 R1STATE/r1_hit 설계 자체의 갭으로 보인다. 브리프 지시에 따라 R0~R4 판정 로직을 임의로 더 바꾸지 않고 실측 그대로 기록한다.
+수정 이력(Task 9 수정 라운드 1): 최초 구현에서 `r1_hit`의 문장 분리가 `sed 's/[.!?。]/\n/g'`로 모든 마침표를 분리자로 써서 `config/app.json` 같은 확장자 마침표까지 잘라 "R1: 경로 + 에 있다" 1건이 실패했다(브리프 Step 4 원문의 결함, 컨트롤러가 macOS 실측으로 확인). 컨트롤러 판정으로 브리프를 아래와 같이 정정해 재수정했다.
+
+1. 문장 분리를 "구두점 뒤에 공백이나 줄끝이 올 때만 자른다"로 변경: `sed 's/[.!?。]/\n/g'` → `sed -E 's/([.!?。])([[:space:]]|$)/\1\n/g'`. 이제 `app.json`의 점처럼 뒤에 문자가 바로 이어지는 마침표는 분리되지 않는다.
+2. 분리 뒤 문장 끝에 구두점이 남을 수 있으므로 `R1STATE`의 `있다` 허용 문자에 마침표 추가: `있다([[:space:],)]|$)` → `있다([[:space:],.)]|$)`.
+
+두 줄만 수정했고 R0~R4의 다른 부분은 바꾸지 않았다. `실패 0건`으로 통과 확인.
 
 실행: `hooks/no-guess-gate/selftest.sh`
 
@@ -115,4 +120,4 @@ Validating marketplace manifest: <repo>/.claude-plugin/marketplace.json
 
 selftest는 1회만 실행하라는 지시에 따라 재실행하지 않았다.
 
-판정: 조건부 통과 — 오탐 2건(턴 중간 카운터 유지, 경로 언급만으로는 R1 미발동)에 대한 브리프 지정 테스트는 통과했다. 남은 갭 2가지: (1) R1의 "경로+확장자 마침표" 문장 분리 갭 1건(게이트 로직 자체의 한계, 위 참고). (2) selftest 실패 2건은 둘 다 게이트 판정 로직(R0~R4, turn_closed)의 회귀가 아님을 기존 산출물 조사로 확인했다 — `rl-tests`는 `claude -p`의 `--max-turns` 강제 종료(Stop 훅 자체가 호출되지 않음), `tp-local`은 이번에 손대지 않은 ASKRE 면제 분기가 걸린 것이다.
+판정: 통과 — 오탐 2건(턴 중간 카운터 유지, 경로 언급만으로는 R1 미발동)과 수정 라운드 1의 "경로+확장자 마침표" 문장 분리 갭까지 unit.sh `실패 0건`으로 확인했다. selftest 실패 2건은 게이트 판정 로직(R0~R4, turn_closed)의 회귀가 아님을 기존 산출물 조사로 확인했다 — `rl-tests`는 `claude -p`의 `--max-turns` 강제 종료(Stop 훅 자체가 호출되지 않음), `tp-local`은 이번 수정에서 손대지 않은 ASKRE 면제 분기가 걸린 것이다. selftest는 회귀 로직 무변경이므로 재실행하지 않았다.
