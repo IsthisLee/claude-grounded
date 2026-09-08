@@ -1,0 +1,3 @@
+hooks/no-guess-gate/state/
+hooks/no-guess-gate/selftest-runs/
+.DS_Store
