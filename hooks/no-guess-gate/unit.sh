@@ -56,5 +56,13 @@ printf '%s' "$SA" | NGG_STATE="$K" "$W/stop.sh" 2>"$T/e1"; check 2 $? "R1: 경�
 grep -q '\[R1\]' "$T/e1"; check 0 $? "stderr에 [R1]"
 printf '%s' "$SB" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 2 $? "R1: 경로 + 에 있다 → exit 2"
 printf '%s' "$SC" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 2 $? "R1: 경로 없어도 존재하지 않습니다 → exit 2"
+SD='{"session_id":"t3","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"config/app.json이 없다면 백업을 사용한다."}'
+SE='{"session_id":"t3","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"config/app.json이 없다고 답했다."}'
+SF='{"session_id":"t3","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"config/app.json이 존재한다면 읽는다."}'
+SG='{"session_id":"t3","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"config/app.json이 존재하지 않는다."}'
+printf '%s' "$SD" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 0 $? "R1: 없다면(가정) → 통과"
+printf '%s' "$SE" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 0 $? "R1: 없다고(인용) → 통과"
+printf '%s' "$SF" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 0 $? "R1: 존재한다면(가정) → 통과"
+printf '%s' "$SG" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 2 $? "R1: 존재하지 않는다 → exit 2"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

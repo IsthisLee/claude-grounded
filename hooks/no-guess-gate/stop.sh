@@ -17,7 +17,7 @@ LOCALQ="(this (directory|folder|file|repo|repository|project|codebase|code|confi
 PATHRE="((^|[^A-Za-z0-9])/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+|$FILE)"
 ctx=0; printf '%s' "$prompt" | grep -qiE "$LOCALQ" && ctx=1; printf '%s' "$last" | grep -qE "$PATHRE" && ctx=1
 R1PHRASE="(there('s| is| are) (no|a|an)|(does|doesn't|do not|don't) (contain|exist|have)|존재하지 않|파일이 없|파일이 있|디렉터리에 (없|있))"
-R1STATE='(없다|없습니다|없음|없어|있다([[:space:],.)]|$)|있습니다|있음|존재|비어|is missing|not found|no such|does not exist|doesn'"'"'t exist|exists([[:space:],.)]|$)|is empty)'
+R1STATE='(없다([[:space:],.)]|$)|없습니다|없음([[:space:],.)]|$)|없어(요)?([[:space:],.)]|$)|있다([[:space:],.)]|$)|있습니다|있음([[:space:],.)]|$)|존재(한다|합니다|하지 않는다|하지 않습니다)([[:space:],.)]|$)|비어 ?있|is missing|not found|no such|does not exist|doesn'"'"'t exist|exists([[:space:],.)]|$)|is empty)'
 r1_hit() { printf '%s' "$last" | grep -qiE "$R1PHRASE" && return 0; printf '%s\n' "$last" | sed -E 's/([.!?。])([[:space:]]|$)/\1\n/g' | grep -E "$PATHRE" | grep -v '수 있' | grep -qiE "$R1STATE"; }
 R2a='(should (verify|check|confirm)|need(s)? to (verify|check|confirm)|would need to (check|verify|run|look)|without checking|to be sure|확인 필요|실측 필요|검증 필요|확인해야|검증해야|확인이 필요|확인하지 않았|검증하지 않았|미확인)'
 R2b='(probably|likely|approximately|appears? to|seems? to|presumably|I think|maybe|I guess|my guess|I assume|assuming|no indication|아마|것 같|로 보임|보인다|로 추정|추정됨|가정하면|추측|것으로 판단)'
