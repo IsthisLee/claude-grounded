@@ -108,6 +108,11 @@ Validating marketplace manifest: <repo>/.claude-plugin/marketplace.json
 총 12케이스 / 실패 2건
 ```
 
-실패 2건 분석: `rl-tests`는 `state/events.log`가 완전히 비어 있다 — Stop 훅이 한 번도 실행되지 않았다는 뜻으로, 게이트 판정 로직이 아니라 `claude -p`/haiku 호출 자체가 도중에 실패했을 가능성이 크다(9턴에서 result=None, max-turns=8을 넘음). `tp-local`은 첫 Stop에서 이미 "질문문 면제"(ASKRE, haiku 응답이 질문형으로 끝남)로 면제되어 R0가 평가되지 않았다 — 이 면제 분기는 Task 9에서 `touch turn_closed`만 추가했을 뿐 면제 조건 자체는 바꾸지 않았으므로, haiku의 비결정적 응답 문구에 의한 것으로 보이며 이번 수정과 직접 인과관계는 확인되지 않는다. selftest는 1회만 실행하라는 지시에 따라 재실행하지 않았다.
+실패 2건 분석(케이스 작업 디렉터리 `hooks/no-guess-gate/selftest-runs/{rl-tests,tp-local}/`를 직접 열어 확인, 재실행 없이 기존 산출물만 조사):
 
-판정: 조건부 통과 — 오탐 2건(턴 중간 카운터 유지, 경로 언급만으로는 R1 미발동)에 대한 브리프 지정 테스트는 통과했으나, R1의 "경로+확장자 마침표" 문장 분리 갭 1건과 selftest 비결정적 실패 2건(원인 불명, 재현 시 재조사 필요)이 남아 있다.
+- `rl-tests`: `state/<session-id>/tools` 파일에 도구 호출 8줄(Bash 5, Read 3)이 정확히 기록돼 있고, `selftest.sh`가 이 케이스에 지정한 `--max-turns`는 8이다. 반면 `state/events.log` 파일 자체가 존재하지 않는다 — `stop.sh`의 `log()`가 한 번도 실행되지 않았다는 뜻이다. 도구 호출 수(8)가 `--max-turns` 값(8)과 정확히 일치하고 Stop 훅 로그가 전혀 없는 조합은, `claude -p`가 max-turns 한도에 도달해 강제 종료되었고 그 강제 종료가 Stop 훅을 거치지 않았음을 뜻한다(JSON 출력의 `result`가 `None`인 것과도 부합 — 정상 종료라면 마지막 텍스트가 남는다). 게이트 판정 로직(R0~R4)이 아니라 CLI의 max-turns 강제 종료 경로가 원인이다.
+- `tp-local`: `state/<session-id>/events.log`에는 `viol=[(질문문 면제)]` 한 줄만 있다 — 첫 Stop 호출에서 이미 ASKRE(질문문) 조건에 걸려 면제되었고, 그 뒤로 R0가 평가된 적이 없다. Task 9는 이 면제 분기에 `touch turn_closed`만 추가했고 ASKRE 정규식·면제 조건 자체는 바꾸지 않았다(`git diff` `hooks/no-guess-gate/stop.sh`로 확인). `events.log`의 `last=` 필드는 80자에서 잘려 있어 haiku 응답의 정확히 어느 부분이 ASKRE의 어떤 항목에 걸렸는지는 지금 가진 로그만으로 확인할 수 없다 — 이 부분은 추가로 단정하지 않는다. 확인되는 사실은 면제 조건 코드 자체는 이번 변경 대상이 아니었다는 것뿐이다.
+
+selftest는 1회만 실행하라는 지시에 따라 재실행하지 않았다.
+
+판정: 조건부 통과 — 오탐 2건(턴 중간 카운터 유지, 경로 언급만으로는 R1 미발동)에 대한 브리프 지정 테스트는 통과했다. 남은 갭 2가지: (1) R1의 "경로+확장자 마침표" 문장 분리 갭 1건(게이트 로직 자체의 한계, 위 참고). (2) selftest 실패 2건은 둘 다 게이트 판정 로직(R0~R4, turn_closed)의 회귀가 아님을 기존 산출물 조사로 확인했다 — `rl-tests`는 `claude -p`의 `--max-turns` 강제 종료(Stop 훅 자체가 호출되지 않음), `tp-local`은 이번에 손대지 않은 ASKRE 면제 분기가 걸린 것이다.
