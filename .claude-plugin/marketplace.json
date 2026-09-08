@@ -1,10 +1,13 @@
 {
   "name": "claude-grounded",
   "description": "Evidence gate for Claude Code: blocks a turn that asserts local state, claims verification, or defers checking without running a tool.",
-  "owner": { "name": "IsthisLee", "url": "https://github.com/IsthisLee" },
+  "owner": {
+    "name": "IsthisLee",
+    "url": "https://github.com/IsthisLee"
+  },
   "plugins": [
     {
-      "name": "claude-grounded",
+      "name": "grounded",
       "source": ".",
       "description": "Evidence gate for Claude Code: blocks a turn that asserts local state, claims verification, or defers checking without running a tool."
     }
