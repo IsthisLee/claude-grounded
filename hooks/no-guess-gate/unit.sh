@@ -30,4 +30,31 @@ printf '%s' "$P" | "$W/prompt.sh"
 printf '%s' "$S" | NGG_STATE="" "$W/stop.sh" 2>/dev/null; check 2 $? "NGG_STATE 빈 문자열도 폴백, 판정 동일 exit 2"
 [ -f "$W/state/events.log" ]; check 0 $? "폴백: 스크립트 폴더 아래 events.log"
 
+# 4. 턴 중간 메시지는 도구 카운터를 유지한다 (오탠 a)
+M="$T/mid"; PQ='{"session_id":"t2","hook_event_name":"UserPromptSubmit","prompt":"이 디렉터리에 package.json 있어?"}'
+PM='{"session_id":"t2","hook_event_name":"UserPromptSubmit","prompt":"그리고 하나 더, 이 폴더 구조 설명해줘"}'
+R2='{"session_id":"t2","hook_event_name":"PreToolUse","tool_name":"Read"}'
+S2='{"session_id":"t2","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"이 디렉터리에는 package.json 파일이 없다."}'
+printf '%s' "$PQ" | NGG_STATE="$M" "$W/prompt.sh"; printf '%s' "$R2" | NGG_STATE="$M" "$W/pre.sh"
+printf '%s' "$PM" | NGG_STATE="$M" "$W/prompt.sh"
+check 1 "$(wc -l < "$M/state/t2/tools" | tr -d ' ')" "턴 중간 프롬프트 뒤에도 tools 1줄 유지"
+printf '%s' "$S2" | NGG_STATE="$M" "$W/stop.sh" 2>/dev/null; check 0 $? "턴 중간 메시지 뒤 Stop: 도구 1회로 통과"
+[ -f "$M/state/t2/turn_closed" ]; check 0 $? "통과한 Stop이 turn_closed 생성"
+printf '%s' "$PQ" | NGG_STATE="$M" "$W/prompt.sh"
+check 0 "$(wc -l < "$M/state/t2/tools" | tr -d ' ')" "턴 닫힌 뒤 첫 프롬프트는 tools 0으로 초기화"
+printf '%s' "$S2" | NGG_STATE="$M" "$W/stop.sh" 2>/dev/null; check 2 $? "초기화 뒤 도구 0회 단정 → exit 2"
+
+# 5. R1은 경로 언급만으로는 걸리지 않는다 (오탐 b)
+K="$T/r1"; PE='{"session_id":"t3","hook_event_name":"UserPromptSubmit","prompt":"검증 기록 형식을 설명해줘"}'
+SM='{"session_id":"t3","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"docs/VERIFICATION.md 절 구성은 실행 명령, 출력, 판정 세 부분으로 적는다. 나중에 고칠 수 있습니다."}'
+SA='{"session_id":"t3","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"docs/VERIFICATION.md 파일이 없다."}'
+SB='{"session_id":"t3","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"설정은 config/app.json 에 있다."}'
+SC='{"session_id":"t3","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"그 파일은 존재하지 않습니다."}'
+printf '%s' "$PE" | NGG_STATE="$K" "$W/prompt.sh"
+printf '%s' "$SM" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 0 $? "R1: 경로 언급만(단정 없음) → 통과"
+printf '%s' "$SA" | NGG_STATE="$K" "$W/stop.sh" 2>"$T/e1"; check 2 $? "R1: 경로 + 파일이 없다 → exit 2"
+grep -q '\[R1\]' "$T/e1"; check 0 $? "stderr에 [R1]"
+printf '%s' "$SB" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 2 $? "R1: 경로 + 에 있다 → exit 2"
+printf '%s' "$SC" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 2 $? "R1: 경로 없어도 존재하지 않습니다 → exit 2"
+
 echo; echo "실패 ${fail}건"; exit "$fail"
