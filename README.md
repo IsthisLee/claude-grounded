@@ -114,9 +114,9 @@ Claude가 화면에서 이런 메시지를 받는다.
 |---|---|
 | 이 저장소에서만 끄기 | `claude plugin disable grounded@claude-grounded --scope project` |
 | 나만 끄기 | 같은 명령에 `--scope local` |
-| 완전히 지우기 | `/plugin uninstall grounded@claude-grounded` |
+| 완전히 지우기 | `claude plugin uninstall grounded@claude-grounded` |
 
-상태 폴더는 `~/.claude/plugins/data/grounded-inline/`에 있다. 지워도 된다.
+상태 폴더는 `~/.claude/plugins/data/grounded-inline/`에 있다. 지워도 된다. 제거하면서 남기고 싶으면 `--keep-data`를 붙인다.
 
 ## 개발
 
