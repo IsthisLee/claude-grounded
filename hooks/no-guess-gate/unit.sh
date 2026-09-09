@@ -65,4 +65,21 @@ printf '%s' "$SE" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 0 $? "R1: 없
 printf '%s' "$SF" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 0 $? "R1: 존재한다면(가정) → 통과"
 printf '%s' "$SG" | NGG_STATE="$K" "$W/stop.sh" 2>/dev/null; check 2 $? "R1: 존재하지 않는다 → exit 2"
 
+# 6. R2a는 실측이 가능했는데 안 한 경우에만 건다 (공식 "Allow Claude to say I don't know")
+X="$T/r2a"; PX='{"session_id":"t4","hook_event_name":"UserPromptSubmit","prompt":"게이트 설계를 설명해줘"}'
+RX='{"session_id":"t4","hook_event_name":"PreToolUse","tool_name":"Read"}'
+SX1='{"session_id":"t4","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"이 부분은 확인이 필요합니다."}'
+SX2='{"session_id":"t4","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"실제 동작은 확인이 필요합니다. 다만 이 환경에서는 서버를 띄울 수 없어 확인할 수 없습니다."}'
+SX3='{"session_id":"t4","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"We would need to check the actual behavior."}'
+SX4='{"session_id":"t4","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"We would need to check the actual behavior, but I cannot run the server in this environment."}'
+printf '%s' "$PX" | NGG_STATE="$X" "$W/prompt.sh"
+printf '%s' "$SX1" | NGG_STATE="$X" "$W/stop.sh" 2>"$T/e2"; check 2 $? "R2a: 도구 0회 + 유보 표현 → exit 2"
+grep -q 'R2a' "$T/e2"; check 0 $? "stderr에 R2a"
+printf '%s' "$RX" | NGG_STATE="$X" "$W/pre.sh"
+printf '%s' "$SX1" | NGG_STATE="$X" "$W/stop.sh" 2>/dev/null; check 0 $? "R2a: 도구 1회 뒤 유보 표현 → 통과"
+printf '%s' "$PX" | NGG_STATE="$X" "$W/prompt.sh"
+printf '%s' "$SX2" | NGG_STATE="$X" "$W/stop.sh" 2>/dev/null; check 0 $? "R2a: 불가능 사유 명시 → 통과"
+printf '%s' "$SX3" | NGG_STATE="$X" "$W/stop.sh" 2>/dev/null; check 2 $? "R2a: 영어 유보 표현 + 도구 0회 → exit 2"
+printf '%s' "$SX4" | NGG_STATE="$X" "$W/stop.sh" 2>/dev/null; check 0 $? "R2a: 영어 불가능 사유 명시 → 통과"
+
 echo; echo "실패 ${fail}건"; exit "$fail"
