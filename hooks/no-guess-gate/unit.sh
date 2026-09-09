@@ -82,4 +82,17 @@ printf '%s' "$SX2" | NGG_STATE="$X" "$W/stop.sh" 2>/dev/null; check 0 $? "R2a: �
 printf '%s' "$SX3" | NGG_STATE="$X" "$W/stop.sh" 2>/dev/null; check 2 $? "R2a: 영어 유보 표현 + 도구 0회 → exit 2"
 printf '%s' "$SX4" | NGG_STATE="$X" "$W/stop.sh" 2>/dev/null; check 0 $? "R2a: 영어 불가능 사유 명시 → 통과"
 
+# 7. python3가 없으면 조용히 통과하지 말고 보이게 실패한다.
+#    공식 hooks 레퍼런스: 시작하지 못한 훅은 비차단 오류로 처리되고 stderr 첫 줄이 표시된다. 조용히 exit 0 하면 게이트가 꺼진 줄 모른다.
+B="$T/shim"; mkdir -p "$B"; printf '#!/usr/bin/env bash\nexit 127\n' > "$B/python3"; chmod +x "$B/python3"
+Q="$T/py"
+printf '%s' "$S" | PATH="$B:$PATH" NGG_STATE="$Q" "$W/stop.sh" 2>"$T/e7"; check 1 $? "python3 실패 → stop.sh exit 1 (조용한 통과 아님)"
+grep -q 'python3' "$T/e7"; check 0 $? "stderr 첫 줄에 python3 언급"
+printf '%s' "$P" | PATH="$B:$PATH" NGG_STATE="$Q" "$W/prompt.sh" 2>/dev/null; check 1 $? "prompt.sh도 같은 경로로 exit 1"
+
+# 8. 상태 파일이 없어도 stderr에 잡음을 내지 않는다. exit 2일 때는 stderr가 그대로 차단 메시지로 보인다.
+N8="$T/fresh"
+printf '%s' '{"session_id":"t8","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"2입니다."}' | NGG_STATE="$N8" "$W/stop.sh" 2>"$T/e8"; check 0 $? "tools 파일 없이 Stop → exit 0"
+[ ! -s "$T/e8" ]; check 0 $? "stderr 비어 있음 (리디렉션 오류 잡음 없음)"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

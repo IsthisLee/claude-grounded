@@ -262,3 +262,41 @@ GREEN 출력(구현 후):
 `rl-local`은 이번 실행에서 `[R0 R1 R2a]`로 막힌 뒤 실측하고 통과했다. 기대가 `ANY`인 것은 막히는 쪽과 되묻는 쪽이 둘 다 옳기 때문이지, 게이트가 느슨해서가 아니다.
 
 `xx-deadlock`은 설계상 교착을 보여 주는 케이스다. `⚠️`는 실패가 아니라 교착이 재현됐다는 표시다.
+
+## V4b python3 부재 시 보이게 실패, 상태 파일 부재 시 stderr 잡음 제거
+
+배경: `_common.sh`의 `read_in`은 훅 입력 JSON을 `python3`로 파싱한다. python3가 없거나 실패하면 `eval ""`이 되어 변수가 전부 비고, 규칙이 하나도 걸리지 않아 **조용히 exit 0** 했다. 게이트가 꺼진 것을 아무도 모른다. 공식 hooks 레퍼런스는 시작하지 못한 훅을 이렇게 다룬다. "A hook that can't start lands in the same non-blocking bucket ... you see the same notice with the interpreter's message ... For most hook events, the action proceeds." (시작 못 한 훅은 비차단 오류로 처리되고, 인터프리터 메시지와 함께 알림이 표시되며, 동작은 진행된다.) 그래서 실패를 stderr + exit 1로 바꿔 같은 경로에 태운다. 막지는 않되 보이게.
+
+함께 발견한 것: `stop.sh` 5행 `wc -l < "$f" 2>/dev/null`은 `$f`가 없을 때 입력 리디렉션 오류가 `2>/dev/null`보다 먼저 처리되어 stderr로 샌다. exit 2일 때 stderr가 그대로 차단 메시지가 되므로 잡음이 Claude에게 보인다. `{ wc -l < "$f"; } 2>/dev/null`로 감쌌다.
+
+실행: `hooks/no-guess-gate/unit.sh` (7군·8군을 먼저 추가해 RED 확인 후 구현)
+
+RED 출력(구현 전):
+```
+❌ python3 실패 → stop.sh exit 1 (조용한 통과 아님) (기대=1 실측=0)
+❌ stderr 첫 줄에 python3 언급 (기대=0 실측=1)
+❌ prompt.sh도 같은 경로로 exit 1 (기대=1 실측=0)
+
+실패 3건
+```
+```
+✅ tools 파일 없이 Stop → exit 0
+❌ stderr 비어 있음 (리디렉션 오류 잡음 없음) (기대=0 실측=1)
+
+실패 1건
+```
+
+GREEN 출력(구현 후):
+```
+✅ python3 실패 → stop.sh exit 1 (조용한 통과 아님)
+✅ stderr 첫 줄에 python3 언급
+✅ prompt.sh도 같은 경로로 exit 1
+✅ tools 파일 없이 Stop → exit 0
+✅ stderr 비어 있음 (리디렉션 오류 잡음 없음)
+
+실패 0건
+```
+
+총 36건 전건 통과(이전 31건 + 신규 5건). 7군은 `exit 127` 하는 가짜 `python3`를 PATH 앞에 두어 재현했다. 실제 python3로 정상 입력을 넣으면 여전히 exit 0이다.
+
+기기의 standalone 훅에도 `_common.sh`, `stop.sh`를 백업 후 복사했고, 네 스크립트가 저장소본과 바이트 동일하며, 저장소 `unit.sh`를 기기본 스크립트에 대고 돌려 `실패 0건`을 확인했다.

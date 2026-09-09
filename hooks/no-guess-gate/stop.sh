@@ -2,7 +2,7 @@
 # Stop / SubagentStop: 근거 없는 결론 게이트 v4. 위반 시 exit 2로 턴 종료 차단.
 d="$(cd "$(dirname "$0")" && pwd)"; . "$d/_common.sh"; read_in; s=$(state_dir "$d")
 last="$LAST"; prompt=$(cat "$s/prompt" 2>/dev/null); f="$s/tools"
-ntools=$(wc -l < "$f" 2>/dev/null | tr -d ' '); ntools=${ntools:-0}
+ntools=$({ wc -l < "$f"; } 2>/dev/null | tr -d ' '); ntools=${ntools:-0}
 nbash=$(grep -c '^Bash$' "$f" 2>/dev/null); nbash=${nbash:-0}
 nask=$(grep -c '^AskUserQuestion$' "$f" 2>/dev/null); nask=${nask:-0}
 log() { local lf="$(state_root "$d")/state/events.log"
