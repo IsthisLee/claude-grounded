@@ -2,9 +2,11 @@
 # 게이트 단위 테스트. claude를 호출하지 않는다. 사용: ./unit.sh
 # 검증: (1) NGG_STATE 지정 시 상태가 그 아래에 생김 (2) 도구 0회 + 파일 부재 단정 → exit 2 (3) 도구 1회 후 exit 0 (4) NGG_STATE 없거나 빈 문자열이면 스크립트 폴더로 폴백
 set -u
+# 단위 테스트는 모델을 부르지 않는다. 수준 2 판정은 기본 끄고, 12군에서만 가짜 판정기로 켠다.
+export NGG_JUDGE=0
 G="$(cd "$(dirname "$0")" && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-W="$T/scripts"; mkdir -p "$W"; cp "$G"/_common.sh "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$W"/
+W="$T/scripts"; mkdir -p "$W"; cp "$G"/_common.sh "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$G"/judge.py "$W"/
 fail=0
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
 P='{"session_id":"t1","hook_event_name":"UserPromptSubmit","prompt":"이 디렉터리에 package.json 있어?"}'
@@ -94,5 +96,80 @@ printf '%s' "$P" | PATH="$B:$PATH" NGG_STATE="$Q" "$W/prompt.sh" 2>/dev/null; ch
 N8="$T/fresh"
 printf '%s' '{"session_id":"t8","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"2입니다."}' | NGG_STATE="$N8" "$W/stop.sh" 2>"$T/e8"; check 0 $? "tools 파일 없이 Stop → exit 0"
 [ ! -s "$T/e8" ]; check 0 $? "stderr 비어 있음 (리디렉션 오류 잡음 없음)"
+
+# 9. R2b: 의견에 붙은 유보(나아·적절해 보인다)는 사실 주장이 아니다. 상태 유보(깨져 보인다)만 잡고, 문체(보인다/보입니다)에 무관하게 같게 판정한다.
+K9="$T/r2b"; P9='{"session_id":"t9","hook_event_name":"UserPromptSubmit","prompt":"훅을 어디에 둘지 설계 검토해줘"}'
+mk9() { printf '{"session_id":"t9","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"%s"}' "$1"; }
+printf '%s' "$P9" | NGG_STATE="$K9" "$W/prompt.sh"
+mk9 "hooks/stop.sh 옆에 두는 게 나아 보인다." | NGG_STATE="$K9" "$W/stop.sh" 2>/dev/null; check 0 $? "R2b: 의견형 유보(나아 보인다) → 통과"
+mk9 "hooks/stop.sh가 깨져 보인다." | NGG_STATE="$K9" "$W/stop.sh" 2>"$T/e9"; check 2 $? "R2b: 상태형 유보(깨져 보인다) → exit 2"
+grep -q 'R2b' "$T/e9"; check 0 $? "stderr에 R2b"
+mk9 "hooks/stop.sh가 깨져 보입니다." | NGG_STATE="$K9" "$W/stop.sh" 2>/dev/null; check 2 $? "R2b: 습니다체(깨져 보입니다)도 exit 2"
+mk9 "hooks/stop.sh 옆이 더 적절해 보입니다." | NGG_STATE="$K9" "$W/stop.sh" 2>/dev/null; check 0 $? "R2b: 의견형 습니다체(적절해 보입니다) → 통과"
+mk9 "Putting it next to hooks/stop.sh seems better." | NGG_STATE="$K9" "$W/stop.sh" 2>/dev/null; check 0 $? "R2b: 영어 의견형(seems better) → 통과"
+mk9 "hooks/stop.sh seems to be corrupted." | NGG_STATE="$K9" "$W/stop.sh" 2>/dev/null; check 2 $? "R2b: 영어 상태형(seems to be corrupted) → exit 2"
+
+# 10. 불가 면제: 실측이 불가능한 이유를 밝힌 답은 "안 했다"(R0·R2a·R4)에서 벗어난다. 단 단정(R1)은 여전히 막는다. 공식 "Allow Claude to say I don't know".
+K10="$T/cannot"; P10='{"session_id":"t10","hook_event_name":"UserPromptSubmit","prompt":"이 디렉터리에 package.json 있어?"}'
+mk10() { printf '{"session_id":"t10","hook_event_name":"Stop","stop_hook_active":%s,"last_assistant_message":"%s"}' "$1" "$2"; }
+printf '%s' "$P10" | NGG_STATE="$K10" "$W/prompt.sh"
+mk10 false "이 세션에서는 도구 실행이 안 돼서 확인할 수 없다." | NGG_STATE="$K10" "$W/stop.sh" 2>/dev/null; check 0 $? "불가 면제: 도구 실행이 안 된다고 밝힘 → R0 통과"
+mk10 false "package.json 파일이 없다." | NGG_STATE="$K10" "$W/stop.sh" 2>/dev/null; check 2 $? "(준비) 도구 0회 단정 → exit 2, blocked_at 기록"
+mk10 true "도구 호출이 이 세션에서 실행되지 않는다. 확인할 수 없다." | NGG_STATE="$K10" "$W/stop.sh" 2>/dev/null; check 0 $? "불가 면제: 차단 뒤 불가 사유를 밝힘 → R4 통과"
+mk10 false "확인할 수 없지만 package.json 파일은 없다." | NGG_STATE="$K10" "$W/stop.sh" 2>"$T/e10"; check 2 $? "불가 면제는 R1에 적용 안 됨: 단정은 exit 2"
+grep -q '게이트 \[R1\]' "$T/e10"; check 0 $? "판정 헤더가 [R1] 하나 (R0은 불가 면제로 빠짐)"
+mk10 false "확인할 수 없다. 아마 없을 것이다." | NGG_STATE="$K10" "$W/stop.sh" 2>/dev/null; check 0 $? "불가 면제: 불가 사유 + 추정 → R2b 통과"
+# 불가 면제는 "도구·명령이 안 돈다"에만 걸려야 한다. 코드 동작 설명이나 파일 권한 얘기는 불가 사유가 아니다(selftest fp-effect·rl-bug에서 과잉 매치 발견).
+mk10 false "의존성 배열이 비어 있으면 다시 실행되지 않는다. package.json 파일이 없다." | NGG_STATE="$K10" "$W/stop.sh" 2>"$T/e10b"; check 2 $? "불가 면제 아님: 코드 동작 설명의 '실행되지 않는다' → R0 유지"
+grep -qE '게이트 \[[^]]*R0' "$T/e10b"; check 0 $? "판정 헤더에 R0 포함(불가 면제가 걸리지 않음)"
+mk10 false "실행 권한이 없는 셸 스크립트가 두 개 있습니다." | NGG_STATE="$K10" "$W/stop.sh" 2>"$T/e10c"; check 2 $? "불가 면제 아님: 파일의 '실행 권한이 없는' → R0 유지"
+grep -qE '게이트 \[[^]]*R0' "$T/e10c"; check 0 $? "판정 헤더에 R0 포함"
+
+# 11. JSON 면제: 답 전체가 JSON 값이면 산문 주장 규칙(R0·R1·R2a·R2b·R4)의 대상이 아니다. 판정·비교 출력이 여기 해당한다.
+K11="$T/json"; P11='{"session_id":"t11","hook_event_name":"UserPromptSubmit","prompt":"두 답변 중 어느 쪽이 저장소 구조를 잘 설명했는지 판정해"}'
+printf '%s' "$P11" | NGG_STATE="$K11" "$W/prompt.sh"
+printf '%s' '{"session_id":"t11","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"{\"winner\": \"1\", \"why\": \"답변 1이 저장소 구조를 정확히 설명한다\"}"}' | NGG_STATE="$K11" "$W/stop.sh" 2>/dev/null; check 0 $? "JSON 면제: 판정 JSON만 있는 답 → 통과"
+printf '%s' '{"session_id":"t11","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"```json\n{\"winner\": \"2\"}\n```"}' | NGG_STATE="$K11" "$W/stop.sh" 2>/dev/null; check 0 $? "JSON 면제: 코드 펜스 안 JSON → 통과"
+printf '%s' '{"session_id":"t11","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"{중괄호로 시작하는 문장. 저장소에 package.json 파일이 없다.}"}' | NGG_STATE="$K11" "$W/stop.sh" 2>/dev/null; check 2 $? "JSON 면제 아님: JSON이 아닌 텍스트 → exit 2"
+grep -q '(JSON 면제)' "$K11/state/events.log"; check 0 $? "events.log에 (JSON 면제) 태그"
+grep -q '(불가 면제)' "$K10/state/events.log"; check 0 $? "events.log에 (불가 면제) 태그"
+
+# 12. 수준 2 의미 판정. 정규식이 R2a·R2b만 잡았을 때 모델이 "의견"이라 하면 풀어 준다. 풀어 줄 수만 있고 새로 막지 못한다.
+#     R0·R1·R3·R4가 섞이면 부르지 않는다. 실패·시간초과·엉뚱한 출력이면 막은 채로 둔다. 중첩 세션(NGG_INNER)에서는 게이트 자체가 돌지 않는다.
+J="$T/judges"; mkdir -p "$J"
+printf '#!/usr/bin/env bash\ncat >/dev/null; echo '"'"'{"release": true, "why": "design opinion"}'"'"'\n' > "$J/ok.sh"
+printf '#!/usr/bin/env bash\ncat >/dev/null; echo '"'"'{"release": false, "why": "state claim"}'"'"'\n' > "$J/no.sh"
+printf '#!/usr/bin/env bash\ncat >/dev/null; echo hello world\n' > "$J/bad.sh"
+printf '#!/usr/bin/env bash\ncat >/dev/null; sleep 5; echo '"'"'{"release": true}'"'"'\n' > "$J/slow.sh"
+printf '#!/usr/bin/env bash\ncat >/dev/null; echo '"'"'{"result": "Sure. {\\"release\\": true, \\"why\\": \\"wrapped\\"}"}'"'"'\n' > "$J/wrapped.sh"
+chmod +x "$J"/*.sh
+K12="$T/judge"; P12='{"session_id":"t12","hook_event_name":"UserPromptSubmit","prompt":"훅 배치를 검토해줘"}'
+mk12() { printf '{"session_id":"t12","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"%s"}' "$1"; }
+printf '%s' "$P12" | NGG_STATE="$K12" "$W/prompt.sh"
+M="hooks/stop.sh가 깨져 보인다."
+mk12 "$M" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/ok.sh" NGG_STATE="$K12" "$W/stop.sh" 2>/dev/null; check 0 $? "판정: R2b만 걸림 + 판정기 release → 통과"
+grep -q '(R2b 판정 면제)' "$K12/state/events.log"; check 0 $? "events.log에 (R2b 판정 면제) 태그"
+mk12 "$M" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/no.sh" NGG_STATE="$K12" "$W/stop.sh" 2>/dev/null; check 2 $? "판정: 판정기 keep → exit 2 유지"
+mk12 "$M" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/bad.sh" NGG_STATE="$K12" "$W/stop.sh" 2>"$T/e12"; check 2 $? "판정: 엉뚱한 출력 → 막은 채로(fail closed)"
+grep -q '판정' "$T/e12"; check 0 $? "stderr에 판정 실패 안내"
+mk12 "$M" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/slow.sh" NGG_JUDGE_TIMEOUT=1 NGG_STATE="$K12" "$W/stop.sh" 2>/dev/null; check 2 $? "판정: 시간초과 → 막은 채로"
+mk12 "$M" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/wrapped.sh" NGG_STATE="$K12" "$W/stop.sh" 2>/dev/null; check 0 $? "판정: claude --output-format json 꼴(result 안의 JSON)도 읽음"
+mk12 "$M" | NGG_JUDGE=0 NGG_JUDGE_CMD="$J/ok.sh" NGG_STATE="$K12" "$W/stop.sh" 2>/dev/null; check 2 $? "판정: NGG_JUDGE=0이면 부르지 않음 → exit 2"
+K12b="$T/judge2"; P12b='{"session_id":"t12b","hook_event_name":"UserPromptSubmit","prompt":"이 디렉터리에 package.json 있어?"}'
+printf '%s' "$P12b" | NGG_STATE="$K12b" "$W/prompt.sh"
+printf '{"session_id":"t12b","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"아마 package.json이 없을 것이다."}' | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/ok.sh" NGG_STATE="$K12b" "$W/stop.sh" 2>/dev/null; check 2 $? "판정: R0이 섞이면 판정기가 release라 해도 exit 2 (도구 0회는 판정 대상 아님)"
+printf '%s' "$S" | NGG_INNER=1 NGG_STATE="$T/inner" "$W/stop.sh" 2>/dev/null; check 0 $? "중첩 세션(NGG_INNER): 단정이어도 게이트가 돌지 않음 → exit 0"
+[ ! -d "$T/inner/state" ]; check 0 $? "중첩 세션: 상태 폴더도 만들지 않음"
+
+# 13. R3: Bash 실행 0건인데 검증을 주장하면 막고, Bash를 한 번이라도 돌렸으면 통과. selftest의 tp-claim은 Haiku가 거짓 주장을 거부해 불안정하므로 결정적 검사는 여기 둔다.
+K13="$T/r3"; P13='{"session_id":"t13","hook_event_name":"UserPromptSubmit","prompt":"테스트 돌려서 결과 알려줘"}'
+mk13() { printf '{"session_id":"t13","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"%s"}' "$1"; }
+printf '%s' "$P13" | NGG_STATE="$K13" "$W/prompt.sh"
+mk13 "테스트 통과했습니다. 전부 정상입니다." | NGG_STATE="$K13" "$W/stop.sh" 2>"$T/e13"; check 2 $? "R3: Bash 0건 + 테스트 통과 주장 → exit 2"
+grep -qE '게이트 \[[^]]*R3' "$T/e13"; check 0 $? "판정 헤더에 R3"
+mk13 "I ran the tests and they all pass." | NGG_STATE="$K13" "$W/stop.sh" 2>/dev/null; check 2 $? "R3: 영어 검증 주장 → exit 2"
+mk13 "테스트를 실행하지 않았습니다." | NGG_STATE="$K13" "$W/stop.sh" 2>/dev/null; check 0 $? "R3: 부정문(실행하지 않았다) → 통과"
+printf '{"session_id":"t13","hook_event_name":"PreToolUse","tool_name":"Bash"}' | NGG_STATE="$K13" "$W/pre.sh"
+mk13 "테스트 통과했습니다. 전부 정상입니다." | NGG_STATE="$K13" "$W/stop.sh" 2>/dev/null; check 0 $? "R3: Bash 1회 뒤 같은 주장 → 통과"
 
 echo; echo "실패 ${fail}건"; exit "$fail"
