@@ -68,7 +68,7 @@ Claude가 답을 마치려는 순간 `Stop` 훅이 규칙 일곱 개를 본다. 
 
 판정이 불리는 턴은 차단의 약 4%이고, 불리면 중앙값 8초가 걸린다(실측 12건, 최대 9초). 끄거나 모델을 바꾸는 법은 [상세 문서](docs/gates.ko.md#의미-판정기-설정)에 있다.
 
-판정기가 무엇을 했는지는 `events.log`에 남는다. `judge=released` / `kept` / `failed`와 걸린 초가 함께 적히므로, 판정이 도는지 실패하는지 셀 수 있다. 정확도는 의견 6건과 상태 주장 6건으로 재서 12/12였다. `hooks/no-guess-gate/judge-accuracy.sh`로 다시 잴 수 있다.
+판정기가 무엇을 했는지는 `events.log`에 남는다. `judge=released` / `kept` / `failed`와 걸린 초가 함께 적히므로, 판정이 도는지 실패하는지 셀 수 있다. 정확도는 의견 6건과 상태 주장 6건으로 재서 12/12였다. `tests/no-guess-gate/judge-accuracy.sh`로 다시 잴 수 있다.
 
 ## 막히면 어떻게 되나
 

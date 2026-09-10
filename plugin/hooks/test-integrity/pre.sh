@@ -24,7 +24,11 @@ EXCLUDE='(testPathIgnorePatterns|testPathIgnore|modulePathIgnorePatterns|coverag
 is_runner_cfg() { printf '%s' "$1" | grep -qE "$RUNNERCFG"; }
 ASSERT='(expect\(|assert[A-Za-z_(]|\bassert\b|should\.|\.toBe\(|\.toEqual\(|\.toHaveBeenCalled|require\.(NoError|Equal)|XCTAssert)'
 
-is_test() { printf '%s' "$1" | grep -qE "$TESTPATH"; }
+# 빌드 산출물은 테스트 파일이 아니다. tests/ 아래라는 이유만으로 __pycache__ 삭제가 막혔다.
+# 이 저장소를 옮기는 작업 중 실제로 세 번 걸렸고, 사용자가 겪으면 게이트를 꺼 버릴 만한 오탐이다.
+ARTIFACT='((^|/)(__pycache__|node_modules|\.pytest_cache|\.mypy_cache|\.ruff_cache|\.tox|\.nyc_output|coverage|dist|build|target)(/|$)|\.(pyc|pyo|class|o)$)'
+is_artifact() { printf '%s' "$1" | grep -qE "$ARTIFACT"; }
+is_test() { is_artifact "$1" && return 1; printf '%s' "$1" | grep -qE "$TESTPATH"; }
 # 명령에서 파일 인자를 뽑는다. 따옴표로 감싼 경로(공백이 든 파일명은 반드시 그렇다)를 살린다.
 # 따옴표 안의 공백은 구분자가 아니므로 셸과 같은 방식으로 쪼갠다.
 cmd_paths() {

@@ -6,7 +6,10 @@ set -u
 # Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 unset NGG_LANG NGG_L NGG_MSG_LOADED
-G="$(cd "$(dirname "$0")" && pwd)"
+# 이 스크립트는 tests/ 에 있고 검사 대상은 plugin/ 에 있다. G 를 훅 폴더로 맞춰 두면
+# 아래의 "$G/..." 참조가 옮기기 전과 똑같이 동작한다.
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+G="$ROOT/plugin/hooks/lib"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 fail=0
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }

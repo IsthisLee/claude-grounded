@@ -26,8 +26,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: 문법 검사
         run: |
-          bash -n hooks/*.sh hooks/*/*.sh skills/unit.sh
-          python3 -m py_compile hooks/no-guess-gate/judge.py hooks/fuzz-inputs.py hooks/lint-expand.py
+          bash -n plugin/hooks/*/*.sh tests/*.sh tests/*/*.sh
+          python3 -m py_compile plugin/hooks/no-guess-gate/judge.py tests/fuzz-inputs.py tests/lint-expand.py
       - name: actionlint (워크플로 문법·보안)
         if: runner.os == 'Linux'
         run: |
@@ -48,26 +48,26 @@ jobs:
             fi
           fi
           shellcheck --version
-          shellcheck -x -s bash hooks/*.sh hooks/*/*.sh skills/unit.sh
+          shellcheck -x -s bash plugin/hooks/*/*.sh tests/*.sh tests/*/*.sh
 
       - name: 결정적 단위 테스트 (모델 호출 없음)
         run: |
-          hooks/lib/unit.sh
-          hooks/no-guess-gate/unit.sh
-          hooks/done-gate/unit.sh
-          hooks/test-integrity/unit.sh
-          hooks/project-guard/unit.sh
-          hooks/repo-profile/unit.sh
-          skills/unit.sh
+          tests/lib/unit.sh
+          tests/no-guess-gate/unit.sh
+          tests/done-gate/unit.sh
+          tests/test-integrity/unit.sh
+          tests/project-guard/unit.sh
+          tests/repo-profile/unit.sh
+          tests/skills-unit.sh
 
       - name: 공격면 점검 (SECURITY.md 가 적은 것과 코드가 맞는지)
-        run: hooks/attack-surface.sh
+        run: tests/attack-surface.sh
 
       - name: 매니페스트 정합 (버전·이름·CHANGELOG)
-        run: hooks/invariants.sh
+        run: tests/invariants.sh
 
       - name: 견고성 퍼징 (모델 호출 없음)
-        run: hooks/fuzz.sh
+        run: tests/fuzz.sh
 
       - name: 낡은 툴체인 (bash 3.2 + 시스템 python3, macOS만)
         if: runner.os == 'macOS'
@@ -77,6 +77,6 @@ jobs:
           ln -s /usr/bin/python3 "$SH/python3"
           "$SH/bash" --version | head -1
           "$SH/python3" -V
-          for f in hooks/*/unit.sh skills/unit.sh; do
+          for f in tests/*/unit.sh tests/skills-unit.sh; do
             PATH="$SH:$PATH" "$f"
           done

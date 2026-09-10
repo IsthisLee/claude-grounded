@@ -16,7 +16,7 @@ for k in sys.argv[2].split('.'):
     if v is None: break
 print('' if v is None else v)" "$1" "$2" 2>/dev/null; }
 
-M="$R/.claude-plugin/marketplace.json"; P="$R/.claude-plugin/plugin.json"
+M="$R/.claude-plugin/marketplace.json"; P="$R/plugin/.claude-plugin/plugin.json"
 for f in "$M" "$P"; do
   if python3 -c 'import json,sys;json.load(open(sys.argv[1]))' "$f"; then ok "$(basename "$f"): 올바른 JSON"; else bad "$(basename "$f"): JSON 파싱 실패"; fi
 done
@@ -35,19 +35,19 @@ if [ -n "$(j "$M" plugins.0.tags)" ]; then ok "marketplace 에 tags 가 있다(C
 
 src=$(j "$M" plugins.0.source)
 if [ -d "$R/$src" ]; then ok "source 경로가 실재한다($src)"; else bad "source 경로가 없다($src)"; fi
-if [ -f "$R/.claude-plugin/plugin.json" ]; then ok "strict=true 가 요구하는 plugin.json 이 있다"; else bad "plugin.json 이 없다"; fi
+if [ -f "$R/plugin/.claude-plugin/plugin.json" ]; then ok "strict=true 가 요구하는 plugin.json 이 있다"; else bad "plugin.json 이 없다"; fi
 
 # 중괄호 없는 변수 뒤에 한글이 바로 붙으면 bash 가 그것까지 변수 이름으로 읽는다.
 # set -u 아래서는 unbound variable 로 그 자리에서 죽는다. 실패 분기에 있으면 통과할 때는
 # 안 보이다가 정작 실패를 알려야 할 때 죽는다. 이 저장소에서 세 번 났다.
-bad_expand=$(python3 "$R/hooks/lint-expand.py" "$R")
+bad_expand=$(python3 "$R/tests/lint-expand.py" "$R")
 if [ -z "$bad_expand" ]; then ok "변수 뒤에 한글이 바로 붙은 곳이 없다"
 else bad "변수 확장이 한글을 먹는 곳이 있다. \${var} 로 감싸라"; printf '%s\n' "$bad_expand" | sed 's/^/    /'; fi
 
 # 훅을 임시 폴더로 복사해 돌리는 하네스는 lib/ 를 통째로 옮겨야 한다. msg.sh 를 빠뜨리면
 # 게이트는 여전히 막지만 메시지가 키 이름으로 나가 측정값이 통째로 달라진다. 실제로 그렇게 잘못 쟀다.
 missing=""
-for h in "$R"/hooks/*/unit.sh "$R"/hooks/no-guess-gate/selftest.sh "$R"/hooks/no-guess-gate/ab.sh; do
+for h in "$R"/tests/*/unit.sh "$R"/tests/no-guess-gate/selftest.sh "$R"/tests/no-guess-gate/ab.sh; do
   [ -f "$h" ] || continue
   # lib/unit.sh 는 일부러 common.sh 만 옮긴다. 카탈로그가 없을 때를 시험하는 곳이다.
   case "$h" in */lib/unit.sh) continue;; esac
@@ -58,18 +58,18 @@ if [ -z "$missing" ]; then ok "훅을 복사하는 하네스가 전부 msg.sh �
 else bad "msg.sh 를 빠뜨린 하네스가 있다:$missing"; fi
 
 # 문서가 적어 둔 개수가 실제와 같은지. 숫자는 조용히 낡는다.
-n_sk=$(find "$R/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+n_sk=$(find "$R/plugin/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 if [ "$n_sk" = 7 ]; then ok "커맨드가 일곱이다"; else bad "커맨드가 일곱이 아니다(${n_sk}개). 문서를 고쳐라"; fi
 # 훅 모듈은 '.sh 를 가진 디렉터리'다. 단순히 디렉터리를 세면 py_compile 이 만든
 # __pycache__ 까지 잡힌다. CI 에서 실제로 그렇게 오탐이 났다.
 n_gate=0
-for d in "$R"/hooks/*/; do
+for d in "$R"/plugin/hooks/*/; do
   case "${d%/}" in */lib) continue;; esac
   ls "$d"*.sh >/dev/null 2>&1 && n_gate=$((n_gate+1))
 done
 if [ "$n_gate" = 5 ]; then ok "훅 모듈이 다섯이다(게이트 넷 + 프로필)"; else bad "훅 모듈이 다섯이 아니다(${n_gate}개)"; fi
-n_in=$(python3 "$R/hooks/fuzz-inputs.py" | wc -l | tr -d ' ')
-n_hook=$(grep -oE '[a-z-]+/[a-z]+\.sh' "$R/hooks/fuzz.sh" | sort -u | wc -l | tr -d ' ')
+n_in=$(python3 "$R/tests/fuzz-inputs.py" | wc -l | tr -d ' ')
+n_hook=$(grep -oE '[a-z-]+/[a-z]+\.sh' "$R/tests/fuzz.sh" | sort -u | wc -l | tr -d ' ')
 want=$(( (n_in + 1) * n_hook ))
 if grep -q "${want}회" "$R/docs/gates.ko.md"; then ok "퍼징 횟수가 문서와 같다(${want}회)"; else bad "퍼징 횟수가 문서와 다르다(실제 ${want}회)"; fi
 

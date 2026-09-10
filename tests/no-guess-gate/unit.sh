@@ -12,7 +12,10 @@ unset NGG_STATE NGG_INNER NGG_JUDGE NGG_JUDGE_CMD NGG_JUDGE_TIMEOUT NGG_DONE DON
 export NGG_LANG=ko
 # 단위 테스트는 모델을 부르지 않는다. 수준 2 판정은 기본 끄고, 12군에서만 가짜 판정기로 켠다.
 export NGG_JUDGE=0
-G="$(cd "$(dirname "$0")" && pwd)"
+# 이 스크립트는 tests/ 에 있고 검사 대상은 plugin/ 에 있다. G 를 훅 폴더로 맞춰 두면
+# 아래의 "$G/..." 참조가 옮기기 전과 똑같이 동작한다.
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+G="$ROOT/plugin/hooks/no-guess-gate"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$T/lib/"; cp "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$G"/judge.py "$W"/
 fail=0

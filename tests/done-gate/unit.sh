@@ -9,7 +9,10 @@ export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_JUDGE_CMD NGG_JUDGE_TIMEOUT NGG_DONE DONE_TIMEOUT
 # 메시지 언어를 못 박는다. 로케일에 따라 문장이 바뀌면 이 아래 문자열 단언이 기계마다 달라진다.
 export NGG_LANG=ko
-G="$(cd "$(dirname "$0")" && pwd)"
+# 이 스크립트는 tests/ 에 있고 검사 대상은 plugin/ 에 있다. G 를 훅 폴더로 맞춰 두면
+# 아래의 "$G/..." 참조가 옮기기 전과 똑같이 동작한다.
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+G="$ROOT/plugin/hooks/done-gate"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$T/lib/"; cp "$G"/post.sh "$G"/stop.sh "$G"/pre.sh "$W"/
 fail=0

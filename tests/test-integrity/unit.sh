@@ -7,7 +7,10 @@ export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_TESTGUARD
 # 메시지 언어를 못 박는다. 로케일에 따라 문장이 바뀌면 이 아래 문자열 단언이 기계마다 달라진다.
 export NGG_LANG=ko
-G="$(cd "$(dirname "$0")" && pwd)"
+# 이 스크립트는 tests/ 에 있고 검사 대상은 plugin/ 에 있다. G 를 훅 폴더로 맞춰 두면
+# 아래의 "$G/..." 참조가 옮기기 전과 똑같이 동작한다.
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+G="$ROOT/plugin/hooks/test-integrity"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$T/lib/"; cp "$G"/pre.sh "$W"/
 fail=0
@@ -105,5 +108,15 @@ edit "$C" "$C/jest.config.js" 'module.exports = { testMatch: ["**/*.test.ts"] };
 printf '%s' 'const exclude = ["a"];' > "$C/app.ts"
 edit "$C" "$C/app.ts" 'const exclude = ["a"];' 'const exclude = ["a","b"]; const testPathIgnorePatterns = 1;' \
   | "$W/pre.sh" 2>/dev/null; check 0 $? "설정: 일반 소스 파일은 대상이 아니다"
+
+# 빌드 산출물은 테스트 파일이 아니다.
+# tests/ 아래라는 이유만으로 __pycache__ 삭제가 막혔다. 실제로 이 저장소 작업 중 세 번 걸렸다.
+A="$T/art"; mkdir -p "$A/tests/__pycache__" "$A/tests/node_modules" "$A/tests/.pytest_cache"
+printf 'x' > "$A/tests/unit.sh"
+bash_ "$A" 'rm -rf tests/__pycache__' | "$W/pre.sh" 2>/dev/null; check 0 $? "산출물: __pycache__ 삭제는 통과"
+bash_ "$A" 'rm -rf tests/node_modules' | "$W/pre.sh" 2>/dev/null; check 0 $? "산출물: node_modules 삭제는 통과"
+bash_ "$A" 'rm -rf tests/.pytest_cache' | "$W/pre.sh" 2>/dev/null; check 0 $? "산출물: .pytest_cache 삭제는 통과"
+bash_ "$A" 'rm -f tests/a.pyc' | "$W/pre.sh" 2>/dev/null; check 0 $? "산출물: .pyc 삭제는 통과"
+bash_ "$A" 'rm tests/unit.sh' | "$W/pre.sh" 2>/dev/null; check 2 $? "산출물 아님: 진짜 테스트 파일 삭제는 여전히 막힌다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

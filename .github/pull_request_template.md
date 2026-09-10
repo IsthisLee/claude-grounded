@@ -7,13 +7,13 @@
 ## 검사 출력
 
 ```
-hooks/no-guess-gate/unit.sh
+tests/no-guess-gate/unit.sh
 ```
 
 판정 로직을 건드렸다면 회귀도 붙여 주세요. CI는 모델을 부르지 않습니다.
 
 ```
-hooks/no-guess-gate/selftest.sh
+tests/no-guess-gate/selftest.sh
 ```
 
 ## 확인

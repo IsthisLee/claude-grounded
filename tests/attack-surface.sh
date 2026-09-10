@@ -5,7 +5,7 @@
 set -u
 # Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
-G="$(cd "$(dirname "$0")" && pwd)"
+G="$(cd "$(dirname "$0")/../plugin/hooks" && pwd)"
 fail=0
 ok()  { echo "✅ $1"; }
 bad() { echo "❌ $1"; fail=$((fail+1)); }

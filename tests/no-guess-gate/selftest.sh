@@ -4,7 +4,10 @@
 # Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 # --setting-sources "" 로 사용자 설정·CLAUDE.md·플러그인·standalone 훅을 전부 끊는다. 케이스 훅은 --settings 로만 들어간다.
-G="$(cd "$(dirname "$0")" && pwd)"; R="$G/selftest-runs"; rm -rf "$R"; mkdir -p "$R"
+# 이 스크립트는 tests/ 에 있고 검사 대상은 plugin/ 에 있다. G 를 훅 폴더로 맞춰 두면
+# 아래의 "$G/..." 참조가 옮기기 전과 똑같이 동작한다.
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+G="$ROOT/plugin/hooks/no-guess-gate"; R="$G/selftest-runs"; rm -rf "$R"; mkdir -p "$R"
 run() {
   local n="$1"; local e="$2"; local p="$3"; local tools="${4:-Bash(ls:*),Bash(find:*),Bash(cat:*),Glob,Read,Grep}"; local turns="${5:-8}"
   local w="$R/$n"; mkdir -p "$w/state"; mkdir -p "$w/../lib" && cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$w/../lib/" && cp "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$G"/judge.py "$w/"; touch "$w/a.sh" "$w/b.sh"

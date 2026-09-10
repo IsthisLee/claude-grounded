@@ -22,9 +22,9 @@ jobs:
       - name: 태그와 plugin.json 버전이 같은지
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          man=$(python3 -c 'import json;print(json.load(open(".claude-plugin/plugin.json"))["version"])')
+          man=$(python3 -c 'import json;print(json.load(open("plugin/.claude-plugin/plugin.json"))["version"])')
           echo "태그 $tag · 매니페스트 $man"
-          [ "$tag" = "$man" ] || { echo "::error::태그와 .claude-plugin/plugin.json 의 version 이 다르다"; exit 1; }
+          [ "$tag" = "$man" ] || { echo "::error::태그와 plugin/.claude-plugin/plugin.json 의 version 이 다르다"; exit 1; }
 
       - name: CHANGELOG 에 이 버전이 있는지
         run: |
@@ -32,17 +32,17 @@ jobs:
           grep -q "^## \[$tag\]" CHANGELOG.md || { echo "::error::CHANGELOG.md 에 [$tag] 항목이 없다"; exit 1; }
 
       - name: 매니페스트 정합
-        run: hooks/invariants.sh
+        run: tests/invariants.sh
 
       - name: 전체 검사
         run: |
           for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do
-            hooks/$g/unit.sh
+            tests/$g/unit.sh
           done
-          skills/unit.sh
-          hooks/attack-surface.sh
-          hooks/invariants.sh
-          hooks/fuzz.sh
+          tests/skills-unit.sh
+          tests/attack-surface.sh
+          tests/invariants.sh
+          tests/fuzz.sh
 
       - name: 릴리스 노트를 CHANGELOG 에서 뽑는다
         run: |

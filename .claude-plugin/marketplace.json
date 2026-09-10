@@ -42,7 +42,7 @@
         "agentic-coding",
         "code-quality"
       ],
-      "source": ".",
+      "source": "./plugin",
       "strict": true
     }
   ]

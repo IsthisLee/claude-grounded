@@ -20,8 +20,8 @@ claude --plugin-dir .                 # 설치본 대신 이 폴더를 그 세�
 바꾸기 전과 후에 돌린다.
 
 ```bash
-hooks/no-guess-gate/unit.sh                 # 결정적 단위 테스트. 모델을 부르지 않는다. 9초
-hooks/no-guess-gate/selftest.sh             # 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분
+tests/no-guess-gate/unit.sh                 # 결정적 단위 테스트. 모델을 부르지 않는다. 9초
+tests/no-guess-gate/selftest.sh             # 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분
 shellcheck -x -s bash hooks/no-guess-gate/*.sh
 python3 -m py_compile hooks/no-guess-gate/judge.py
 claude plugin validate .

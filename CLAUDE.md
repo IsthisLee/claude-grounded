@@ -4,20 +4,20 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 
 ## 검사 명령
 
-- `hooks/lib/unit.sh` — 메시지 카탈로그 21건. 두 언어의 키가 맞는지, 언어 결정 순서가 맞는지, 카탈로그가 사라져도 조용히 통과하지 않는지 본다.
-- `hooks/no-guess-gate/unit.sh` — 근거 게이트 130건. 모델을 부르지 않는다.
-- `hooks/done-gate/unit.sh` — 완료 게이트 34건.
-- `hooks/test-integrity/unit.sh` — 테스트 무결성 39건.
-- `hooks/project-guard/unit.sh` — 프로젝트 가드 26건.
-- `hooks/repo-profile/unit.sh` — 저장소 프로필 19건.
-- `skills/unit.sh` — 스킬 정의 4건.
-- `hooks/attack-surface.sh` — SECURITY.md가 적은 공격면과 코드가 맞는지 9건.
-- `hooks/invariants.sh` — 매니페스트·CHANGELOG·문서의 숫자, 셸 인용, 하네스의 카탈로그 복사 14건.  **합계 296건.**
-- `hooks/fuzz.sh` — 망가진 입력을 열 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
-- `hooks/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다.
-- `hooks/no-guess-gate/ab.sh` — 게이트 켠 채와 끈 채를 비교해 효과를 잰다. `SET=hard`가 압박 프롬프트.
-- `hooks/no-guess-gate/judge-accuracy.sh` — 판정기 정확도와 소요 시간. 의견 여섯·상태 주장 여섯. README가 인용하는 숫자가 여기서 나온다. 모델을 부르고 몇 분 걸린다.
-- `shellcheck -x -s bash hooks/*.sh hooks/*/*.sh skills/unit.sh` · `actionlint`
+- `tests/lib/unit.sh` — 메시지 카탈로그 21건. 두 언어의 키가 맞는지, 언어 결정 순서가 맞는지, 카탈로그가 사라져도 조용히 통과하지 않는지 본다.
+- `tests/no-guess-gate/unit.sh` — 근거 게이트 130건. 모델을 부르지 않는다.
+- `tests/done-gate/unit.sh` — 완료 게이트 34건.
+- `tests/test-integrity/unit.sh` — 테스트 무결성 44건.
+- `tests/project-guard/unit.sh` — 프로젝트 가드 26건.
+- `tests/repo-profile/unit.sh` — 저장소 프로필 19건.
+- `tests/skills-unit.sh` — 스킬 정의 4건.
+- `tests/attack-surface.sh` — SECURITY.md가 적은 공격면과 코드가 맞는지 9건.
+- `tests/invariants.sh` — 매니페스트·CHANGELOG·문서의 숫자, 셸 인용, 하네스의 카탈로그 복사 14건.  **합계 301건.**
+- `tests/fuzz.sh` — 망가진 입력을 열 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
+- `tests/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다.
+- `tests/no-guess-gate/ab.sh` — 게이트 켠 채와 끈 채를 비교해 효과를 잰다. `SET=hard`가 압박 프롬프트.
+- `tests/no-guess-gate/judge-accuracy.sh` — 판정기 정확도와 소요 시간. 의견 여섯·상태 주장 여섯. README가 인용하는 숫자가 여기서 나온다. 모델을 부르고 몇 분 걸린다.
+- `shellcheck -x -s bash plugin/hooks/*/*.sh tests/*.sh tests/*/*.sh` · `actionlint`
 - `claude plugin validate .` · `claude --plugin-dir .`
 
 ## 규칙
@@ -31,18 +31,22 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 
 ## 구조
 
-- `hooks/hooks.json` — SessionStart · UserPromptSubmit · PreToolUse(넷) · PostToolUse · Stop(둘) · SubagentStop 배선. 상태는 `${CLAUDE_PLUGIN_DATA}`.
-- `hooks/no-guess-gate/bashres.sh` — `PostToolUse`·`PostToolUseFailure`(Bash)에서 이 턴의 Bash 결과를 `S`/`F`로 남긴다. R5가 마지막 글자만 본다.
-- `hooks/lib/common.sh` — 모든 훅이 공유하는 입력 파서와 메시지 함수 `t`·`tn`. `no-guess-gate/pre.sh`는 도구 호출마다 돌아 파라미터 확장만 쓰는 빠른 경로가 따로 있다.
-- `hooks/lib/msg.sh` — 사람과 모델에게 나가는 문장 46개를 한국어와 영어로 담는다. 차단이 일어날 때만 읽는다. **훅 안에 문장을 직접 쓰지 않는다.** 한쪽 언어에만 넣으면 `hooks/lib/unit.sh`가 잡는다.
-- `hooks/no-guess-gate/stop.sh` — 규칙 R0~R5와 면제 다섯. `judge.py`가 R2a·R2b만 걸렸을 때 의견인지 상태 주장인지 작은 모델에게 묻는다(`NGG_JUDGE_MODEL`, 기본 haiku).
-- `hooks/done-gate/` — 코드를 고친 턴에 저장소 검사를 돌린다. 이 저장소의 `.grounded.toml`이 자기 테스트를 가리킨다.
-- `hooks/test-integrity/` — 테스트 무력화 편집, 테스트 파일 삭제, 러너 설정의 제외 추가를 막는다.
-- `hooks/project-guard/` — `append_only` 경로의 기존 파일 수정·삭제와 `--no-verify` 커밋을 막는다.
-- `hooks/repo-profile/` — `SessionStart`에 저장소 사실을 컨텍스트로 싣는다. 사실만 싣고 행동 지시는 넣지 않는다.
-- `skills/` — 사용자 전용 커맨드 일곱. 내장과 겹치는 것은 만들지 않는다. 새 스킬을 넣으면 `skills/unit.sh`가 정의를 검사한다.
-- **훅을 임시 폴더로 복사해 돌리는 하네스는 `lib/`를 통째로 옮긴다.** `msg.sh`를 빠뜨리면 게이트는 여전히 막지만 모델이 받는 문장이 `ngg.r0` 같은 키 이름이 된다. 막히기만 하고 무엇을 하라는지 모르니 측정값이 통째로 달라진다. `hooks/invariants.sh`가 `cp` 줄을 본다.
-- **중괄호 없는 변수 뒤에 한글을 붙이지 않는다.** `"$n개"`는 bash가 `n개`를 변수 이름으로 읽고, `set -u` 아래서는 그 자리에서 죽는다. 실패 분기에 있으면 통과할 때는 안 보이다가 정작 실패를 알려야 할 때 죽는다. **이 저장소에서 세 번 났다.** `${n}개`로 쓴다. `hooks/invariants.sh`가 전수로 막는다.
+**저장소는 두 층이다.** `plugin/` 만 사용자에게 실린다. 설치본은 23개 파일이고 그중 도는 것은 훅 열과 스킬 일곱이다.
+공식 마켓플레이스와 tdd-guard 가 같은 방식이다(`source: "./plugin"`). 플러그인 설치는 폴더를 통째로 복사하고 제외 방법이 없다.
+**테스트·도구·문서·CI 를 `plugin/` 안에 두지 않는다.** 두면 사용자가 그것까지 내려받는다.
+
+- `plugin/hooks/hooks.json` — SessionStart · UserPromptSubmit · PreToolUse(넷) · PostToolUse · Stop(둘) · SubagentStop 배선. 상태는 `${CLAUDE_PLUGIN_DATA}`.
+- `plugin/hooks/no-guess-gate/bashres.sh` — `PostToolUse`·`PostToolUseFailure`(Bash)에서 이 턴의 Bash 결과를 `S`/`F`로 남긴다. R5가 마지막 글자만 본다.
+- `plugin/hooks/lib/common.sh` — 모든 훅이 공유하는 입력 파서와 메시지 함수 `t`·`tn`. `no-guess-gate/pre.sh`는 도구 호출마다 돌아 파라미터 확장만 쓰는 빠른 경로가 따로 있다.
+- `plugin/hooks/lib/msg.sh` — 사람과 모델에게 나가는 문장 46개를 한국어와 영어로 담는다. 차단이 일어날 때만 읽는다. **훅 안에 문장을 직접 쓰지 않는다.** 한쪽 언어에만 넣으면 `tests/lib/unit.sh`가 잡는다.
+- `plugin/hooks/no-guess-gate/stop.sh` — 규칙 R0~R5와 면제 다섯. `judge.py`가 R2a·R2b만 걸렸을 때 의견인지 상태 주장인지 작은 모델에게 묻는다(`NGG_JUDGE_MODEL`, 기본 haiku).
+- `plugin/hooks/done-gate/` — 코드를 고친 턴에 저장소 검사를 돌린다. 이 저장소의 `.grounded.toml`이 자기 테스트를 가리킨다.
+- `plugin/hooks/test-integrity/` — 테스트 무력화 편집, 테스트 파일 삭제, 러너 설정의 제외 추가를 막는다.
+- `plugin/hooks/project-guard/` — `append_only` 경로의 기존 파일 수정·삭제와 `--no-verify` 커밋을 막는다.
+- `plugin/hooks/repo-profile/` — `SessionStart`에 저장소 사실을 컨텍스트로 싣는다. 사실만 싣고 행동 지시는 넣지 않는다.
+- `skills/` — 사용자 전용 커맨드 일곱. 내장과 겹치는 것은 만들지 않는다. 새 스킬을 넣으면 `tests/skills-unit.sh`가 정의를 검사한다.
+- **훅을 임시 폴더로 복사해 돌리는 하네스는 `lib/`를 통째로 옮긴다.** `msg.sh`를 빠뜨리면 게이트는 여전히 막지만 모델이 받는 문장이 `ngg.r0` 같은 키 이름이 된다. 막히기만 하고 무엇을 하라는지 모르니 측정값이 통째로 달라진다. `tests/invariants.sh`가 `cp` 줄을 본다.
+- **중괄호 없는 변수 뒤에 한글을 붙이지 않는다.** `"$n개"`는 bash가 `n개`를 변수 이름으로 읽고, `set -u` 아래서는 그 자리에서 죽는다. 실패 분기에 있으면 통과할 때는 안 보이다가 정작 실패를 알려야 할 때 죽는다. **이 저장소에서 세 번 났다.** `${n}개`로 쓴다. `tests/invariants.sh`가 전수로 막는다.
 - **정규식의 대괄호 안에 멀티바이트 문자를 넣지 않는다.** `[.!?。]`처럼 쓰면 `LC_ALL=C`에서 `grep`·`sed`가 바이트로 매칭해 한국어 글자를 한가운데서 자르고 R1이 조용히 안 걸린다. 교체(`|`)로 쓴다.
 - **메시지 언어는 로케일을 따른다.** `NGG_LANG`이 우선하고 없으면 `LC_ALL` → `LC_MESSAGES` → `LANG` 순으로 본다. `ko` 계열이면 한국어, 그 외에는 영어다. 단위 테스트는 머리에서 `NGG_LANG=ko`를 못 박아 기계마다 결과가 달라지지 않게 한다.
 - **테스트는 주변 환경에 기대지 않는다.** `unit.sh`가 머리에서 `NGG_*`를 `unset`한다. 게이트가 자식에게 물려주는 변수 때문에 폴백 검사가 조용히 뒤집힌 적이 있다.

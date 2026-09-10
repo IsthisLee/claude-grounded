@@ -1547,3 +1547,61 @@ test_cases.json 에서 케이스 삭제 → exit=0
 - "If your hook legitimately needs more than eight iterations to converge, raise the cap with `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`."
 
 README 의 "끄기와 제거" 표에 넣었다. 게이트를 끄는 방법을 숨기지 않는 것이 이 저장소의 태도와 맞는다.
+
+## V24 플러그인을 하위 폴더로 옮기다 — 사용자가 무엇을 내려받는가
+
+배경: "최고급 개발자가 만든 플러그인은 어떻게 개발되나"를 공식 문서와 동종 저장소로 다시 봤다. 가장 큰 차이는 **마켓플레이스 `source` 가 무엇을 가리키느냐**였다.
+
+### 동종은 하위 폴더를 가리킨다
+
+| 저장소 | 항목 | `source` |
+|---|---|---|
+| `anthropics/claude-code` | 13 | 13개 전부 `./plugins/<이름>` |
+| `thedotmack/claude-mem` | 2 | `./plugin`, `./cowork` |
+| `nizos/tdd-guard` | 1 | `./plugin` (저장소 429개 파일 중 플러그인은 **9개**) |
+| `obra/superpowers` | 1 | `./` (루트) |
+| **claude-grounded (전)** | 1 | **`.` (저장소 전체)** |
+
+### 왜 문제인가
+
+공식 레퍼런스에 제외 방법이 없다. 설치는 폴더를 통째로 복사한다. 그래서 설치본을 열어 봤다.
+
+```
+총 62개 파일 · 500K
+실림  docs/VERIFICATION.md      (1,549줄)
+실림  .github/workflows/test.yml
+실림  tests/…  fuzz.sh  ab.sh  selftest.sh  judge-accuracy.sh  attack-surface.sh  invariants.sh
+실림  CONTRIBUTING.md  CODE_OF_CONDUCT.md  .githooks/pre-commit
+
+훅으로 실제로 도는 파일: 10개
+```
+
+`SECURITY.md` 는 "이 플러그인을 설치한다는 것은 그 코드를 신뢰한다는 뜻" 이라고 적어 두었다. 그 말이 사실이려면 신뢰할 코드가 작아야 한다.
+
+### 옮긴 결과
+
+```
+이전: 62개 500K → 지금: 23개 124K
+plugin/     23개  (매니페스트·LICENSE·훅 14·스킬 7)
+tests/      15개  안 실림
+docs/ .github/ README… CLAUDE.md   안 실림
+```
+
+런타임 훅은 서로의 상대 위치가 그대로라 한 줄도 고치지 않았다. 테스트만 `G` 를 훅 폴더로 맞추는 한 줄씩 바꿨다.
+
+### 옮기다가 게이트에 세 번 막혔다 — 진짜 오탐
+
+`tests/__pycache__` 를 지우려는 명령이 **테스트 파일 삭제**로 읽혔다. `tests/` 아래라는 이유였다.
+
+```
+테스트 무결성 게이트: 테스트 파일 삭제 명령이다.
+- 대상: tests/__pycache__
+```
+
+빌드 산출물은 테스트가 아니다. `__pycache__`·`node_modules`·`.pytest_cache`·`.mypy_cache`·`.tox`·`dist`·`build`·`.pyc` 를 제외했다. 테스트를 먼저 써서 RED 4건을 보고 고쳤고, **진짜 테스트 파일 삭제는 그대로 막힌다**는 단언도 같이 넣었다.
+
+사용자가 이 오탐을 겪으면 게이트를 꺼 버린다. 내가 세 번 겪었다.
+
+### 검증
+
+단위 301건, 퍼징 240회 실패 0, `shellcheck` exit 0, `claude plugin validate --strict` 를 마켓플레이스와 플러그인 양쪽에서 통과. `--plugin-dir ./plugin` 으로 실제 세션을 띄워 게이트가 도는 것까지 확인했다.

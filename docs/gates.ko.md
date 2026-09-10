@@ -29,7 +29,7 @@ Claude Code는 코드를 대신 써 주는 AI 조수다. 일은 잘한다. 그�
 |---|---|---|
 | `NGG_LANG` | (로케일) | `ko` 또는 `en`. 주면 로케일을 무시한다 |
 
-`NGG_LANG`이 없으면 `LC_ALL` → `LC_MESSAGES` → `LANG` 순으로 보고, `ko` 계열이면 한국어, 그 밖에는 영어다. 문장은 `hooks/lib/msg.sh` 한 곳에 모여 있다.
+`NGG_LANG`이 없으면 `LC_ALL` → `LC_MESSAGES` → `LANG` 순으로 보고, `ko` 계열이면 한국어, 그 밖에는 영어다. 문장은 `plugin/hooks/lib/msg.sh` 한 곳에 모여 있다.
 
 ### 왜 내장 `type: "prompt"` 훅을 쓰지 않나
 
@@ -156,13 +156,13 @@ append-only 경로: supabase/migrations
 claude --plugin-dir .                         # 설치본 대신 이 폴더를 그 세션에 로드
 claude plugin validate .                      # 매니페스트와 훅 배선 검사
 for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do
-  hooks/$g/unit.sh || break; done && skills/unit.sh    # 합계 252건. 모델을 부르지 않는다
-hooks/fuzz.sh                                 # 망가진 입력 24종 × 훅 열 = 240회 = 216회
-hooks/no-guess-gate/selftest.sh               # 실제 프롬프트 회귀 12케이스, 몇 분
-hooks/no-guess-gate/judge-accuracy.sh         # 판정기 정확도·소요 시간, 몇 분
+  hooks/$g/unit.sh || break; done && tests/skills-unit.sh    # 합계 252건. 모델을 부르지 않는다
+tests/fuzz.sh                                 # 망가진 입력 24종 × 훅 열 = 240회 = 216회
+tests/no-guess-gate/selftest.sh               # 실제 프롬프트 회귀 12케이스, 몇 분
+tests/no-guess-gate/judge-accuracy.sh         # 판정기 정확도·소요 시간, 몇 분
 shellcheck -x -s bash hooks/*/*.sh skills/unit.sh
 ```
 
-게이트가 내보내는 문장은 훅이 아니라 `hooks/lib/msg.sh` 한 곳에 있다. 새 문장은 한국어와 영어를 함께 넣는다. 한쪽만 넣으면 `hooks/lib/unit.sh`가 잡는다.
+게이트가 내보내는 문장은 훅이 아니라 `plugin/hooks/lib/msg.sh` 한 곳에 있다. 새 문장은 한국어와 영어를 함께 넣는다. 한쪽만 넣으면 `tests/lib/unit.sh`가 잡는다.
 
 모든 검증은 실행 명령과 출력 원문을 [`docs/VERIFICATION.md`](VERIFICATION.md)에 남긴다. 기여는 [CONTRIBUTING.md](../CONTRIBUTING.md), 보안은 [SECURITY.md](../SECURITY.md)를 보라.

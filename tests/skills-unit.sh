@@ -5,7 +5,7 @@ set -u
 # Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 unset NGG_STATE NGG_INNER NGG_JUDGE
-G="$(cd "$(dirname "$0")" && pwd)"
+G="$(cd "$(dirname "$0")/../plugin/skills" && pwd)"
 fail=0
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
 

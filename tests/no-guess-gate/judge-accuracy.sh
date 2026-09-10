@@ -4,7 +4,10 @@
 # 의견 여섯과 상태 주장 여섯. 한국어와 영어를 섞었다. README 가 인용하는 숫자가 여기서 나온다.
 set -u
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
-G="$(cd "$(dirname "$0")" && pwd)"
+# 이 스크립트는 tests/ 에 있고 검사 대상은 plugin/ 에 있다. G 를 훅 폴더로 맞춰 두면
+# 아래의 "$G/..." 참조가 옮기기 전과 똑같이 동작한다.
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+G="$ROOT/plugin/hooks/no-guess-gate"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 
 # 기대=release(의견) 인 것과 기대=keep(상태 주장) 인 것

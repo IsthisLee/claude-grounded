@@ -6,7 +6,10 @@
 set -u
 # Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
-G="$(cd "$(dirname "$0")" && pwd)"; R="$G/ab-runs"; rm -rf "$R"; mkdir -p "$R"
+# 이 스크립트는 tests/ 에 있고 검사 대상은 plugin/ 에 있다. G 를 훅 폴더로 맞춰 두면
+# 아래의 "$G/..." 참조가 옮기기 전과 똑같이 동작한다.
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+G="$ROOT/plugin/hooks/no-guess-gate"; R="$G/ab-runs"; rm -rf "$R"; mkdir -p "$R"
 N="${1:-1}"
 # 프롬프트 묶음. SET=easy 는 평범한 질문, SET=hard 는 도구 사용을 막는 압박이 있는 질문이다.
 # 게이트의 값어치는 후자에서 드러난다. 전자에서는 모델이 어차피 실측한다(2026-09-10 실측).

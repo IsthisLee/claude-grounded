@@ -33,7 +33,7 @@ ngg_lang
 # t <키> [인자...] — 카탈로그의 문장을 찍는다. 카탈로그는 처음 쓸 때만 읽는다.
 # tn은 줄바꿈 없이 찍는다. 키가 없으면 키를 그대로 내보내 조용히 사라지지 않게 한다.
 tn() { [ -n "${NGG_MSG_LOADED:-}" ] || {
-    # shellcheck source=hooks/lib/msg.sh
+    # shellcheck source=plugin/hooks/lib/msg.sh
     . "$NGG_LIB/msg.sh"; NGG_MSG_LOADED=1; }
   # M 은 여기서 비운다. msg 가 없을 때(카탈로그 파일이 사라진 경우) msg 안의 초기화에 기대면
   # 앞 호출의 값이 남아 모든 줄이 같은 키로 나온다.

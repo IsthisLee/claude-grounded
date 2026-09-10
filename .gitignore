@@ -1,6 +1,6 @@
-hooks/no-guess-gate/state/
-hooks/no-guess-gate/selftest-runs/
+plugin/hooks/no-guess-gate/state/
+plugin/hooks/no-guess-gate/selftest-runs/
 .DS_Store
 .private/
 __pycache__/
-hooks/no-guess-gate/ab-runs/
+plugin/hooks/no-guess-gate/ab-runs/

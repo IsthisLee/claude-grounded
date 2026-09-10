@@ -11,7 +11,8 @@ set -u
 # Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_DONE NGG_GUARD NGG_TESTGUARD NGG_PROFILE
-G="$(cd "$(dirname "$0")" && pwd)"
+G="$(cd "$(dirname "$0")/../plugin/hooks" && pwd)"
+TOOLS="$(cd "$(dirname "$0")" && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 fail=0; n=0
 INPUTS=()
@@ -36,7 +37,7 @@ HOOKS="no-guess-gate/prompt.sh no-guess-gate/pre.sh no-guess-gate/stop.sh no-gue
 done-gate/post.sh done-gate/stop.sh done-gate/pre.sh \
 test-integrity/pre.sh project-guard/pre.sh repo-profile/session.sh"
 
-while IFS= read -r line; do INPUTS+=("$line"); done < <(python3 "$G/fuzz-inputs.py")
+while IFS= read -r line; do INPUTS+=("$line"); done < <(python3 "$TOOLS/fuzz-inputs.py")
 # shellcheck disable=SC2016  # 파이썬 코드는 확장하지 않는다. 카나리 경로만 argv로 넘긴다
 INPUTS+=("$(python3 -c 'import json,sys; print(json.dumps({"session_id":"c","tool_name":"Bash","tool_input":{"command":"rm $(touch "+chr(34)+sys.argv[1]+chr(34)+").test.ts"}},ensure_ascii=False))' "$CANARY")")
 

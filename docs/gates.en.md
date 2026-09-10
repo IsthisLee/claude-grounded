@@ -21,7 +21,7 @@ Every message the gates emit exists in Korean and English. The rule verdict is t
 |---|---|---|
 | `NGG_LANG` | (locale) | `ko` or `en`. Set it and the locale is ignored |
 
-Without `NGG_LANG` the gate reads `LC_ALL`, then `LC_MESSAGES`, then `LANG`: Korean locales get Korean, everything else gets English. All strings live in `hooks/lib/msg.sh`.
+Without `NGG_LANG` the gate reads `LC_ALL`, then `LC_MESSAGES`, then `LANG`: Korean locales get Korean, everything else gets English. All strings live in `plugin/hooks/lib/msg.sh`.
 
 ### Why not the built-in `type: "prompt"` hook
 
@@ -144,13 +144,13 @@ The reason for using hooks at all is in the docs too:
 claude --plugin-dir .                         # load this folder instead of the installed copy
 claude plugin validate .                      # manifest and hook wiring
 for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do
-  hooks/$g/unit.sh || break; done && skills/unit.sh    # 252 assertions, no model calls
-hooks/fuzz.sh                                 # 24 malformed inputs x ten hooks = 240 runs
-hooks/no-guess-gate/selftest.sh               # 12-case regression against real prompts, minutes
-hooks/no-guess-gate/judge-accuracy.sh         # judge accuracy and latency, minutes
+  hooks/$g/unit.sh || break; done && tests/skills-unit.sh    # 252 assertions, no model calls
+tests/fuzz.sh                                 # 24 malformed inputs x ten hooks = 240 runs
+tests/no-guess-gate/selftest.sh               # 12-case regression against real prompts, minutes
+tests/no-guess-gate/judge-accuracy.sh         # judge accuracy and latency, minutes
 shellcheck -x -s bash hooks/*/*.sh skills/unit.sh
 ```
 
-Every string the gates emit lives in `hooks/lib/msg.sh`, not in the hooks. A new string goes in with both its Korean and English form; leave one out and `hooks/lib/unit.sh` fails.
+Every string the gates emit lives in `plugin/hooks/lib/msg.sh`, not in the hooks. A new string goes in with both its Korean and English form; leave one out and `tests/lib/unit.sh` fails.
 
 Every verification records the exact command and its raw output in [`docs/VERIFICATION.md`](VERIFICATION.md). See [CONTRIBUTING.md](../CONTRIBUTING.md) and [SECURITY.md](../SECURITY.md).
