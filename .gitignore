@@ -1,4 +1,4 @@
-plugin/hooks/no-guess-gate/state/
+plugin/hooks/*/state/
 plugin/hooks/no-guess-gate/selftest-runs/
 .DS_Store
 .private/

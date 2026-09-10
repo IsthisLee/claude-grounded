@@ -24,7 +24,20 @@ CODE_RE='\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|swift|c|h|cc|cpp|cs|php|sc
 
 # 이 저장소 안의 코드 파일만 센다. 다른 곳의 파일을 근거로 검사하지 않는다.
 n=$(grep -c . "$ch" 2>/dev/null || echo 0)
-code=$(awk -v root="$root/" 'index($0, root)==1' "$ch" 2>/dev/null | grep -cE "$CODE_RE" || true)
+# 경로는 실경로로 맞춰 비교한다. macOS 에서 PostToolUse 는 /private/var/... 를,
+# cwd 는 /var/... 를 준다. 문자열로만 보면 저장소 밖으로 읽혀 코드 파일이 0개가 되고
+# 게이트가 조용히 통과시킨다. 실제 세션에서 그렇게 새어 나갔다.
+code=$(py -c 'import os,sys,re
+root = os.path.realpath(sys.argv[1]) + os.sep
+pat = re.compile(sys.argv[2])
+n = 0
+for line in sys.stdin:
+    p = line.strip()
+    if not p: continue
+    if not os.path.realpath(p).startswith(root): continue
+    if pat.search(p): n += 1
+print(n)' "$root" "$CODE_RE" < "$ch" 2>/dev/null || echo 0)
+[ -z "$code" ] && code=0
 [ "${code:-0}" -gt 0 ] || exit 0
 
 note() { t done.prefix "$1" >&2; }
