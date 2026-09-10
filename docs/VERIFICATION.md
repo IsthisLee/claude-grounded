@@ -976,3 +976,65 @@ actions/checkout   v4 → 11d5960a326750d5838078e36cf38b85af677262 (SHA 고정)
 **실사용자 피드백과 제3자 보안 감사는 이 세션에서 만들 수 없다.** 사람이 써 봐야 나오고, 외부 검토자가 봐야 나온다. 지어내지 않는다.
 
 대신 그것을 받을 준비는 갖췄다. 오탐·미탐 이슈 템플릿이 `events.log` 줄을 요구하고, `SECURITY.md`가 비공개 신고 경로와 14일 응답 약속을 적었고, 판정기 결과가 로그에 남아 사용자가 직접 셀 수 있다.
+
+## V15 공개 배포와 설치 경로 실측 (1.0.0)
+
+사용자 승인을 받고 공개했다. `gh repo create`는 되돌리기 어렵고 바깥으로 나가는 작업이라, 목표 평가기의 요구만으로는 실행하지 않았다.
+
+### 공개 직전 감사
+
+```
+브랜치 main · 미커밋 0건
+전체 이력에서 금지 패턴 네 종(계정 아이디, 개인 작업 폴더 경로,
+개인 설정 저장소 이름, 홈 절대 경로) 모두 0건
+```
+
+패턴 원문은 `.private/guard-patterns`에 있고 커밋되지 않는다. 이 문서에 그대로 적으면
+가드가 자기 자신을 막는다. 실제로 처음 이 절을 쓸 때 막혔다.
+
+### 배포
+
+```
+공개   https://github.com/IsthisLee/claude-grounded          46개 파일, 39커밋
+비공개 https://github.com/IsthisLee/claude-grounded-private  설계·계획·검토 문서
+토픽   agentic-coding, claude, claude-code, code-quality, guardrails, hooks, llm-tools, tdd
+```
+
+### README에 적은 설치 경로를 그대로 실행
+
+```
+$ claude plugin marketplace add IsthisLee/claude-grounded
+✔ Successfully added marketplace: claude-grounded (declared in user settings)
+
+$ claude plugin install grounded@claude-grounded
+✔ Successfully installed plugin: grounded@claude-grounded (scope: user)
+
+$ claude plugin list
+  ❯ grounded@claude-grounded   Version: 1.0.0   Scope: user   Status: ✔ enabled
+```
+
+**성공 메시지를 근거로 삼지 않고 설치본을 직접 실행했다.** 처음 두 번은 경로를 잘못 짚었다. 설치본은 `cache/claude-grounded/grounded/1.0.0/`에 있다.
+
+```
+실행 비트: 훅 스크립트 열 개 전부 살아 있음   ← 클론에서 유실되면 훅이 조용히 죽는다
+prompt.sh OK
+근거 없는 결론 게이트 [R0 R1]. 턴을 끝낼 수 없다.
+[grounded 프로필] claude-grounded  (브랜치 main)
+게이트: 근거(항상) · 완료(켜짐) · 테스트 무결성(항상) · 프로젝트 가드(설정 없어 --no-verify만 차단)
+```
+
+### standalone 훅 제거 (이중 발동 방지)
+
+계획대로 `settings.json`의 standalone 배선 4개를 지웠다. 플러그인과 둘 다 걸려 있으면 차단 메시지가 두 번 뜨고 8회 상한이 두 배로 빨리 소진된다.
+
+```
+제거 전 4개 → 제거 후 0개
+백업: ~/.claude/backups/standalone-<시각>/settings.json
+남은 훅 이벤트는 그대로 (Orca 등 다른 도구의 배선은 건드리지 않았다)
+```
+
+### 이제 성립하는 것
+
+공개 후에 성립한다고 적었던 OpenSSF 항목들이 채워졌다. `repo_public`, `sites_https`, `version_unique`(1.0.0), `report_archive`·`report_process`(GitHub Issues), `delivery_mitm`(HTTPS clone). 남은 것은 사람이 있어야 하는 `report_responses`, `vulnerability_report_response`, `discussion`이다.
+
+**실사용자 피드백과 제3자 감사는 여전히 없다.** 이제 받을 수 있는 상태가 됐을 뿐이다.
