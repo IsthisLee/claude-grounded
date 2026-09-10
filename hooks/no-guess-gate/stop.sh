@@ -20,12 +20,14 @@ FILE='[A-Za-z0-9_.-]+\.(json|js|jsx|ts|tsx|md|sh|yml|yaml|env|lock|sql|css|scss|
 LOCALQ="(this (directory|folder|file|repo|repository|project|codebase|code|config|setting)|the (code|codebase|repo|repository|project|config|current directory)|current directory|in here|이 (디렉터리|폴더|파일|저장소|프로젝트|코드|설정)|여기|현재 (디렉터리|폴더)|코드베이스|저장소|$FILE)"
 PATHRE="((^|[^A-Za-z0-9])/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+|$FILE)"
 ctx=0; printf '%s' "$prompt" | grep -qiE "$LOCALQ" && ctx=1; printf '%s' "$last" | grep -qE "$PATHRE" && ctx=1
+# 정규식의 대괄호 안에는 멀티바이트 문자를 넣지 않는다. LC_ALL=C 같은 로케일에서 grep·sed 가
+# 바이트로 매칭해 한국어 글자를 한가운데서 자르고, 그러면 R1 이 조용히 안 걸린다. 교체(|)로 쓴다.
 R1PHRASE="(there('s| is| are) (no|a|an)|(does|doesn't|do not|don't) (contain|exist|have)|존재하지 않|파일이 없|파일이 있|디렉터리에 (없|있))"
 R1STATE='(없다([[:space:],.)]|$)|없습니다|없음([[:space:],.)]|$)|없어(요)?([[:space:],.)]|$)|있다([[:space:],.)]|$)|있습니다|있음([[:space:],.)]|$)|존재(한다|합니다|하지 않는다|하지 않습니다)([[:space:],.)]|$)|비어 ?있|is missing|not found|no such|does not exist|doesn'"'"'t exist|exists([[:space:],.)]|$)|is empty)'
-r1_hit() { printf '%s' "$last" | grep -qiE "$R1PHRASE" && return 0; printf '%s\n' "$last" | sed -E 's/([.!?。])([[:space:]]|$)/\1\n/g' | grep -E "$PATHRE" | grep -v '수 있' | grep -qiE "$R1STATE"; }
+r1_hit() { printf '%s' "$last" | grep -qiE "$R1PHRASE" && return 0; printf '%s\n' "$last" | sed -E 's/(\.|!|\?|。)([[:space:]]|$)/\1\n/g' | grep -E "$PATHRE" | grep -v '수 있' | grep -qiE "$R1STATE"; }
 R2a='(should (verify|check|confirm)|need(s)? to (verify|check|confirm)|would need to (check|verify|run|look)|without checking|to be sure|확인 필요|실측 필요|검증 필요|확인해야|검증해야|확인이 필요|확인하지 않았|검증하지 않았|미확인)'
 # 불가 면제. 실측이 불가능한 이유를 밝힌 답. "안 했다"(NEG)와 다르다. R0·R2a·R2b·R4에서 벗어나고 단정(R1)과 검증 주장(R3)에는 적용하지 않는다.
-CANNOT='(확인할 수 없|검증할 수 없|실행할 수 없|접근할 수 없|띄울 수 없|재현할 수 없|불가능(하다|합니다|해서|하다고)|(도구|명령|명령어|커맨드|bash|셸|쉘|툴) ?(실행|호출)?[^.。]{0,25}(안 ?(된다|돼|됩니다|되고|돌아)|되지 않|실행되지 않|돌지 않|불가|막혀)|cannot (verify|check|run|access|reproduce|execute)|can'"'"'t (verify|check|run|access|reproduce|execute)|unable to (verify|check|run|access|reproduce|execute)|no (access|permission)|tools? (are|is) (not |un)?(available|working|running|broken|failing)|tool calls? (are |is )?(not|fail))'
+CANNOT='(확인할 수 없|검증할 수 없|실행할 수 없|접근할 수 없|띄울 수 없|재현할 수 없|불가능(하다|합니다|해서|하다고)|(도구|명령|명령어|커맨드|bash|셸|쉘|툴) ?(실행|호출)?[^.]{0,25}(안 ?(된다|돼|됩니다|되고|돌아)|되지 않|실행되지 않|돌지 않|불가|막혀)|cannot (verify|check|run|access|reproduce|execute)|can'"'"'t (verify|check|run|access|reproduce|execute)|unable to (verify|check|run|access|reproduce|execute)|no (access|permission)|tools? (are|is) (not |un)?(available|working|running|broken|failing)|tool calls? (are |is )?(not|fail))'
 # 의견형 유보. "나아 보인다"는 설계 의견이지 상태 주장이 아니다. R2b 판정 전에 지운다.
 EVALHEDGE='((더 |훨씬 |좀 더 )?(나아|낫|좋아|괜찮아|적절해|맞아|타당해|자연스러워|충분해|깔끔해|안전해|편해|쉬워|무난해|합리적으로|바람직해|유리해|나쁘지 않아) ?보(인다|임|입니다|여요|이네요|이는데|이지만)|(seems?|looks?|appears?|feels?) (like )?(a |the )?(good|better|best|fine|reasonable|appropriate|sensible|cleaner|simpler|safer|right|ok|okay|nice|worth|solid|clean|natural|clearer|preferable))'
 cannot=0; printf '%s' "$last" | grep -qiE "$CANNOT" && cannot=1
@@ -57,7 +59,7 @@ v="${v# }"
 JUDGE_DEFAULT=1; judge_note=""; judged=""; judge_log=""
 if [ -n "$v" ] && [ "${NGG_JUDGE:-$JUDGE_DEFAULT}" != "0" ] && ! printf '%s' "$v" | grep -qE 'R0|R1|R3|R4'; then
   # 걸린 문장만 뽑아 보낸다. 판정 대상이 분명해지고 입력이 짧아진다.
-  flagged=$(printf '%s\n' "$last" | sed -E 's/([.!?。])([[:space:]]|$)/\1\n/g' | while IFS= read -r sent; do [ -n "$sent" ] && printf '%s' "$sent" | xform | grep -qiE "$R2a|$R2b" && printf '%s\n' "$sent"; done)
+  flagged=$(printf '%s\n' "$last" | sed -E 's/(\.|!|\?|。)([[:space:]]|$)/\1\n/g' | while IFS= read -r sent; do [ -n "$sent" ] && printf '%s' "$sent" | xform | grep -qiE "$R2a|$R2b" && printf '%s\n' "$sent"; done)
   jt0=$(date +%s)
   why=$(python3 -c 'import json,sys; print(json.dumps(dict(prompt=sys.argv[1],rules=sys.argv[2],tools=sys.argv[3],bash=sys.argv[4],last=sys.argv[5],flagged=sys.argv[6]),ensure_ascii=False))' "$prompt" "$v" "$ntools" "$nbash" "$last" "$flagged" | "$d/judge.py" 2>/dev/null); jr=$?
   jel=$(( $(date +%s) - jt0 ))

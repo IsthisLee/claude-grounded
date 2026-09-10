@@ -310,4 +310,14 @@ printf '{"session_id":"t20","hook_event_name":"PreToolUse","tool_input":{"file_p
 grep -qx 'Edit' "$K20/state/t20/tools"; check 0 $? "폴백: 결과가 같다"
 printf 'not json at all' | NGG_STATE="$K20" "$W/pre.sh" 2>/dev/null; check 1 $? "폴백: JSON이 아니면 exit 1(조용히 통과하지 않음)"
 
+# 21. 로케일이 비어도 규칙이 그대로 걸린다. 대괄호 안 멀티바이트가 바이트로 쪼개져 R1이 조용히 빠지던 적이 있다.
+mkstop() { printf '{"session_id":"t21","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"%s"}' "$1"; }
+KO='src/auth.ts 파일에 버그가 있다.'
+for LC in "ko_KR.UTF-8" "C" ""; do
+  rm -rf "$T/k21"
+  # shellcheck disable=SC2016  # 안쪽 sh 가 받을 따옴표다
+  rc=$(env -u LANG -u LC_ALL -u LC_CTYPE LC_ALL="$LC" sh -c 'printf "%s" "$1" | NGG_STATE="$2" "$3" >/dev/null 2>&1; echo $?' _ "$(mkstop "$KO")" "$T/k21" "$W/stop.sh")
+  check 2 "$rc" "LC_ALL=${LC:-(없음)}: 한국어 단정이 R1에 걸린다"
+done
+
 echo; echo "실패 ${fail}건"; exit "$fail"
