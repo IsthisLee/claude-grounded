@@ -18,7 +18,7 @@ claude-grounded removes that tenth one. It turns what the Claude Code docs *reco
 
 You never asked for any of it, and it happens every time. **The point is that you get to forget.**
 
-> **All four gates plus the repo profile ship.** This document describes only what is real.
+> **The whole roadmap ships:** four gates, the repo profile, and seven commands. This document describes only what is real.
 
 ---
 
@@ -131,6 +131,22 @@ The docs are explicit that this event's stdout becomes context: "The exceptions 
 
 **It carries facts, never instructions** — enforcement is the gates' job. It calls no model, only reads files, and never reads values out of secret files like `.env`. The last line shows which gate is idle, so a missing setting is visible immediately. Disable with `NGG_PROFILE=0`.
 
+## Seven commands
+
+The gates run on their own. What needs your judgment about *when* and *what it costs* stays a command. All seven are **user-invoked only** (`disable-model-invocation: true`), as the docs advise: "Use `disable-model-invocation: true` for workflows with side effects that you want to trigger manually."
+
+| Command | What it does |
+|---|---|
+| `/grounded:spec` | Interviews you with `AskUserQuestion` before a large feature and writes `SPEC.md` |
+| `/grounded:init` | Actually runs the candidate check command, then pins it in `.grounded.toml`; proposes a baseline, append-only paths, and secret-file denies |
+| `/grounded:tdd` | Failing test first, confirm RED, minimum implementation |
+| `/grounded:ship` | Runs the checks and puts their output into the PR body as evidence |
+| `/grounded:handoff` | Writes a handoff for the next session |
+| `/grounded:status` | Measures and reports what every gate is actually doing |
+| `/grounded:auto` | Explore → plan → implement → review → ship, in order |
+
+**More commands are absent than present.** Planning is built-in plan mode, exploration is the built-in Explore agent, review is `/code-review`, run-and-see is `/verify`, looping is `/goal`. An audit cut 23 candidates down to these 7. Nothing here duplicates something that already exists.
+
 ## When it blocks
 
 Claude receives this:
@@ -193,6 +209,7 @@ hooks/done-gate/unit.sh                       # completion gate: 19 tests
 hooks/test-integrity/unit.sh                  # test integrity: 23 tests
 hooks/project-guard/unit.sh                   # project guard: 14 tests
 hooks/repo-profile/unit.sh                    # repo profile: 16 tests
+skills/unit.sh                                # skill definitions: 4 tests
 hooks/no-guess-gate/selftest.sh               # 12-case regression against real prompts, minutes
 shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
 ```
@@ -207,7 +224,7 @@ Every verification records the exact command and its raw output in [`docs/VERIFI
 | 2 | Completion gate | **Shipped** |
 | 3 | Test-integrity gate, project guard | **Shipped** |
 | 4 | Repo profile | **Shipped** |
-| 5+ | Workflow commands | Under review |
+| 5 | Seven workflow commands | **Shipped** |
 
 ## Related
 

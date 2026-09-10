@@ -638,3 +638,43 @@ plugin validate 통과 (경고는 version 미지정 하나, 첫 배포 때 1.0.0
 도그푸딩         다섯 스위트를 .grounded.toml에 걸고 완료 게이트로 실행 → 통과
 배선            SessionStart · UserPromptSubmit · PreToolUse ×3 · PostToolUse · Stop ×2 · SubagentStop
 ```
+
+## V8 작업 흐름 커맨드 일곱 (로드맵 5단계)
+
+배경: 전수 조사(`.private/docs/source-audit.ko.md` F)에서 23개 후보를 7개로 줄인 결과를 구현했다. 내장과 겹치는 것은 만들지 않는다.
+
+| 커맨드 | 근거 |
+|---|---|
+| `spec` | best practices "Let Claude interview you" 프롬프트를 그대로 |
+| `init` | 검사 명령을 **실제로 돌려 보고** 확정. Willison "First run the tests"로 기준선 |
+| `tdd` | Willison "confirm that the tests fail before implementing" · Beck "the simplest failing test first" |
+| `ship` | Willison 반패턴 "Don't file pull requests with code you haven't reviewed yourself" |
+| `handoff` | best practices "start a fresh session to execute it" |
+| `status` | 근거 없음(운영 유틸리티). 전부 실측하도록 본문에 못 박았다 |
+| `auto` | best practices 네 단계 Explore → Plan → Implement → Commit |
+
+전부 `disable-model-invocation: true`다. 공식 문서: "Use `disable-model-invocation: true` for workflows with side effects that you want to trigger manually."
+
+**스킬 정의도 배포물이라 회귀로 고정했다.** `skills/unit.sh` 4건이 폴더명과 `name` 일치(어긋나면 `/이름`이 틀어진다), 사용자 전용 플래그, `allowed-tools`, 본문 길이, 인자를 받는 넷의 `$ARGUMENTS` 사용, **내장과 겹치는 스킬 부재**(plan·explore·review·verify·commit), 핵심 넷의 원문 인용 존재를 검사한다.
+
+### 로드 실측
+
+`--plugin-dir` 세션에서 모델에게 스킬 목록을 물으니 `grounded` 접두사가 하나도 없다고 답했다. 실패로 보였지만 아니었다. `disable-model-invocation: true`는 **모델의 스킬 목록에서 감추는 것**이 정의된 동작이다. 사용자가 `/이름`을 치는 경로는 따로다.
+
+그래서 탐침을 만들어 갈랐다. 저장소를 복사해 훅을 지우고 `status`에서만 그 플래그를 뺀 뒤 같은 질문을 던졌다.
+
+```
+있습니다. `probeplug:status` — 게이트가 켜져 있는지, 설정이 무엇인지, 최근에 무엇에 막혔는지 보여 준다.
+(목록에 있는 이름은 `status`가 아니라 플러그인 접두사가 붙은 `probeplug:status`입니다.)
+```
+
+플러그인 스킬은 `<플러그인>:<이름>`으로 등록된다. 우리 일곱이 모델 목록에 없는 것은 결함이 아니라 설계대로다.
+
+### 전체
+
+```
+근거 게이트 89 · 완료 19 · 테스트 무결성 23 · 프로젝트 가드 14 · 저장소 프로필 16 · 스킬 정의 4
+합계 165건, 전부 exit 0
+shellcheck -x  hooks/lib/common.sh hooks/*/*.sh skills/unit.sh   exit 0
+plugin validate 통과 · 도그푸딩(여섯 스위트를 .grounded.toml에 걸고 완료 게이트로) 통과
+```

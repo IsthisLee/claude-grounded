@@ -33,3 +33,4 @@ jobs:
           hooks/test-integrity/unit.sh
           hooks/project-guard/unit.sh
           hooks/repo-profile/unit.sh
+          skills/unit.sh

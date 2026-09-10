@@ -18,7 +18,7 @@ claude-grounded는 그 한 번을 없앤다. Claude Code 공식 문서가 권하
 
 한 번도 부탁하지 않았는데 매번 그렇게 된다. **잊어도 된다는 것이 요점이다.**
 
-> **게이트 넷과 저장소 프로필이 모두 배포된다.** 이 문서는 있는 것만 적는다.
+> **로드맵이 전부 배포됐다.** 게이트 넷, 저장소 프로필, 커맨드 일곱. 이 문서는 있는 것만 적는다.
 
 ---
 
@@ -142,6 +142,22 @@ append-only 경로: supabase/migrations
 
 **싣는 것은 사실뿐이고 행동 지시는 넣지 않는다.** 그건 게이트의 일이다. 모델을 부르지 않고 파일만 읽으며, `.env` 같은 비밀 파일의 값은 읽지 않는다. 마지막 줄이 어느 게이트가 놀고 있는지 알려 주므로 설정을 빼먹으면 바로 보인다. 끄려면 `NGG_PROFILE=0`이다.
 
+## 커맨드 일곱
+
+게이트는 저절로 돌지만, 언제 할지와 비용을 내가 정해야 하는 일은 커맨드로 둔다. 전부 **내가 쳐야만** 돈다(`disable-model-invocation: true`). 공식 문서가 그렇게 권한다. "Use `disable-model-invocation: true` for workflows with side effects that you want to trigger manually."
+
+| 커맨드 | 하는 일 |
+|---|---|
+| `/grounded:spec` | 큰 기능 전에 `AskUserQuestion`으로 나를 인터뷰해 `SPEC.md`를 쓴다 |
+| `/grounded:init` | 검사 명령을 실제로 돌려 보고 `.grounded.toml`에 확정. 기준선·append-only·비밀 파일 차단 제안 |
+| `/grounded:tdd` | 실패 테스트 먼저, RED 확인, 최소 구현 |
+| `/grounded:ship` | 검사를 돌리고 그 출력을 PR 본문에 근거로 넣는다 |
+| `/grounded:handoff` | 다음 세션이 읽을 인수인계를 쓴다 |
+| `/grounded:status` | 게이트 상태를 전부 실측해 보고한다 |
+| `/grounded:auto` | 탐색 → 계획 → 구현 → 검토 → 배포를 순서대로 |
+
+**없는 커맨드가 더 많다.** 계획은 내장 plan mode가, 탐색은 내장 Explore가, 리뷰는 `/code-review`가, 실행 확인은 `/verify`가, 반복은 `/goal`이 이미 한다. 전수 조사에서 23개 후보를 7개로 줄인 결과다. 같은 일을 하는 것을 새로 만들지 않는다.
+
 ## 막히면 어떻게 되나
 
 Claude가 이런 메시지를 받는다.
@@ -207,6 +223,7 @@ hooks/done-gate/unit.sh                       # 완료 게이트 19건
 hooks/test-integrity/unit.sh                  # 테스트 무결성 23건
 hooks/project-guard/unit.sh                   # 프로젝트 가드 14건
 hooks/repo-profile/unit.sh                    # 저장소 프로필 16건
+skills/unit.sh                                # 스킬 정의 4건
 hooks/no-guess-gate/selftest.sh               # 실제 프롬프트 회귀 12케이스, 몇 분
 shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
 ```
@@ -221,7 +238,7 @@ shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
 | 2 | 완료 게이트 | **배포됨** |
 | 3 | 테스트 무결성 게이트, 프로젝트 가드 | **배포됨** |
 | 4 | 저장소 프로필 | **배포됨** |
-| 5 이후 | 작업 흐름 커맨드 | 검토 중 |
+| 5 | 작업 흐름 커맨드 일곱 | **배포됨** |
 
 ## 비슷한 도구
 
