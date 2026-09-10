@@ -27,26 +27,29 @@ n=$(grep -c . "$ch" 2>/dev/null || echo 0)
 # 경로는 실경로로 맞춰 비교한다. macOS 에서 PostToolUse 는 /private/var/... 를,
 # cwd 는 /var/... 를 준다. 문자열로만 보면 저장소 밖으로 읽혀 코드 파일이 0개가 되고
 # 게이트가 조용히 통과시킨다. 실제 세션에서 그렇게 새어 나갔다.
-code=$(py -c 'import os, sys, re
-# 훅 입력의 경로는 POSIX 형태다. os.sep 을 쓰면 Windows 에서 백슬래시가 붙어 아무것도 안 맞는다.
+# 1차: 옛 방식 그대로 문자열 접두로 센다. 어느 플랫폼에서도 이 셈은 바뀌지 않는다.
+code=$(awk -v root="$root/" 'index($0, root)==1' "$ch" 2>/dev/null | grep -cE "$CODE_RE" || true)
+[ -z "$code" ] && code=0
+# 2차: 0으로 세였을 때만 심링크를 풀어 한 번 더 본다. macOS 는 PostToolUse 가
+# /private/var/... 를, cwd 가 /var/... 를 주어 1차가 놓친다. 더하기만 하므로 다른 플랫폼을 깨지 않는다.
+if [ "$code" -eq 0 ]; then
+  code=$(py -c 'import os, sys, re
+# realpath 는 Windows 에서 백슬래시를 준다. 양쪽을 같은 모양으로 눕히고 비교한다.
 def norm(x):
-    return x.replace(chr(92), "/").rstrip("/") + "/"
-raw = norm(sys.argv[1])
-try: real = norm(os.path.realpath(sys.argv[1]))
-except Exception: real = raw
+    return os.path.realpath(x).replace(chr(92), "/").rstrip("/")
+try: root = norm(sys.argv[1])
+except Exception: sys.exit(0)
 pat = re.compile(sys.argv[2])
 n = 0
 for line in sys.stdin:
     p = line.strip()
     if not p or not pat.search(p): continue
-    # 원본이 맞거나 심링크를 푼 뒤 맞으면 저장소 안이다.
-    # 앞만 보면 macOS 의 /private 접두에서 새고, 뒤만 보면 Windows 의 MSYS 경로에서 샌다.
-    if p.replace(chr(92), "/").startswith(raw): n += 1; continue
-    try: rp = norm(os.path.realpath(p))[:-1]
+    try: rp = norm(p)
     except Exception: continue
-    if rp.startswith(real) or rp.startswith(raw): n += 1
+    if rp.startswith(root + "/"): n += 1
 print(n)' "$root" "$CODE_RE" < "$ch" 2>/dev/null || echo 0)
-[ -z "$code" ] && code=0
+  [ -z "$code" ] && code=0
+fi
 [ "${code:-0}" -gt 0 ] || exit 0
 
 note() { t done.prefix "$1" >&2; }

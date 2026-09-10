@@ -153,9 +153,14 @@ symrun() { rm -rf "$SS"; mkdir -p "$SS/state/sy"; printf '%s\n' "$1" > "$SS/stat
   python3 -c 'import json,sys;print(json.dumps({"session_id":"sy","hook_event_name":"Stop","stop_hook_active":False,"cwd":sys.argv[1]},ensure_ascii=False))' "$2" \
     | NGG_STATE="$SS" "$W/stop.sh" >/dev/null 2>&1; }
 symrun "$PS/src/a.js" "$PS"; check 2 $? "심링크: 둘 다 실경로면 막는다(기준선)"
-symrun "$LN/src/a.js" "$PS"; check 2 $? "심링크: changed 만 링크 경로여도 막는다"
-symrun "$PS/src/a.js" "$LN"; check 2 $? "심링크: cwd 만 링크 경로여도 막는다"
-symrun "$LN/src/a.js" "$LN"; check 2 $? "심링크: 둘 다 링크 경로여도 막는다"
+# Git Bash 는 권한에 따라 ln -s 가 심링크 대신 사본을 만든다. 그러면 검사할 상황 자체가 없다.
+if [ -L "$LN" ]; then
+  symrun "$LN/src/a.js" "$PS"; check 2 $? "심링크: changed 만 링크 경로여도 막는다"
+  symrun "$PS/src/a.js" "$LN"; check 2 $? "심링크: cwd 만 링크 경로여도 막는다"
+  symrun "$LN/src/a.js" "$LN"; check 2 $? "심링크: 둘 다 링크 경로여도 막는다"
+else
+  echo "⏭  심링크 3건: 이 플랫폼에서 ln -s 가 심링크를 만들지 않아 건너뛴다"
+fi
 symrun "$T/elsewhere/a.js" "$PS"; check 0 $? "심링크: 정말 저장소 밖이면 세지 않는다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"
