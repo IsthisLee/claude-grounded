@@ -508,3 +508,56 @@ GREEN: `실패 0건`, 총 87건.
 회귀(전체 반영 후): 12케이스 실패 0건. `rl-claim`이 이번엔 R3로 막혔고(모델이 거짓 주장을 냈다가 걸림), `rl-local`은 R0·R1로 막힌 뒤 Bash로 확인하고 통과했다.
 
 기기 훅 다섯 파일 SHA-256 일치.
+
+## V5 완료 게이트 (2단계 첫 모듈)
+
+배경: 이 키트의 두 번째 핵심 약속인 "테스트를 안 돌리고 다 됐다고 하는 것을 막는다"가 코드로 없었다. 공식 best practices가 방법까지 지정해 둔 것을 그대로 구현했다.
+
+> "As a deterministic gate: a Stop hook runs your check as a script and blocks the turn from ending until it passes."
+
+**구조.** 공유 코드를 `hooks/lib/common.sh`로 빼고(87건이 이동을 지켜 줬다), `hooks/done-gate/`에 `post.sh`(PostToolUse Edit|Write, 고친 파일 기록)와 `stop.sh`(검사 실행)를 두었다. 검사 명령은 `.grounded.toml` → `package.json scripts.test` → `Makefile test` → `pyproject.toml` 순으로 찾는다.
+
+**설계 원칙 셋.** 모르는 것으로 막지 않는다(명령을 못 찾으면 알리고 통과). 조용히 실패하지 않는다(시간초과도 stderr로 알리고 막지 않는다). 코드가 아닌 변경은 대상이 아니다(문서만 고친 턴, 저장소 밖 파일 제외).
+
+실행: `hooks/done-gate/unit.sh` (19건을 먼저 작성)
+
+RED: `실패 18건` (구현 전, 스크립트가 없어 exit 127)
+
+GREEN 1차: `실패 2건`. 둘 다 진짜 결함이었다.
+```
+❌ stderr에 안내(막지는 않음)      → note "코드 파일 $code개를..." 에서 $code개가 변수명 경계 문제로 깨져 출력이 망가짐
+❌ stderr에 시간초과 안내           → 메시지에 "시간"이라는 말이 없었다
+```
+`${code}개`로 경계를 명시하고 문구를 "제한 시간 ${to}초를 넘겨 시간초과로 중단했다"로 고쳤다.
+
+GREEN 2차: `실패 0건`, 19건.
+
+**배선.** `hooks.json`에 `PostToolUse`(matcher `Edit|Write`, 10초)와 `Stop`의 두 번째 항목(240초)을 넣었다. `unit.sh` 15군을 두 게이트 배선을 검사하도록 넓혔고, 16군으로 턴 경계 공유(턴이 닫힌 뒤 첫 프롬프트에서 `changed`도 비움)를 박았다. 근거 게이트 89건.
+
+**도그푸딩이 진짜 결함을 찾았다.** 이 저장소에 `.grounded.toml`을 두어 자기 테스트를 가리키게 하고 게이트를 돌렸더니 **실패했다.** 같은 명령을 손으로 돌리면 통과하는데 게이트를 거치면 실패했다.
+
+```
+$ ( hooks/no-guess-gate/unit.sh >/dev/null && hooks/done-gate/unit.sh >/dev/null ); echo $?
+0
+게이트를 거치면: 검사가 실패했다(exit 1)
+```
+
+원인은 **환경 오염**이었다. 게이트는 `NGG_STATE`를 자식에게 물려주는데, `unit.sh`의 "NGG_STATE 없음 → 스크립트 폴더로 폴백" 검사가 그 변수가 없다고 가정하고 있었다. 테스트가 주변 환경에 기대고 있었던 것이다. 두 `unit.sh` 머리에서 `NGG_*`와 `DONE_TIMEOUT`을 `unset` 하도록 고쳤다.
+
+```
+오염된 환경에서 실행 (NGG_STATE=… NGG_JUDGE=1 DONE_TIMEOUT=1)
+  근거 게이트 exit=0 · 완료 게이트 exit=0     ← 고친 뒤
+도그푸딩 재실행
+  게이트 exit=0, changed 비워짐                ← 통과 시에만 비운다
+```
+
+일부러 깨뜨렸을 때 막는 것도 확인했다.
+```
+$ printf '\nexit 1\n' >> hooks/done-gate/unit.sh   # 일부러 실패시킴
+완료 게이트: 검사가 실패했다(exit 1). 턴을 끝낼 수 없다.
+- 돌린 명령: hooks/no-guess-gate/unit.sh >/dev/null && hooks/done-gate/unit.sh >/dev/null   (출처: .grounded.toml)
+- 고친 코드 파일: 1개 (이 턴 변경 1개 중)
+테스트를 고쳐서 통과시키지 마라. 코드를 고쳐라.
+```
+
+한 가지 남긴다. 이 저장소의 `.grounded.toml`은 검사 출력을 `>/dev/null`로 버려 실패 시 꼬리가 비어 있다. 실제 프로젝트에서는 출력을 버리지 말아야 Claude가 무엇이 틀렸는지 읽을 수 있다.

@@ -37,6 +37,17 @@
             "timeout": 90
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/done-gate/stop.sh",
+            "shell": "bash",
+            "timeout": 240,
+            "statusMessage": "완료 게이트"
+          }
+        ]
       }
     ],
     "SubagentStop": [
@@ -50,6 +61,20 @@
             "timeout": 90
           }
         ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/done-gate/post.sh",
+            "shell": "bash",
+            "timeout": 10,
+            "statusMessage": "완료 게이트"
+          }
+        ],
+        "matcher": "Edit|Write"
       }
     ]
   }

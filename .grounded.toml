@@ -1,0 +1,3 @@
+# claude-grounded 저장소 설정. 완료 게이트가 이 명령으로 검사한다.
+# 형식은 한 줄에 키 하나다. macOS 기본 파이썬(3.9)에 tomllib이 없어 온전한 TOML 파서를 쓰지 않는다.
+test_command = "hooks/no-guess-gate/unit.sh && hooks/done-gate/unit.sh"

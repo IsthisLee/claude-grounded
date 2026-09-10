@@ -4,7 +4,8 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 
 ## 검사 명령
 
-- `hooks/no-guess-gate/unit.sh` — 결정적 단위 테스트. 모델을 부르지 않는다. 9초.
+- `hooks/no-guess-gate/unit.sh` — 근거 게이트 단위 테스트 89건. 모델을 부르지 않는다. 9초.
+- `hooks/done-gate/unit.sh` — 완료 게이트 단위 테스트 19건.
 - `hooks/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다. 사용자 설정과 격리된 세션이다.
 - `claude plugin validate .` — 매니페스트와 훅 배선 검사.
 - `claude --plugin-dir .` — 설치본 대신 이 폴더를 그 세션에 로드한다.
@@ -21,5 +22,8 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 ## 구조
 
 - `hooks/hooks.json` — UserPromptSubmit · PreToolUse · Stop · SubagentStop 배선. `${CLAUDE_PLUGIN_DATA}`에 상태를 둔다.
+- `hooks/lib/common.sh` — 두 게이트가 공유하는 훅 입력 파서.
 - `hooks/no-guess-gate/stop.sh` — 규칙 R0~R4와 면제 셋. `judge.py`가 R2a·R2b만 걸렸을 때 의견인지 상태 주장인지 Haiku에게 묻는다.
+- `hooks/done-gate/` — 코드를 고친 턴에 저장소 검사를 돌린다. 이 저장소의 `.grounded.toml`이 자기 테스트를 가리킨다.
+- **테스트는 주변 환경에 기대지 않는다.** `unit.sh`가 머리에서 `NGG_*`를 `unset`한다. 게이트가 자식에게 물려주는 변수 때문에 폴백 검사가 조용히 뒤집힌 적이 있다.
 - 요구 사항: bash, python3. macOS와 Linux. Windows는 Git Bash가 있을 때만.

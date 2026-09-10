@@ -2,11 +2,14 @@
 # 게이트 단위 테스트. claude를 호출하지 않는다. 사용: ./unit.sh
 # 검증: (1) NGG_STATE 지정 시 상태가 그 아래에 생김 (2) 도구 0회 + 파일 부재 단정 → exit 2 (3) 도구 1회 후 exit 0 (4) NGG_STATE 없거나 빈 문자열이면 스크립트 폴더로 폴백
 set -u
+# 테스트는 주변 환경에 기대지 않는다. 게이트가 자식에게 물려주는 변수가 남아 있으면
+# 폴백 검사 같은 것이 조용히 뒤집힌다(2026-09-10 도그푸딩에서 실측).
+unset NGG_STATE NGG_INNER NGG_JUDGE NGG_JUDGE_CMD NGG_JUDGE_TIMEOUT NGG_DONE DONE_TIMEOUT
 # 단위 테스트는 모델을 부르지 않는다. 수준 2 판정은 기본 끄고, 12군에서만 가짜 판정기로 켠다.
 export NGG_JUDGE=0
 G="$(cd "$(dirname "$0")" && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-W="$T/scripts"; mkdir -p "$W"; cp "$G"/_common.sh "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$G"/judge.py "$W"/
+W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$T/lib/"; cp "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$G"/judge.py "$W"/
 fail=0
 # [ ... ] 뒤의 $?는 조건의 결과라 덮어쓰기 쉽다(SC2319). 파일 검사는 함수로 감싸 명령 결과로 만든다.
 isfile() { [ -f "$1" ]; }
@@ -205,27 +208,45 @@ python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$HJ"; check 0 $? "ho
 python3 - "$HJ" "$G" <<'PY'
 import json, os, re, sys
 d = json.load(open(sys.argv[1])); root = os.path.dirname(os.path.abspath(sys.argv[2]))
-want = {"UserPromptSubmit": "prompt.sh", "PreToolUse": "pre.sh", "Stop": "stop.sh", "SubagentStop": "stop.sh"}
+want = {
+    "UserPromptSubmit": [("no-guess-gate", "prompt.sh")],
+    "PreToolUse":       [("no-guess-gate", "pre.sh")],
+    "PostToolUse":      [("done-gate", "post.sh")],
+    "Stop":             [("no-guess-gate", "stop.sh"), ("done-gate", "stop.sh")],
+    "SubagentStop":     [("no-guess-gate", "stop.sh")],
+}
 hooks = d.get("hooks", {})
 assert set(hooks) == set(want), f"이벤트 불일치: {sorted(hooks)}"
-for ev, script in want.items():
+for ev, expected in want.items():
     entries = [h for g in hooks[ev] for h in g.get("hooks", [])]
-    assert len(entries) == 1, f"{ev}: 항목 {len(entries)}개"
-    e = entries[0]
-    assert e.get("type") == "command", f"{ev}: type={e.get('type')}"
-    assert script in e["command"], f"{ev}: {script} 없음"
-    assert "${CLAUDE_PLUGIN_ROOT}" in e["command"], f"{ev}: PLUGIN_ROOT 미사용"
-    assert "${CLAUDE_PLUGIN_DATA}" in e["command"], f"{ev}: PLUGIN_DATA 미사용"
-    assert e.get("shell") == "bash", f"{ev}: shell={e.get('shell')}"
-    t = e.get("timeout")
-    assert isinstance(t, int) and t > 0, f"{ev}: timeout={t}"
-    if ev in ("Stop", "SubagentStop"):
-        assert t >= 90, f"{ev}: timeout {t} < 90 (판정기 상한 40초보다 넉넉해야 함)"
-    m = re.search(r'hooks/no-guess-gate/(\w+\.sh)', e["command"])
-    assert m and os.path.isfile(os.path.join(root, "no-guess-gate", m.group(1))), f"{ev}: 스크립트 파일 없음"
+    assert len(entries) == len(expected), f"{ev}: 항목 {len(entries)}개, 기대 {len(expected)}개"
+    for e, (gate, script) in zip(entries, expected):
+        assert e.get("type") == "command", f"{ev}: type={e.get('type')}"
+        assert f"hooks/{gate}/{script}" in e["command"], f"{ev}: {gate}/{script} 없음"
+        assert "${CLAUDE_PLUGIN_ROOT}" in e["command"], f"{ev}: PLUGIN_ROOT 미사용"
+        assert "${CLAUDE_PLUGIN_DATA}" in e["command"], f"{ev}: PLUGIN_DATA 미사용"
+        assert e.get("shell") == "bash", f"{ev}: shell={e.get('shell')}"
+        t = e.get("timeout")
+        assert isinstance(t, int) and t > 0, f"{ev}: timeout={t}"
+        if ev in ("Stop", "SubagentStop"):
+            assert t >= 90, f"{ev}/{gate}: timeout {t} < 90"
+        assert os.path.isfile(os.path.join(root, gate, script)), f"{ev}: {gate}/{script} 파일 없음"
+# PostToolUse는 파일을 고치는 도구에만 걸려야 한다
+pm = [g.get("matcher") for g in hooks["PostToolUse"]]
+assert pm == ["Edit|Write"], f"PostToolUse matcher={pm}"
 PY
-check 0 $? "hooks.json: 네 이벤트 배선·PLUGIN_ROOT/DATA·shell·타임아웃(Stop ≥ 90초)"
-for f in prompt.sh pre.sh stop.sh judge.py; do [ -x "$G/$f" ] || { echo "❌ $f 실행 비트 없음"; fail=$((fail+1)); }; done
-check 0 0 "훅 스크립트 넷 실행 비트"
+check 0 $? "hooks.json: 다섯 이벤트에 두 게이트 배선·PLUGIN_ROOT/DATA·shell·타임아웃·matcher"
+for f in "$G/prompt.sh" "$G/pre.sh" "$G/stop.sh" "$G/judge.py" "$G/../done-gate/post.sh" "$G/../done-gate/stop.sh"; do [ -x "$f" ] || { echo "❌ $(basename "$f") 실행 비트 없음"; fail=$((fail+1)); }; done
+check 0 0 "훅 스크립트 여섯 실행 비트"
+
+# 16. 턴 경계는 두 게이트가 공유한다. 턴이 닫힌 뒤 첫 프롬프트에서 changed도 비운다.
+K16="$T/turn"; P16='{"session_id":"t16","hook_event_name":"UserPromptSubmit","prompt":"고쳐줘"}'
+printf '%s' "$P16" | NGG_STATE="$K16" "$W/prompt.sh"
+printf 'x\n' > "$K16/state/t16/changed"
+printf '%s' "$P16" | NGG_STATE="$K16" "$W/prompt.sh"
+grep -q x "$K16/state/t16/changed"; check 0 $? "턴 중간 프롬프트: changed 유지"
+printf '{"session_id":"t16","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"했습니다."}' | NGG_STATE="$K16" "$W/stop.sh" 2>/dev/null
+printf '%s' "$P16" | NGG_STATE="$K16" "$W/prompt.sh"
+nodir "$K16/state/t16/nonexistent"; [ -s "$K16/state/t16/changed" ] && { echo "❌ 턴 닫힌 뒤 첫 프롬프트: changed 초기화"; fail=$((fail+1)); } || echo "✅ 턴 닫힌 뒤 첫 프롬프트: changed 초기화"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

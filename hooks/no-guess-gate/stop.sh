@@ -2,7 +2,7 @@
 # shellcheck source-path=SCRIPTDIR
 # Stop / SubagentStop: 근거 없는 결론 게이트 v4. 위반 시 exit 2로 턴 종료 차단.
 [ -n "${NGG_INNER:-}" ] && { cat >/dev/null; exit 0; }  # 판정기가 띄운 중첩 세션에서는 돌지 않는다
-d="$(cd "$(dirname "$0")" && pwd)"; . "$d/_common.sh"; read_in; s=$(state_dir "$d")
+d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in; s=$(state_dir "$d")
 # shellcheck disable=SC2153  # LAST/PROMPT 등은 _common.sh의 read_in이 eval로 정의한다
 last="$LAST"; prompt=$(cat "$s/prompt" 2>/dev/null); f="$s/tools"
 ntools=$({ wc -l < "$f"; } 2>/dev/null | tr -d ' '); ntools=${ntools:-0}

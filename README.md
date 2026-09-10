@@ -12,12 +12,12 @@ claude-grounded는 그 한 번을 없앤다. Claude Code 공식 문서가 권하
 | 이런 일이 생기면 | 이렇게 된다 |
 |---|---|
 | 열어 보지도 않고 "그런 파일 없습니다" | 그 답이 나가지 못한다 |
-| 테스트를 안 돌리고 "다 됐습니다" | 턴이 끝나지 않는다 |
+| 테스트를 안 돌리고 "다 됐습니다" | 검사가 자동으로 돌고, 실패하면 턴이 끝나지 않는다 |
 | 막힌 뒤 사과문만 내고 다시 끝내려 함 | 또 막힌다 |
 
 한 번도 부탁하지 않았는데 매번 그렇게 된다. **잊어도 된다는 것이 요점이다.**
 
-> **지금 배포되는 것은 근거 게이트 하나다.** 완료 게이트, 테스트 무결성 게이트, 프로젝트 가드는 [로드맵](#로드맵)에 있고 아직 없다. 이 문서는 있는 것만 적는다.
+> **지금 배포되는 것은 근거 게이트와 완료 게이트 둘이다.** 테스트 무결성 게이트와 프로젝트 가드는 [로드맵](#로드맵)에 있고 아직 없다. 이 문서는 있는 것만 적는다.
 
 ---
 
@@ -70,6 +70,33 @@ Claude가 답을 마치려는 순간 `Stop` 훅이 규칙 여섯 개를 본다. 
 마지막 둘은 정규식으로 다 가릴 수 없다. 그래서 R2a·R2b만 걸렸을 때는 **Haiku에게 의견인지 상태 주장인지 묻고 의견이면 풀어 준다.** 이 판정은 풀어 줄 수만 있고 새로 막지 못한다. 도구를 안 돌린 사실을 잡는 R0·R1·R3·R4는 판정 대상이 아니라 결정적 바닥이 그대로 남는다. 판정이 실패하거나 시간을 넘기면 막은 채로 둔다.
 
 끄려면 `NGG_JUDGE=0`이다. 판정이 불리는 턴은 차단의 약 4%이고, 불리면 5~10초 걸린다.
+
+## 완료 게이트: 검사가 통과해야 턴이 끝난다
+
+코드 파일을 고친 턴은 저장소의 검사를 실제로 돌린 뒤에야 끝난다. 공식 문서가 지정한 방법 그대로다.
+
+> "As a deterministic gate: a Stop hook runs your check as a script and blocks the turn from ending until it passes."
+> (결정적 게이트로: Stop 훅이 검사를 스크립트로 돌리고, 통과할 때까지 턴이 끝나는 것을 막는다.)
+
+검사 명령은 이 순서로 찾는다.
+
+| 순서 | 출처 |
+|---|---|
+| 1 | 저장소 루트의 `.grounded.toml`에 적은 `test_command` |
+| 2 | `package.json`의 `scripts.test` → `npm test` |
+| 3 | `Makefile`의 `test` 타깃 → `make test` |
+| 4 | `pyproject.toml` → `python3 -m pytest -q` |
+
+```toml
+# .grounded.toml
+test_command = "npm test"
+```
+
+설계 원칙 셋이다. **모르는 것으로 막지 않는다** — 검사 명령을 못 찾으면 알리고 통과시킨다. **조용히 실패하지 않는다** — 시간을 넘기면 그 사실을 알리고 막지 않는다. **코드가 아닌 변경은 대상이 아니다** — 문서만 고친 턴은 검사하지 않고, 저장소 밖 파일도 세지 않는다.
+
+끄려면 `NGG_DONE=0`, 제한 시간은 `DONE_TIMEOUT`(기본 180초)이다.
+
+이 저장소도 스스로에게 적용한다. `.grounded.toml`이 자기 테스트를 가리키고 있어서, 훅을 고치면 훅이 자기를 검사한다.
 
 ## 막히면 어떻게 되나
 
@@ -131,9 +158,10 @@ Claude가 이런 메시지를 받는다.
 ```bash
 claude --plugin-dir .                         # 설치본 대신 이 폴더를 그 세션에 로드
 claude plugin validate .                      # 매니페스트와 훅 배선 검사
-hooks/no-guess-gate/unit.sh                   # 결정적 단위 테스트 87건, 9초. 모델을 부르지 않는다
+hooks/no-guess-gate/unit.sh                   # 근거 게이트 89건, 9초. 모델을 부르지 않는다
+hooks/done-gate/unit.sh                       # 완료 게이트 19건
 hooks/no-guess-gate/selftest.sh               # 실제 프롬프트 회귀 12케이스, 몇 분
-shellcheck -x -s bash hooks/no-guess-gate/*.sh
+shellcheck -x -s bash hooks/lib/common.sh hooks/no-guess-gate/*.sh hooks/done-gate/*.sh
 ```
 
 모든 검증은 실행 명령과 출력 원문을 [`docs/VERIFICATION.md`](docs/VERIFICATION.md)에 남긴다. 기여는 [CONTRIBUTING.md](CONTRIBUTING.md), 보안은 [SECURITY.md](SECURITY.md)를 보라.
@@ -143,8 +171,9 @@ shellcheck -x -s bash hooks/no-guess-gate/*.sh
 | 단계 | 내용 | 상태 |
 |---|---|---|
 | 1 | 근거 게이트 | **배포됨** |
-| 2 | 완료 게이트(검사가 통과해야 턴이 끝남), 테스트 무결성 게이트(통과시키려고 테스트를 끄는 것을 차단), 프로젝트 가드(마이그레이션 등 append-only 경로), 저장소 프로필 | 설계 완료 |
-| 3 이후 | 작업 흐름 커맨드 | 검토 중 |
+| 2 | 완료 게이트 | **배포됨** |
+| 3 | 테스트 무결성 게이트(통과시키려고 테스트를 끄는 것을 차단), 프로젝트 가드(마이그레이션 등 append-only 경로), 저장소 프로필 | 설계 완료 |
+| 4 이후 | 작업 흐름 커맨드 | 검토 중 |
 
 ## 비슷한 도구
 

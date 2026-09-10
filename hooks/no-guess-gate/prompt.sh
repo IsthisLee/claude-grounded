@@ -5,7 +5,7 @@
 # 예외 2: 턴이 열려 있는 동안(직전 Stop이 통과하지 않음) 들어온 사용자 메시지는 턴 중간 메시지다.
 #         카운터를 지우면 이미 실행한 도구가 사라져 R0·R1·R3 오탐이 난다(실측 2026-09-09). 유지한다.
 [ -n "${NGG_INNER:-}" ] && { cat >/dev/null; exit 0; }  # 판정기가 띄운 중첩 세션에서는 돌지 않는다
-d="$(cd "$(dirname "$0")" && pwd)"; . "$d/_common.sh"; read_in; s=$(state_dir "$d")
+d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in; s=$(state_dir "$d")
 case "$PROMPT" in
   '<task-notification>'*) echo "continuation" >> "$s/continuations"; exit 0 ;;
 esac
@@ -13,6 +13,6 @@ printf '%s' "$PROMPT" > "$s/prompt"
 if [ -f "$s/tools" ] && [ ! -f "$s/turn_closed" ]; then
   echo "midturn" >> "$s/continuations"
 else
-  : > "$s/tools"; rm -f "$s/continuations" "$s/blocked_at" "$s/turn_closed"
+  : > "$s/tools"; : > "$s/changed"; rm -f "$s/continuations" "$s/blocked_at" "$s/turn_closed"
 fi
 find "$(state_root "$d")/state" -mindepth 1 -maxdepth 1 -type d -mmin +720 -exec rm -rf {} + 2>/dev/null; exit 0

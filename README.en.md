@@ -12,12 +12,12 @@ claude-grounded removes that tenth one. It turns what the Claude Code docs *reco
 | When this happens | This is what happens |
 |---|---|
 | "There's no such file" — without opening anything | That answer never leaves |
-| "All done" — without running the tests | The turn doesn't end |
+| "All done" — without running the tests | The check runs, and a failure keeps the turn open |
 | Apologizing after a block, then trying to end again | Blocked again |
 
 You never asked for any of it, and it happens every time. **The point is that you get to forget.**
 
-> **Only the evidence gate ships today.** The completion gate, test-integrity gate, and project guard are on the [roadmap](#roadmap) and do not exist yet. This document describes only what is real.
+> **Two gates ship today: evidence and completion.** The test-integrity gate and project guard are on the [roadmap](#roadmap) and do not exist yet. This document describes only what is real.
 
 ---
 
@@ -62,6 +62,32 @@ The official docs say to give Claude explicit permission to admit uncertainty, s
 The last two cannot be fully separated by regex. So when *only* R2a/R2b fire, the gate asks Haiku whether the flagged wording is an opinion or a state claim, and releases it if it's an opinion. **That judge can only release, never block.** R0, R1, R3, and R4 — the rules grounded in "no tool was run" — are never sent to the judge, so the deterministic floor stays. If the judge fails or times out, the block stands.
 
 Turn it off with `NGG_JUDGE=0`. It runs on about 4% of blocks and takes 5–10 seconds when it does.
+
+## Completion gate: the check must pass
+
+A turn that changed code files does not end until your project's check actually runs. This is the mechanism the official docs prescribe:
+
+> "As a deterministic gate: a Stop hook runs your check as a script and blocks the turn from ending until it passes."
+
+The check command is resolved in this order:
+
+| Order | Source |
+|---|---|
+| 1 | `test_command` in `.grounded.toml` at the repo root |
+| 2 | `scripts.test` in `package.json` → `npm test` |
+| 3 | a `test` target in `Makefile` → `make test` |
+| 4 | `pyproject.toml` → `python3 -m pytest -q` |
+
+```toml
+# .grounded.toml
+test_command = "npm test"
+```
+
+Three principles. **Never block on what it doesn't know** — if no check command is found, it says so and lets the turn end. **Never fail silently** — a timeout is reported, not swallowed. **Non-code changes are out of scope** — a docs-only turn runs nothing, and files outside the repo don't count.
+
+Disable with `NGG_DONE=0`; the timeout is `DONE_TIMEOUT` (default 180s).
+
+This repo eats its own dog food: its `.grounded.toml` points at its own test suites, so changing a hook makes the hook check itself.
 
 ## When it blocks
 
@@ -120,9 +146,10 @@ The reason for using hooks at all is in the docs too:
 ```bash
 claude --plugin-dir .                         # load this folder instead of the installed copy
 claude plugin validate .                      # manifest and hook wiring
-hooks/no-guess-gate/unit.sh                   # 87 deterministic tests, 9s, no model calls
+hooks/no-guess-gate/unit.sh                   # evidence gate: 89 tests, 9s, no model calls
+hooks/done-gate/unit.sh                       # completion gate: 19 tests
 hooks/no-guess-gate/selftest.sh               # 12-case regression against real prompts, minutes
-shellcheck -x -s bash hooks/no-guess-gate/*.sh
+shellcheck -x -s bash hooks/lib/common.sh hooks/no-guess-gate/*.sh hooks/done-gate/*.sh
 ```
 
 Every verification records the exact command and its raw output in [`docs/VERIFICATION.md`](docs/VERIFICATION.md). See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
@@ -132,8 +159,9 @@ Every verification records the exact command and its raw output in [`docs/VERIFI
 | Stage | Contents | Status |
 |---|---|---|
 | 1 | Evidence gate | **Shipped** |
-| 2 | Completion gate (checks must pass before a turn ends), test-integrity gate (blocks disabling tests to make them pass), project guard (append-only paths such as migrations), repo profile | Designed |
-| 3+ | Workflow commands | Under review |
+| 2 | Completion gate | **Shipped** |
+| 3 | Test-integrity gate (blocks disabling tests to make them pass), project guard (append-only paths such as migrations), repo profile | Designed |
+| 4+ | Workflow commands | Under review |
 
 ## Related
 
