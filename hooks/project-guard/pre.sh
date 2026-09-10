@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# shellcheck source-path=SCRIPTDIR
+# PreToolUse(Edit|Write|Bash): 저장소가 정한 구조 규칙을 그 순간에 강제한다.
+#
+# 공식 best practices의 훅 예시가 같은 자리를 가리킨다.
+#   "Write a hook that blocks writes to the migrations folder."
+# 이 가드는 그보다 정밀하다. **새 파일 추가는 허용하고 기존 파일의 수정·삭제만 막는다.**
+# 마이그레이션은 계속 써야 하기 때문이다.
+#
+# 설정: 저장소 루트 .grounded.toml
+#   append_only = "supabase/migrations, db/migrate"
+# 설정이 없으면 아무것도 막지 않는다. 끄기: NGG_GUARD=0
+d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
+[ "${NGG_GUARD:-1}" = "0" ] && exit 0
+root="${CWD:-$PWD}"; conf="$root/.grounded.toml"
+
+block() { { echo "프로젝트 가드: $1"; echo "$2"; } >&2; exit 2; }
+
+# 검사를 건너뛰는 커밋은 설정과 무관하게 막는다. 비상 통로는 사람이 직접 쓰는 것이지
+# 에이전트가 게이트를 우회하는 길이 아니다.
+if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+commit\b[^|;&]*(--no-verify|[[:space:]]-n\b)'; then
+  block "git commit --no-verify로 커밋 훅을 건너뛰려 했다." "- 명령: $COMMAND
+- 검사를 건너뛰지 말고 통과시켜라. 정말 비상이면 사람이 직접 실행한다."
+fi
+
+[ -f "$conf" ] || exit 0
+paths=$(sed -n 's/^[[:space:]]*append_only[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$conf" | head -1)
+[ -n "$paths" ] || exit 0
+
+# 설정된 경로 아래에 있고 이미 존재하는 파일인가
+guarded() {
+  local f="$1" rel p
+  case "$f" in "$root"/*) rel="${f#"$root"/}";; *) rel="$f";; esac
+  # printf '%s'는 마지막 줄에 개행을 안 붙여 read가 마지막 항목을 버린다. '%s\\n'을 쓴다.
+  printf '%s\n' "$paths" | tr ',' '\n' | while IFS= read -r p; do
+    p=$(printf '%s' "$p" | sed 's#^[[:space:]]*##; s#[[:space:]]*$##; s#/*$##')
+    [ -n "$p" ] || continue
+    case "$rel" in "$p"/*) echo hit;; esac
+  done | grep -q hit
+}
+
+case "$TOOL_NAME" in
+  Edit|Write)
+    [ -n "$FILE_PATH" ] || exit 0
+    guarded "$FILE_PATH" || exit 0
+    [ -f "$FILE_PATH" ] || exit 0     # 새 파일 추가는 허용
+    block "이 경로는 추가만 가능하다(append-only). 기존 파일은 고칠 수 없다." "- 파일: $FILE_PATH
+- 설정: append_only = \"$paths\"  (.grounded.toml)
+- 고쳐야 할 내용이 있으면 지난 파일을 바꾸지 말고 새 파일을 더해라." ;;
+  Bash)
+    printf '%s' "$COMMAND" | grep -qE '(^|[;&|]|\s)(rm|git[[:space:]]+rm|mv)\b' || exit 0
+    for tok in $COMMAND; do
+      case "$tok" in -*) continue;; esac
+      case "$tok" in /*) f="$tok";; *) f="$root/$tok";; esac
+      if guarded "$f" && [ -f "$f" ]; then
+        block "이 경로는 추가만 가능하다(append-only). 삭제나 이동을 막는다." "- 명령: $COMMAND
+- 대상: $tok
+- 설정: append_only = \"$paths\"  (.grounded.toml)"
+      fi
+    done ;;
+esac
+exit 0

@@ -561,3 +561,47 @@ $ printf '\nexit 1\n' >> hooks/done-gate/unit.sh   # 일부러 실패시킴
 ```
 
 한 가지 남긴다. 이 저장소의 `.grounded.toml`은 검사 출력을 `>/dev/null`로 버려 실패 시 꼬리가 비어 있다. 실제 프로젝트에서는 출력을 버리지 말아야 Claude가 무엇이 틀렸는지 읽을 수 있다.
+
+## V6 테스트 무결성 게이트와 프로젝트 가드 (선언한 게이트 넷 완성)
+
+배경: 네 게이트 중 둘만 코드로 있었다. 선언한 기능이 없는 것은 코드 품질이 아니라 미완성이다.
+
+### 테스트 무결성 게이트
+
+근거는 Kent Beck이다. "Any indication that the genie was cheating, for example by disabling or deleting tests." 막는 것은 셋뿐이다. 테스트 파일에 무력화 표기가 늘 때, 단언이 줄 때, 테스트 파일을 지우는 명령일 때. **테스트 수정 전반은 막지 않는다.** 기댓값 변경과 단언 추가는 통과한다.
+
+실행: `hooks/test-integrity/unit.sh` (23건을 먼저 작성)
+
+RED: `실패 23건` (스크립트 없음)
+GREEN 1차: `실패 1건` — 차단 메시지가 "지우는 명령이다"라 테스트의 `grep '삭제'`가 안 맞았다. 문구를 "테스트 파일 삭제 명령이다"로 바꿨다.
+GREEN 2차: `실패 0건`, 23건.
+
+### 프로젝트 가드
+
+근거는 공식 훅 예시다. "Write a hook that blocks writes to the migrations folder." 이 가드는 그보다 정밀하다. 새 파일 추가는 허용하고 기존 파일의 수정·삭제만 막는다. 설정은 `.grounded.toml`의 `append_only`이고, 설정이 없으면 아무것도 막지 않는다. `git commit --no-verify`만 설정과 무관하게 막는다.
+
+실행: `hooks/project-guard/unit.sh` (14건을 먼저 작성)
+
+RED: `실패 14건`
+GREEN 1차: `실패 1건` — **진짜 버그였다.** 설정의 마지막 경로가 적용되지 않았다.
+```
+$ printf '%s' "supabase/migrations, db/migrate" | tr ',' '\n' | while IFS= read -r p; do echo "[$p]"; done
+[supabase/migrations]      ← db/migrate가 사라진다
+```
+`printf '%s'`가 마지막 줄에 개행을 붙이지 않아 `read`가 마지막 항목을 버렸다. `printf '%s\n'`으로 고쳤다. 테스트 7이 마지막 경로를 대상으로 삼은 덕에 잡혔다.
+GREEN 2차: `실패 0건`, 14건.
+
+### 배선과 전체
+
+`hooks.json`의 `PreToolUse`가 셋이 됐다(근거 게이트 무조건, 나머지 둘은 matcher `Edit|Write|Bash`). `unit.sh` 15군을 네 게이트 배선과 여덟 스크립트 실행 비트를 보도록 넓혔다.
+
+```
+근거 게이트      89건  exit 0
+완료 게이트      19건  exit 0
+테스트 무결성    23건  exit 0
+프로젝트 가드    14건  exit 0
+합계            145건
+shellcheck -x   hooks/lib/common.sh hooks/*/*.sh  exit 0
+plugin validate 통과
+도그푸딩         네 스위트를 .grounded.toml에 걸고 완료 게이트로 실행 → 통과
+```

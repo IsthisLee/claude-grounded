@@ -13,11 +13,12 @@ claude-grounded는 그 한 번을 없앤다. Claude Code 공식 문서가 권하
 |---|---|
 | 열어 보지도 않고 "그런 파일 없습니다" | 그 답이 나가지 못한다 |
 | 테스트를 안 돌리고 "다 됐습니다" | 검사가 자동으로 돌고, 실패하면 턴이 끝나지 않는다 |
-| 막힌 뒤 사과문만 내고 다시 끝내려 함 | 또 막힌다 |
+| 통과시키려고 테스트에 `.skip`을 붙임 | 그 편집이 아예 안 된다 |
+| 쌓인 마이그레이션을 고치려 함 | 커밋 전에 막힌다 |
 
 한 번도 부탁하지 않았는데 매번 그렇게 된다. **잊어도 된다는 것이 요점이다.**
 
-> **지금 배포되는 것은 근거 게이트와 완료 게이트 둘이다.** 테스트 무결성 게이트와 프로젝트 가드는 [로드맵](#로드맵)에 있고 아직 없다. 이 문서는 있는 것만 적는다.
+> **게이트 넷이 모두 배포된다.** 근거·완료·테스트 무결성·프로젝트 가드. 이 문서는 있는 것만 적는다.
 
 ---
 
@@ -98,6 +99,32 @@ test_command = "npm test"
 
 이 저장소도 스스로에게 적용한다. `.grounded.toml`이 자기 테스트를 가리키고 있어서, 훅을 고치면 훅이 자기를 검사한다.
 
+## 테스트 무결성 게이트: 테스트가 아니라 코드를 고친다
+
+Kent Beck이 에이전트의 부정행위로 지목한 것을 그대로 막는다.
+
+> "Any indication that the genie was cheating, for example by disabling or deleting tests."
+> (지니가 속임수를 쓴다는 낌새, 예컨대 테스트를 비활성화하거나 지우는 것.)
+
+막는 것은 셋뿐이다. 테스트 파일에 **무력화 표기가 늘어날 때**(`.skip(`, `.only(`, `xit(`, `@pytest.mark.skip`, `#[ignore]`, `t.Skip(` 등), **단언이 줄어들 때**, 그리고 **테스트 파일을 지우는 명령**이다.
+
+**테스트 수정 전반을 막지 않는다.** 기댓값을 고치거나 단언을 더하는 것은 통과한다. TDD는 테스트를 먼저 쓰고 고치는 방법론이라, 그것까지 막으면 문서가 권하는 바와 반대로 간다. 끄려면 `NGG_TESTGUARD=0`이다.
+
+## 프로젝트 가드: 지난 기록은 고치지 않는다
+
+공식 문서의 훅 예시가 가리키는 자리다.
+
+> "Write a hook that blocks writes to the migrations folder."
+
+이 가드는 그보다 정밀하다. **새 파일 추가는 허용하고 기존 파일의 수정·삭제만 막는다.** 마이그레이션은 계속 써야 하기 때문이다.
+
+```toml
+# .grounded.toml
+append_only = "supabase/migrations, db/migrate"
+```
+
+설정이 없으면 아무것도 막지 않는다. 다만 `git commit --no-verify`는 설정과 무관하게 막는다. 비상 통로는 사람이 직접 쓰는 것이지 에이전트가 게이트를 우회하는 길이 아니다. 끄려면 `NGG_GUARD=0`이다.
+
 ## 막히면 어떻게 되나
 
 Claude가 이런 메시지를 받는다.
@@ -158,10 +185,12 @@ Claude가 이런 메시지를 받는다.
 ```bash
 claude --plugin-dir .                         # 설치본 대신 이 폴더를 그 세션에 로드
 claude plugin validate .                      # 매니페스트와 훅 배선 검사
-hooks/no-guess-gate/unit.sh                   # 근거 게이트 89건, 9초. 모델을 부르지 않는다
+hooks/no-guess-gate/unit.sh                   # 근거 게이트 89건. 모델을 부르지 않는다
 hooks/done-gate/unit.sh                       # 완료 게이트 19건
+hooks/test-integrity/unit.sh                  # 테스트 무결성 23건
+hooks/project-guard/unit.sh                   # 프로젝트 가드 14건
 hooks/no-guess-gate/selftest.sh               # 실제 프롬프트 회귀 12케이스, 몇 분
-shellcheck -x -s bash hooks/lib/common.sh hooks/no-guess-gate/*.sh hooks/done-gate/*.sh
+shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
 ```
 
 모든 검증은 실행 명령과 출력 원문을 [`docs/VERIFICATION.md`](docs/VERIFICATION.md)에 남긴다. 기여는 [CONTRIBUTING.md](CONTRIBUTING.md), 보안은 [SECURITY.md](SECURITY.md)를 보라.
@@ -172,8 +201,9 @@ shellcheck -x -s bash hooks/lib/common.sh hooks/no-guess-gate/*.sh hooks/done-ga
 |---|---|---|
 | 1 | 근거 게이트 | **배포됨** |
 | 2 | 완료 게이트 | **배포됨** |
-| 3 | 테스트 무결성 게이트(통과시키려고 테스트를 끄는 것을 차단), 프로젝트 가드(마이그레이션 등 append-only 경로), 저장소 프로필 | 설계 완료 |
-| 4 이후 | 작업 흐름 커맨드 | 검토 중 |
+| 3 | 테스트 무결성 게이트, 프로젝트 가드 | **배포됨** |
+| 4 | 저장소 프로필(세션마다 스택·검사 명령을 자동으로 실어 줌) | 설계 완료 |
+| 5 이후 | 작업 흐름 커맨드 | 검토 중 |
 
 ## 비슷한 도구
 

@@ -19,9 +19,33 @@
           {
             "type": "command",
             "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/no-guess-gate/pre.sh",
-            "statusMessage": "근거 게이트",
             "shell": "bash",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "근거 게이트"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/test-integrity/pre.sh",
+            "shell": "bash",
+            "timeout": 10,
+            "statusMessage": "테스트 무결성 게이트"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/project-guard/pre.sh",
+            "shell": "bash",
+            "timeout": 10,
+            "statusMessage": "프로젝트 가드"
           }
         ]
       }

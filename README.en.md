@@ -13,11 +13,12 @@ claude-grounded removes that tenth one. It turns what the Claude Code docs *reco
 |---|---|
 | "There's no such file" — without opening anything | That answer never leaves |
 | "All done" — without running the tests | The check runs, and a failure keeps the turn open |
-| Apologizing after a block, then trying to end again | Blocked again |
+| Adding `.skip` to a test to make it pass | The edit itself is refused |
+| Editing a migration that already landed | Blocked before the commit |
 
 You never asked for any of it, and it happens every time. **The point is that you get to forget.**
 
-> **Two gates ship today: evidence and completion.** The test-integrity gate and project guard are on the [roadmap](#roadmap) and do not exist yet. This document describes only what is real.
+> **All four gates ship: evidence, completion, test integrity, project guard.** This document describes only what is real.
 
 ---
 
@@ -89,6 +90,31 @@ Disable with `NGG_DONE=0`; the timeout is `DONE_TIMEOUT` (default 180s).
 
 This repo eats its own dog food: its `.grounded.toml` points at its own test suites, so changing a hook makes the hook check itself.
 
+## Test-integrity gate: fix the code, not the test
+
+This blocks exactly what Kent Beck called cheating.
+
+> "Any indication that the genie was cheating, for example by disabling or deleting tests."
+
+Only three things are blocked: a test file gaining **disabling markers** (`.skip(`, `.only(`, `xit(`, `@pytest.mark.skip`, `#[ignore]`, `t.Skip(`, …), **assertions being removed**, and **commands that delete test files**.
+
+**Editing tests is not blocked in general.** Changing an expected value or adding assertions passes. TDD is a methodology of writing and revising tests, so blocking that would contradict the very docs this kit follows. Disable with `NGG_TESTGUARD=0`.
+
+## Project guard: history is append-only
+
+This is the spot the official hook example points at.
+
+> "Write a hook that blocks writes to the migrations folder."
+
+This guard is more precise: **new files are allowed; only edits and deletions of existing files are blocked.** You still need to write migrations.
+
+```toml
+# .grounded.toml
+append_only = "supabase/migrations, db/migrate"
+```
+
+With no configuration it blocks nothing — except `git commit --no-verify`, which is blocked regardless. An escape hatch is for a human to use, not a path for the agent to route around the gate. Disable with `NGG_GUARD=0`.
+
 ## When it blocks
 
 Claude receives this:
@@ -146,10 +172,12 @@ The reason for using hooks at all is in the docs too:
 ```bash
 claude --plugin-dir .                         # load this folder instead of the installed copy
 claude plugin validate .                      # manifest and hook wiring
-hooks/no-guess-gate/unit.sh                   # evidence gate: 89 tests, 9s, no model calls
+hooks/no-guess-gate/unit.sh                   # evidence gate: 89 tests, no model calls
 hooks/done-gate/unit.sh                       # completion gate: 19 tests
+hooks/test-integrity/unit.sh                  # test integrity: 23 tests
+hooks/project-guard/unit.sh                   # project guard: 14 tests
 hooks/no-guess-gate/selftest.sh               # 12-case regression against real prompts, minutes
-shellcheck -x -s bash hooks/lib/common.sh hooks/no-guess-gate/*.sh hooks/done-gate/*.sh
+shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
 ```
 
 Every verification records the exact command and its raw output in [`docs/VERIFICATION.md`](docs/VERIFICATION.md). See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
@@ -160,8 +188,9 @@ Every verification records the exact command and its raw output in [`docs/VERIFI
 |---|---|---|
 | 1 | Evidence gate | **Shipped** |
 | 2 | Completion gate | **Shipped** |
-| 3 | Test-integrity gate (blocks disabling tests to make them pass), project guard (append-only paths such as migrations), repo profile | Designed |
-| 4+ | Workflow commands | Under review |
+| 3 | Test-integrity gate, project guard | **Shipped** |
+| 4 | Repo profile (loads stack and check commands into every session) | Designed |
+| 5+ | Workflow commands | Under review |
 
 ## Related
 

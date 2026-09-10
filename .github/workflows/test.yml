@@ -24,9 +24,11 @@ jobs:
             sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck || brew install shellcheck
           fi
           shellcheck --version
-          shellcheck -x -s bash hooks/lib/common.sh hooks/no-guess-gate/*.sh hooks/done-gate/*.sh
+          shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
 
       - name: 결정적 단위 테스트 (모델 호출 없음)
         run: |
           hooks/no-guess-gate/unit.sh
           hooks/done-gate/unit.sh
+          hooks/test-integrity/unit.sh
+          hooks/project-guard/unit.sh
