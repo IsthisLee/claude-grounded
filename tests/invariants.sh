@@ -57,6 +57,13 @@ done
 if [ -z "$missing" ]; then ok "훅을 복사하는 하네스가 전부 msg.sh 도 옮긴다"
 else bad "msg.sh 를 빠뜨린 하네스가 있다:$missing"; fi
 
+# Windows 는 " < > : | ? * 가 든 파일명을 체크아웃하지 못한다. 그런 파일이 커밋되면
+# CI 가 체크아웃 단계에서 죽고 원인이 안 보인다. 실제로 그렇게 한 번 깨졌다.
+badname=$(git -C "$R" ls-files | tr -d '"' | grep -nE '[<>:|?*\\]' || true)
+badq=$(git -C "$R" ls-files | grep -c '"' || true)
+if [ -z "$badname" ] && [ "$badq" = 0 ]; then ok "Windows 가 못 만드는 파일명이 없다"
+else bad "Windows 에서 체크아웃 못 하는 파일명이 있다"; printf '%s\n' "$badname" | sed 's/^/    /'; fi
+
 # 문서가 "실리는 것은 N개" 라고 적는다. 사용자가 설치 전에 확인하라고 안내한 숫자라 틀리면 안 된다.
 # 실리는 것은 "커밋된 것" 이다. find 로 세면 py_compile 이 만든 __pycache__ 까지 잡혀
 # CI 에서 하나 더 나온다. 실제로 그렇게 세 OS 가 깨졌다. git 이 아는 것만 센다.
