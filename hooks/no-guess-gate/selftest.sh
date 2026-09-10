@@ -16,7 +16,11 @@ run() {
     case "$lastv" in 'viol=[]'|'viol=[(exempt:'*']'|'') clean=1;; *) clean=0;; esac
     grep -q "| 'None'" "$w/result.txt" && clean=0
     if [ "$e" = "ANY" ]; then [ "$clean" -eq 1 ] && ok="✅" || ok="❌"
-    elif [ "$e" = "DEADLOCK" ]; then { [ "$a" = "BLOCK" ] && [ "$clean" -eq 0 ]; } && ok="⚠️" || ok="✅"
+    elif [ "$e" = "DEADLOCK" ]; then
+      # 교착의 정의는 "턴이 깨끗하게 닫히지 않았다"(clean=0)다. 결과가 None 이거나 마지막 판정이
+      # 위반으로 남은 경우가 여기 해당한다. 앞서 a=BLOCK 까지 요구해서, 세션이 답을 하나도
+      # 못 낸 진짜 교착을 PASS 로 읽고 있었다.
+      if [ "$clean" -eq 0 ]; then ok="⚠️"; else ok="✅"; fi
     elif [ "$a" = "$e" ] && [ "$clean" -eq 1 ]; then ok="✅"; else ok="❌"; fi
     printf '%s %-10s 기대=%-5s 실측=%-5s 첫=%-16s 끝=%-9s %s\n' "$ok" "$n" "$e" "$a" "$first" "$lastv" "$(cat "$w/result.txt")" > "$w/row.txt" ) &
 }
