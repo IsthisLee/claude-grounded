@@ -172,4 +172,20 @@ mk13 "테스트를 실행하지 않았습니다." | NGG_STATE="$K13" "$W/stop.sh
 printf '{"session_id":"t13","hook_event_name":"PreToolUse","tool_name":"Bash"}' | NGG_STATE="$K13" "$W/pre.sh"
 mk13 "테스트 통과했습니다. 전부 정상입니다." | NGG_STATE="$K13" "$W/stop.sh" 2>/dev/null; check 0 $? "R3: Bash 1회 뒤 같은 주장 → 통과"
 
+# 14. 인용은 사용이 아니다. 따옴표·백틱 안의 유보 표현은 R2b 대상이 아니다(규칙을 설명하는 문서가 늘 걸리던 문제).
+#     판정기에는 걸린 문장만 보내고(flagged), 훅 입력이 깨지면 stderr 첫 줄이 안내여야 한다(트레이스백이 아니라).
+K14="$T/quote"; P14='{"session_id":"t14","hook_event_name":"UserPromptSubmit","prompt":"완벽하게 진행해야 한다."}'
+mk14() { python3 -c 'import json,sys; print(json.dumps({"session_id":"t14","hook_event_name":"Stop","stop_hook_active":False,"last_assistant_message":sys.argv[1]},ensure_ascii=False))' "$1"; }
+printf '%s' "$P14" | NGG_STATE="$K14" "$W/prompt.sh"
+mk14 '상태형("깨져 보인다")만 잡습니다. judge.py로 풀어 줍니다.' | NGG_STATE="$K14" "$W/stop.sh" 2>/dev/null; check 0 $? "인용: 따옴표 안의 유보 표현 → 통과"
+mk14 '`깨져 보인다`는 상태형이다. judge.py 참고.' | NGG_STATE="$K14" "$W/stop.sh" 2>/dev/null; check 0 $? "인용: 백틱 안의 유보 표현 → 통과"
+mk14 'judge.py가 깨져 보인다.' | NGG_STATE="$K14" "$W/stop.sh" 2>/dev/null; check 2 $? "사용: 따옴표 없는 유보 표현 → exit 2"
+mk14 '문체(보인다/보입니다/보여요)를 통일했습니다. judge.py 추가.' | NGG_STATE="$K14" "$W/stop.sh" 2>/dev/null; check 0 $? "인용: 공백 없는 괄호 목록(보인다/보입니다) → 통과"
+mk14 'judge.py는 (아마 깨져 보인다) 고 본다.' | NGG_STATE="$K14" "$W/stop.sh" 2>/dev/null; check 2 $? "사용: 공백 있는 괄호 안 유보 → exit 2"
+printf '#!/usr/bin/env bash\ncat > "%s/judge-in.json"; echo '"'"'{"release": false, "why": "dump"}'"'"'\n' "$T" > "$J/dump.sh"; chmod +x "$J/dump.sh"
+mk14 '첫 문장은 멀쩡하다. 그런데 judge.py가 깨져 보인다. 마지막 문장도 멀쩡하다.' | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/dump.sh" NGG_STATE="$K14" "$W/stop.sh" 2>/dev/null
+python3 -c 'import sys; t=open(sys.argv[1],encoding="utf-8").read(); a=t.find("Flagged sentences"); b=t.find("Surrounding reply"); f=t[a:b] if 0<=a<b else ""; sys.exit(0 if "깨져 보인다" in f and "첫 문장" not in f else 1)' "$T/judge-in.json"; check 0 $? "판정 프롬프트의 Flagged 절에 걸린 문장만 들어감"
+printf 'this is not json' | NGG_STATE="$K14" "$W/stop.sh" 2>"$T/e14"; check 1 $? "훅 입력이 JSON이 아니면 exit 1"
+head -1 "$T/e14" | grep -q 'no-guess-gate'; check 0 $? "stderr 첫 줄이 안내(트레이스백 아님)"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

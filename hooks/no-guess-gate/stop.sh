@@ -26,7 +26,10 @@ CANNOT='(확인할 수 없|검증할 수 없|실행할 수 없|접근할 수 없
 # 의견형 유보. "나아 보인다"는 설계 의견이지 상태 주장이 아니다. R2b 판정 전에 지운다.
 EVALHEDGE='((더 |훨씬 |좀 더 )?(나아|낫|좋아|괜찮아|적절해|맞아|타당해|자연스러워|충분해|깔끔해|안전해|편해|쉬워|무난해|합리적으로|바람직해|유리해|나쁘지 않아) ?보(인다|임|입니다|여요|이네요|이는데|이지만)|(seems?|looks?|appears?|feels?) (like )?(a |the )?(good|better|best|fine|reasonable|appropriate|sensible|cleaner|simpler|safer|right|ok|okay|nice|worth|solid|clean|natural|clearer|preferable))'
 cannot=0; printf '%s' "$last" | grep -qiE "$CANNOT" && cannot=1
-resid=$(printf '%s' "$last" | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sed -E "s/$EVALHEDGE//g")
+# 인용은 사용이 아니다. 따옴표·백틱 안(80자 이내)과 공백 없는 괄호 목록("(보인다/보입니다)")은 R2a·R2b 판정 전에 지운다. R1은 원문을 본다.
+STRIPQ='import sys,re; t=sys.stdin.read(); sys.stdout.write(re.sub(r"\"[^\"\n]{1,80}\"|“[^”\n]{1,80}”|‘[^’\n]{1,80}’|`[^`\n]{1,80}`|「[^」\n]{1,80}」|\([^()\s]{1,40}\)", " ", t))'
+xform() { python3 -c "$STRIPQ" | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sed -E "s/$EVALHEDGE//g"; }
+resid=$(printf '%s' "$last" | xform)
 # JSON 면제. 답 전체가 JSON 값이면 산문 주장 규칙의 대상이 아니다(판정·비교 출력). python3 검증에 실패하면 면제하지 않는다.
 jsononly=0; printf '%s' "$last" | sed -E '1s/^[[:space:]]*```(json)?[[:space:]]*//; $s/[[:space:]]*```[[:space:]]*$//' | python3 -c 'import sys,json
 t=sys.stdin.read().strip()
@@ -40,7 +43,7 @@ v=""
 ba=$(cat "$s/blocked_at" 2>/dev/null); if [ "$STOP_HOOK_ACTIVE" = "True" ] && [ -n "$ba" ] && [ "$ntools" -le "$ba" ] && [ "$prose" -eq 1 ]; then v="$v R4"; fi
 [ "$ntools" -eq 0 ] && [ "$prose" -eq 1 ] && printf '%s' "$prompt" | grep -qiE "$LOCALQ" && v="$v R0"
 [ "$ntools" -eq 0 ] && [ "$jsononly" -eq 0 ] && r1_hit && v="$v R1"
-[ "$ntools" -eq 0 ] && [ "$prose" -eq 1 ] && printf '%s' "$last" | grep -qiE "$R2a" && v="$v R2a"
+[ "$ntools" -eq 0 ] && [ "$prose" -eq 1 ] && printf '%s' "$resid" | grep -qiE "$R2a" && v="$v R2a"
 [ "$ctx" -eq 1 ] && [ "$prose" -eq 1 ] && printf '%s' "$resid" | grep -qiE "$R2b" && ! printf '%s' "$last" | grep -qiE "$NG2" && v="$v R2b"
 [ "$nbash" -eq 0 ] && printf '%s' "$last" | grep -qiE "$R3" && ! printf '%s' "$last" | grep -qiE "$NEG" && v="$v R3"
 v="${v# }"
@@ -48,7 +51,9 @@ v="${v# }"
 # R0·R1·R3·R4(도구를 안 돌린 사실, 단정, 검증 주장)는 판정 대상이 아니다. 실패·시간초과면 막은 채로 둔다(fail closed).
 JUDGE_DEFAULT=1; judge_note=""; judged=""
 if [ -n "$v" ] && [ "${NGG_JUDGE:-$JUDGE_DEFAULT}" != "0" ] && ! printf '%s' "$v" | grep -qE 'R0|R1|R3|R4'; then
-  why=$(python3 -c 'import json,sys; print(json.dumps(dict(prompt=sys.argv[1],rules=sys.argv[2],tools=sys.argv[3],bash=sys.argv[4],last=sys.argv[5]),ensure_ascii=False))' "$prompt" "$v" "$ntools" "$nbash" "$last" | "$d/judge.py" 2>/dev/null); jr=$?
+  # 걸린 문장만 뽑아 보낸다. 판정 대상이 분명해지고 입력이 짧아진다.
+  flagged=$(printf '%s\n' "$last" | sed -E 's/([.!?。])([[:space:]]|$)/\1\n/g' | while IFS= read -r sent; do [ -n "$sent" ] && printf '%s' "$sent" | xform | grep -qiE "$R2a|$R2b" && printf '%s\n' "$sent"; done)
+  why=$(python3 -c 'import json,sys; print(json.dumps(dict(prompt=sys.argv[1],rules=sys.argv[2],tools=sys.argv[3],bash=sys.argv[4],last=sys.argv[5],flagged=sys.argv[6]),ensure_ascii=False))' "$prompt" "$v" "$ntools" "$nbash" "$last" "$flagged" | "$d/judge.py" 2>/dev/null); jr=$?
   case "$jr" in 0) judged="($v 판정 면제)"; v="";; 1) judge_note="- 모델 판정: 상태 주장으로 봄($why). 규칙 판정을 유지한다.";; *) judge_note="- 모델 판정 실패 또는 시간초과($why). 규칙 판정을 유지한다.";; esac
 fi
 tag="$v"; if [ -z "$v" ]; then [ "$jsononly" -eq 1 ] && tag="(JSON 면제)"; [ "$cannot" -eq 1 ] && tag="(불가 면제)"; [ -n "$judged" ] && tag="$judged"; fi

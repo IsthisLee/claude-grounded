@@ -13,7 +13,7 @@ RUBRIC = (
     "Decide whether EVERY flagged wording is an OPINION (a design preference, recommendation, or evaluation of options) "
     "rather than a CLAIM about local state (existence or content of files/directories, command results, test outcomes).\n"
     "Tools run this turn: {tools} (bash: {bash}).\n\n"
-    "User prompt:\n{prompt}\n\nAssistant reply:\n{last}\n\n"
+    "User prompt:\n{prompt}\n\nFlagged sentences (judge these):\n{flagged}\n\nSurrounding reply (truncated):\n{last}\n\n"
     'Respond with JSON only: {{"release": true|false, "why": "<one short sentence>"}}. '
     "Answer release:true ONLY if no flagged wording concerns local state."
 )
@@ -25,11 +25,12 @@ def main():
         print("bad input"); return 2
     cmd = os.environ.get("NGG_JUDGE_CMD") or DEFAULT_CMD
     try:
-        timeout = float(os.environ.get("NGG_JUDGE_TIMEOUT", "25"))
+        timeout = float(os.environ.get("NGG_JUDGE_TIMEOUT", "40"))
     except ValueError:
         timeout = 20.0
     prompt = RUBRIC.format(rules=d.get("rules", ""), tools=d.get("tools", ""), bash=d.get("bash", ""),
-                           prompt=str(d.get("prompt", ""))[:4000], last=str(d.get("last", ""))[:12000])
+                           prompt=str(d.get("prompt", ""))[:2000], flagged=str(d.get("flagged", "")).strip()[:3000] or "(none extracted)",
+                           last=str(d.get("last", ""))[:1500])
     env = dict(os.environ, NGG_INNER="1", CLAUDE_CODE_DISABLE_AUTO_MEMORY="1")
     try:
         r = subprocess.run(cmd, shell=True, input=prompt, capture_output=True, text=True, timeout=timeout, env=env)
