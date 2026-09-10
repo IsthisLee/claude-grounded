@@ -62,6 +62,8 @@ This blocks exactly what Kent Beck called cheating.
 
 Only three things are blocked: a test file gaining **disabling markers** (`.skip(`, `.only(`, `xit(`, `@pytest.mark.skip`, `#[ignore]`, `t.Skip(`, …), **assertions being removed**, and **commands that delete test files**.
 
+**Runner configs count too.** In `jest.config.*`, `vitest.config.*`, `pytest.ini`, `pyproject.toml`, `.mocharc.*` and friends, an edit that **increases** exclusion directives (`testPathIgnorePatterns`, `--ignore=`, `exclude`, `norecursedirs`, …) is blocked. Deleting tests through config was an open route. EvilGenie (arXiv [2511.21654](https://arxiv.org/abs/2511.21654)) files this under "Modified Testing Procedures". Reducing exclusions, or any unrelated edit, passes.
+
 **Editing tests is not blocked in general.** Changing an expected value or adding assertions passes. TDD is a methodology of writing and revising tests, so blocking that would contradict the very docs this kit follows. Disable with `NGG_TESTGUARD=0`.
 
 ## Project guard: history is append-only

@@ -44,6 +44,8 @@ msg_ko() { case "$1" in
   ti.rm)         M="테스트 파일 삭제 명령이다." ;;
   ti.disable)    M="테스트를 무력화하는 표기가 늘었다(%s → %s)." ;;
   ti.assert)     M="단언이 줄었다(%s → %s)." ;;
+  ti.exclude)    M="테스트 러너 설정에서 제외 지시어가 늘었다(%s → %s)." ;;
+  ti.excludehint) M="- 설정으로 테스트를 빼지 마라. 실패하는 테스트가 있으면 코드를 고쳐라. 정말 그 테스트가 더 이상 맞지 않으면 이유를 밝히고 확인받아라." ;;
   ti.markers)    M="- 걸린 표기: %s" ;;
 
   pg.prefix)     M="프로젝트 가드: %s" ;;
@@ -107,6 +109,8 @@ msg_en() { case "$1" in
   ti.rm)         M="This command deletes a test file." ;;
   ti.disable)    M="Markers that disable tests went up (%s → %s)." ;;
   ti.assert)     M="Assertions went down (%s → %s)." ;;
+  ti.exclude)    M="Exclusion directives in the test-runner config went up (%s → %s)." ;;
+  ti.excludehint) M="- Do not remove tests through config. If a test fails, fix the code. If the test is genuinely wrong now, say why and get that confirmed." ;;
   ti.markers)    M="- Markers found: %s" ;;
 
   pg.prefix)     M="Project guard: %s" ;;

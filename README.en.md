@@ -14,6 +14,7 @@ claude-grounded removes that tenth one. It turns what the Claude Code docs *reco
 | "There's no such file" — without opening anything | That answer never leaves |
 | "All done" — without running the tests | The check runs, and a failure keeps the turn open |
 | Adding `.skip` to a test to make it pass | The edit itself is refused |
+| Removing tests by adding an ignore pattern to the runner config | Blocked too |
 | Editing a migration that already landed | Blocked before the commit |
 
 You never asked for any of it, and it happens every time. **The point is that you get to forget.**

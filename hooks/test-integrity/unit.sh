@@ -73,4 +73,37 @@ grep -q '테스트 무결성 게이트' "$T/tl-ko"; check 0 $? "ko: 한국어 �
 grep -q 'Test-integrity gate' "$T/tl-en"; check 0 $? "en: 영어 머리글"
 nohangul "$(cat "$T/tl-en")"; check 0 $? "en: 한글이 섞이지 않는다"
 
+# 테스트 러너 설정으로 테스트를 빼는 것을 막는다.
+# EvilGenie(arXiv 2511.21654)가 "Modified Testing Procedures"로 분류한 행동이다.
+# 테스트 파일을 건드리지 않고 설정에 제외 패턴만 넣으면 지금까지 그냥 통과했다.
+C="$T/cfg"; mkdir -p "$C"
+cfg() { printf '%s' "$2" > "$C/$1"; }
+
+cfg jest.config.js 'module.exports = { testMatch: ["**/*.test.ts"] };'
+edit "$C" "$C/jest.config.js" 'module.exports = { testMatch: ["**/*.test.ts"] };' \
+  'module.exports = { testMatch: ["**/*.test.ts"], testPathIgnorePatterns: ["src/auth"] };' \
+  | "$W/pre.sh" 2>"$T/c1"; check 2 $? "설정: jest 에 testPathIgnorePatterns 추가 → exit 2"
+grep -q '테스트 무결성 게이트' "$T/c1"; check 0 $? "설정: 게이트 이름이 나온다"
+
+cfg pytest.ini '[pytest]'
+edit "$C" "$C/pytest.ini" '[pytest]' '[pytest]
+addopts = --ignore=tests/auth' | "$W/pre.sh" 2>/dev/null; check 2 $? "설정: pytest 에 --ignore 추가 → exit 2"
+
+cfg vitest.config.ts 'export default { test: {} }'
+edit "$C" "$C/vitest.config.ts" 'export default { test: {} }' 'export default { test: { exclude: ["src/auth/**"] } }' \
+  | "$W/pre.sh" 2>/dev/null; check 2 $? "설정: vitest 에 exclude 추가 → exit 2"
+
+# 제외를 줄이거나 그대로면 통과한다
+cfg jest.config.js 'module.exports = { testPathIgnorePatterns: ["a","b"] };'
+edit "$C" "$C/jest.config.js" 'module.exports = { testPathIgnorePatterns: ["a","b"] };' \
+  'module.exports = { testPathIgnorePatterns: ["a"] };' | "$W/pre.sh" 2>/dev/null; check 0 $? "설정: 제외를 줄이면 통과"
+cfg jest.config.js 'module.exports = { testMatch: ["**/*.test.ts"] };'
+edit "$C" "$C/jest.config.js" 'module.exports = { testMatch: ["**/*.test.ts"] };' \
+  'module.exports = { testMatch: ["**/*.test.ts"], verbose: true };' | "$W/pre.sh" 2>/dev/null; check 0 $? "설정: 제외와 무관한 편집은 통과"
+
+# 설정 파일이 아니면 대상이 아니다
+printf '%s' 'const exclude = ["a"];' > "$C/app.ts"
+edit "$C" "$C/app.ts" 'const exclude = ["a"];' 'const exclude = ["a","b"]; const testPathIgnorePatterns = 1;' \
+  | "$W/pre.sh" 2>/dev/null; check 0 $? "설정: 일반 소스 파일은 대상이 아니다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

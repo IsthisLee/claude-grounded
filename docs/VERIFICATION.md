@@ -1429,3 +1429,54 @@ Stop active=False tools=1 bash=1 ctx=0 viol=[] last=존재하지 않는 경로�
 ### 검증
 
 단위 289건(근거 게이트 130), 퍼징 24종 × 훅 열 = 240회 실패 0, `shellcheck`·`bash -n` exit 0, `claude plugin validate` 통과, 여섯 로케일과 bash 3.2.57 + python 3.9.6 통과.
+
+## V21 최신 논문에서 온 규칙: 러너 설정으로 테스트 빼기
+
+배경: 코딩 에이전트의 보상 해킹을 다룬 2026년 논문들을 찾아 우리 규칙과 대조했다. 가장 가까운 것이 EvilGenie(arXiv [2511.21654](https://arxiv.org/abs/2511.21654))다.
+
+### 논문이 꼽은 행동 셋과 우리 상태
+
+| EvilGenie 분류 | 원문 | 우리가 막나 |
+|---|---|---|
+| Hardcoded Test Cases | "write code that specifically detects the inputs in the test suite and returns the pre-determined outputs" | 못 막는다 |
+| Modified Testing Procedures | "modifying `test.py` to ignore failures or deleting entries from `test_cases.json`" | **일부만** |
+| Heuristic Solutions | "brute-force implementations that only work for small input sizes" | 못 막는다 |
+
+탐지 방법 셋도 대조했다. **File System Monitoring** 과 **LLM Judges** 는 우리가 이미 한다(테스트 무결성 게이트, `judge.py`). **Holdout Testing** 은 훅이 할 수 있는 일이 아니다.
+
+### 둘째 항목의 구멍을 쟀다
+
+우리 테스트 무결성 게이트는 **테스트 파일**만 본다. 테스트를 건드리지 않고 러너 설정만 고치면 어떻게 되는지 확인했다.
+
+```
+jest.config 에 제외 추가 → exit=0
+pytest.ini 에 --ignore 추가 → exit=0
+test_cases.json 에서 케이스 삭제 → exit=0
+```
+
+셋 다 통과했다. 논문이 예로 든 것과 같은 경로다.
+
+### 구현
+
+테스트를 먼저 써서 RED 를 봤다(4건 실패). `RUNNERCFG` 로 러너 설정 파일을 가리고, `EXCLUDE` 로 제외 지시어를 세어 **늘어날 때만** 막는다.
+
+```
+✅ 설정: jest 에 testPathIgnorePatterns 추가 → exit 2
+✅ 설정: pytest 에 --ignore 추가 → exit 2
+✅ 설정: vitest 에 exclude 추가 → exit 2
+✅ 설정: 제외를 줄이면 통과
+✅ 설정: 제외와 무관한 편집은 통과
+✅ 설정: 일반 소스 파일은 대상이 아니다
+```
+
+오탐 위험도 따로 봤다. 이 저장소의 `.grounded.toml` 편집과 `pyproject.toml` 에 `--tb=short` 를 더하는 무해한 편집은 통과한다.
+
+### 안 한 것과 이유
+
+**Hardcoded Test Cases 는 넣지 않았다.** 소스에 테스트 입력값이 나타나는지로 잡으려면 상수가 양쪽에 정당하게 나오는 경우와 구분할 수 없다. 논문 자신도 holdout 방식이 "1.4% false positive rate" 였다고 적는다. 오탐이 잦은 규칙은 게이트를 꺼 버리게 만든다.
+
+**Heuristic Solutions 도 넣지 않았다.** 일반성 판단은 정규식의 일이 아니고, 판정기에 맡기기엔 근거가 약하다.
+
+### 검증
+
+단위 296건, 퍼징 240회 실패 0, `shellcheck`·`bash -n` exit 0, `claude plugin validate` 통과.

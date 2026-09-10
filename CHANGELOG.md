@@ -5,6 +5,9 @@
 ## [Unreleased]
 
 ### 추가
+- **테스트 러너 설정으로 테스트를 빼는 것을 막는다.** `jest.config.*`·`vitest.config.*`·`pytest.ini`·`pyproject.toml`·`.mocharc.*` 등에서 제외 지시어(`testPathIgnorePatterns`, `--ignore=`, `exclude`, `norecursedirs`, …)가 늘면 차단한다. 테스트 파일을 건드리지 않고 설정만 고치면 지금까지 그냥 통과했다. EvilGenie(arXiv 2511.21654)가 "Modified Testing Procedures"로 분류한 행동이고, 그 논문이 꼽은 세 가지 중 우리가 안 막던 것이다. 제외를 줄이거나 무관한 편집은 통과한다.
+
+### 추가
 - **규칙 R5: 마지막으로 돌린 명령이 실패했는데 통과·검증을 주장하면 막는다.** R3은 Bash 실행이 0건일 때만 걸려서, **명령을 돌렸는데 실패한 경우가 비어 있었다.** `npm test`가 깨진 뒤 "전부 통과했습니다"가 그대로 나갔다. 공식 훅 문서의 `PostToolUseFailure` 이벤트를 써서 이 턴의 Bash 결과를 `S`/`F`로 남기고, 마지막이 `F`면 성공 주장을 막는다. 실패한 뒤 고쳐서 다시 성공했으면 걸리지 않는다.
 - `hooks/no-guess-gate/bashres.sh`. 도구 호출마다 도는 자리라 파라미터 확장만 쓰고 파이썬을 부르지 않는다.
 

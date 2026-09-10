@@ -16,6 +16,12 @@ d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
 
 TESTPATH='(\.(test|spec)\.[a-z]+$|(^|/)__tests__/|(^|/)tests?/|(^|/)test_[^/]+\.py$|_test\.(go|py|rb|ex)$|(^|/)spec/)'
 DISABLE='(\.skip\(|\.only\(|\bxit\(|\bxdescribe\(|\bxtest\(|@pytest\.mark\.(skip|xfail)|#\[ignore\]|\bt\.Skip\(|@Ignore\b|\bpending\(|it\.todo\(|describe\.skip\()'
+# 테스트 러너 설정. 테스트 파일을 건드리지 않고 여기에 제외를 넣어 테스트를 빼는 길이 있었다.
+# EvilGenie(arXiv 2511.21654)가 "Modified Testing Procedures"로 분류한 행동이다.
+RUNNERCFG='((^|/)(jest|vitest|karma|playwright|cypress|webpack)\.config\.[a-z]+$|(^|/)(pytest\.ini|tox\.ini|setup\.cfg|pyproject\.toml|phpunit\.xml|\.mocharc\.[a-z]+|\.nycrc)$|(^|/)jest\.config$)'
+# 제외를 뜻하는 지시어. 늘어나면 막는다.
+EXCLUDE='(testPathIgnorePatterns|testPathIgnore|modulePathIgnorePatterns|coveragePathIgnorePatterns|--ignore(-glob)?=|norecursedirs|collect_ignore|testpaths *=|(^|[^a-zA-Z])exclude *[:=]|excludeSpecPattern|ignorePatterns|skipFiles|--deselect)'
+is_runner_cfg() { printf '%s' "$1" | grep -qE "$RUNNERCFG"; }
 ASSERT='(expect\(|assert[A-Za-z_(]|\bassert\b|should\.|\.toBe\(|\.toEqual\(|\.toHaveBeenCalled|require\.(NoError|Equal)|XCTAssert)'
 
 is_test() { printf '%s' "$1" | grep -qE "$TESTPATH"; }
@@ -45,7 +51,19 @@ case "$TOOL_NAME" in
 $(cmd_paths "$COMMAND")
 EOF
     exit 0 ;;
-  Edit|Write) is_test "$FILE_PATH" || exit 0 ;;
+  Edit|Write)
+    if is_runner_cfg "$FILE_PATH"; then
+      if [ "$TOOL_NAME" = "Write" ]; then
+        [ -f "$FILE_PATH" ] || exit 0
+        cb=$(cat "$FILE_PATH" 2>/dev/null); ca="$CONTENT"
+      else cb="$OLD_STRING"; ca="$NEW_STRING"; fi
+      eb=$(count "$EXCLUDE" "$cb"); ea=$(count "$EXCLUDE" "$ca")
+      if [ "$ea" -gt "$eb" ]; then
+        block "$(tn ti.exclude "$eb" "$ea")" "$(t line.file "$FILE_PATH"; tn ti.excludehint)"
+      fi
+      exit 0
+    fi
+    is_test "$FILE_PATH" || exit 0 ;;
   *) exit 0 ;;
 esac
 

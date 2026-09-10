@@ -72,6 +72,8 @@ Kent Beck이 에이전트의 부정행위로 지목한 것을 그대로 막는�
 
 막는 것은 셋뿐이다. 테스트 파일에 **무력화 표기가 늘어날 때**(`.skip(`, `.only(`, `xit(`, `@pytest.mark.skip`, `#[ignore]`, `t.Skip(` 등), **단언이 줄어들 때**, 그리고 **테스트 파일을 지우는 명령**이다.
 
+**테스트 러너 설정도 본다.** `jest.config.*`·`vitest.config.*`·`pytest.ini`·`pyproject.toml`·`.mocharc.*` 같은 파일에서 제외 지시어(`testPathIgnorePatterns`, `--ignore=`, `exclude`, `norecursedirs` 등)가 **늘면** 막는다. 테스트 파일을 건드리지 않고 설정으로 테스트를 빼는 길이 있었다. EvilGenie(arXiv [2511.21654](https://arxiv.org/abs/2511.21654))가 "Modified Testing Procedures"로 분류한 행동이다. 제외를 줄이거나 그와 무관한 편집은 통과한다.
+
 **테스트 수정 전반을 막지 않는다.** 기댓값을 고치거나 단언을 더하는 것은 통과한다. TDD는 테스트를 먼저 쓰고 고치는 방법론이라, 그것까지 막으면 문서가 권하는 바와 반대로 간다. 끄려면 `NGG_TESTGUARD=0`이다.
 
 ## 프로젝트 가드: 지난 기록은 고치지 않는다
