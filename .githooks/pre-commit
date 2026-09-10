@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 공개 저장소 가드: 내부 문서와 개인 식별 정보가 커밋에 섞이는 것을 막는다.
-#   - 경로: .private/ 아래, docs/README-review*, docs/superpowers/ 는 커밋 금지
+#   - 경로: .private/ 아래, docs/design-plan-review*, docs/README-review*, docs/superpowers/ 는 커밋 금지
 #   - 내용: 홈 경로(/Users/<이름>, /home/<이름>) + .private/guard-patterns 에 적힌 개인 패턴(한 줄에 하나, git 무시 폴더라 커밋되지 않음)
 # 우회는 git commit --no-verify 뿐이며, 사람이 의도적으로 할 때만 쓴다.
 set -u
@@ -9,7 +9,7 @@ fail=0
 paths=$(git diff --cached --name-only --diff-filter=ACMR)
 for f in $paths; do
   case "$f" in
-    .private/*|docs/README-review*|docs/README-preview*|docs/superpowers/*)
+    .private/*|docs/design-plan-review*|docs/README-review*|docs/README-preview*|docs/superpowers/*)
       echo "pre-commit: 내부 문서는 공개 저장소에 올리지 않는다: $f"; fail=1;;
   esac
 done
