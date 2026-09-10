@@ -27,15 +27,21 @@ n=$(grep -c . "$ch" 2>/dev/null || echo 0)
 # 경로는 실경로로 맞춰 비교한다. macOS 에서 PostToolUse 는 /private/var/... 를,
 # cwd 는 /var/... 를 준다. 문자열로만 보면 저장소 밖으로 읽혀 코드 파일이 0개가 되고
 # 게이트가 조용히 통과시킨다. 실제 세션에서 그렇게 새어 나갔다.
-code=$(py -c 'import os,sys,re
-root = os.path.realpath(sys.argv[1]) + os.sep
+code=$(py -c 'import os, sys, re
+raw = sys.argv[1].rstrip(os.sep) + os.sep
+try: real = os.path.realpath(sys.argv[1]).rstrip(os.sep) + os.sep
+except Exception: real = raw
 pat = re.compile(sys.argv[2])
 n = 0
 for line in sys.stdin:
     p = line.strip()
-    if not p: continue
-    if not os.path.realpath(p).startswith(root): continue
-    if pat.search(p): n += 1
+    if not p or not pat.search(p): continue
+    # 원본 그대로 맞거나, 심링크를 푼 뒤 맞으면 저장소 안이다.
+    # 앞만 보면 macOS 의 /private 접두에서 새고, 뒤만 보면 Windows 의 MSYS 경로에서 샌다.
+    if p.startswith(raw): n += 1; continue
+    try: rp = os.path.realpath(p)
+    except Exception: continue
+    if rp.startswith(real) or rp.rstrip(os.sep).startswith(raw.rstrip(os.sep)): n += 1
 print(n)' "$root" "$CODE_RE" < "$ch" 2>/dev/null || echo 0)
 [ -z "$code" ] && code=0
 [ "${code:-0}" -gt 0 ] || exit 0
