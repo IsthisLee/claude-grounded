@@ -1,0 +1,155 @@
+# claude-grounded
+
+[![test](https://github.com/IsthisLee/claude-grounded/actions/workflows/test.yml/badge.svg)](https://github.com/IsthisLee/claude-grounded/actions/workflows/test.yml)
+[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**[English](README.en.md)** · 한국어
+
+### 말로 부탁한 규칙은 열 번 중 아홉 번 지켜진다. 나머지 한 번이 사고다.
+
+claude-grounded는 그 한 번을 없앤다. Claude Code 공식 문서가 권하는 것을 **부탁이 아니라 장치**로 바꾸는 플러그인이다.
+
+| 이런 일이 생기면 | 이렇게 된다 |
+|---|---|
+| 열어 보지도 않고 "그런 파일 없습니다" | 그 답이 나가지 못한다 |
+| 테스트를 안 돌리고 "다 됐습니다" | 턴이 끝나지 않는다 |
+| 막힌 뒤 사과문만 내고 다시 끝내려 함 | 또 막힌다 |
+
+한 번도 부탁하지 않았는데 매번 그렇게 된다. **잊어도 된다는 것이 요점이다.**
+
+> **지금 배포되는 것은 근거 게이트 하나다.** 완료 게이트, 테스트 무결성 게이트, 프로젝트 가드는 [로드맵](#로드맵)에 있고 아직 없다. 이 문서는 있는 것만 적는다.
+
+---
+
+## 개발을 몰라도 되는 설명
+
+Claude Code는 코드를 대신 써 주는 AI 조수다. 일은 잘한다. 그런데 가끔 서류를 열어 보지도 않고 "그런 건 없습니다"라고 하고, 검사를 돌리지도 않고 "다 끝냈습니다"라고 한다.
+
+사람이 그러면 "확인은 했어요?"라고 되물으면 된다. 문제는 **매번** 되물어야 한다는 것이다. 사람은 언젠가 깜빡하고, 깜빡한 그날 사고가 난다.
+
+이 플러그인은 그 되묻기를 자동으로 만든다. 안전벨트를 안 매면 차에서 경고음이 나는 것과 같다. 운전자가 기억할 필요가 없고, 기억하지 못해도 괜찮다.
+
+## 설치
+
+Claude Code 세션 안에서 두 줄.
+
+```
+/plugin marketplace add IsthisLee/claude-grounded
+/plugin install grounded@claude-grounded
+```
+
+**당신의 `settings.json`과 `CLAUDE.md`는 한 글자도 바뀌지 않는다.** 설치하면 평소와 똑같다. 게이트는 걸릴 때만 나타난다.
+
+필요한 것은 `bash`와 `python3`다. macOS와 Linux에서 돌고, Windows는 Git Bash가 있을 때만이다.
+
+## 무엇이 막히나
+
+Claude가 답을 마치려는 순간 `Stop` 훅이 규칙 여섯 개를 본다. 하나라도 걸리면 턴이 끝나지 않고, Claude는 실측하거나 물어본 뒤 다시 답한다.
+
+| 코드 | 막는 경우 | 예 |
+|---|---|---|
+| **R0** | 사용자가 이 디렉터리·파일·코드의 상태를 물었는데 도구를 한 번도 안 씀 | "여기 테스트 있어?" → 확인 없이 "없습니다" |
+| **R1** | 도구 없이 특정 경로·파일의 존재나 상태를 단정 | "src/auth.ts에 버그가 있다" (안 읽고) |
+| **R2a** | 도구를 한 번도 안 쓰고 "확인이 필요하다"로 끝냄 | "실제 동작은 확인이 필요합니다."로 끝 |
+| **R2b** | 확인 가능한 로컬 상태를 추정으로 메움 | "아마 설정 파일이 없어서일 겁니다" |
+| **R3** | Bash 실행 0건인데 테스트·검증을 했다고 주장 | "테스트 통과했습니다" (안 돌리고) |
+| **R4** | 막힌 뒤 도구를 하나도 안 쓰고 또 끝내려 함 | 사과문만 내고 끝 |
+
+### 걸리지 않는 것
+
+공식 문서가 "모른다고 인정할 권한을 주라"고 하므로, 정직한 답은 막지 않는다.
+
+| 면제 | 조건 |
+|---|---|
+| **질문** | 답이 되묻거나 `AskUserQuestion`을 썼다. 묻는 것은 언제나 허용된다 |
+| **불가** | "이 세션에서는 도구 실행이 안 된다"처럼 실측이 불가능한 이유를 밝혔다 |
+| **JSON** | 답 전체가 JSON 값이다. 판정·비교 출력에는 확인할 로컬 상태가 없다 |
+| **인용** | 따옴표·백틱 안의 표현. 규칙을 설명하는 글이 규칙에 걸리지 않는다 |
+| **의견** | "이 구조가 나아 보인다"는 설계 의견이지 상태 주장이 아니다 |
+
+마지막 둘은 정규식으로 다 가릴 수 없다. 그래서 R2a·R2b만 걸렸을 때는 **Haiku에게 의견인지 상태 주장인지 묻고 의견이면 풀어 준다.** 이 판정은 풀어 줄 수만 있고 새로 막지 못한다. 도구를 안 돌린 사실을 잡는 R0·R1·R3·R4는 판정 대상이 아니라 결정적 바닥이 그대로 남는다. 판정이 실패하거나 시간을 넘기면 막은 채로 둔다.
+
+끄려면 `NGG_JUDGE=0`이다. 판정이 불리는 턴은 차단의 약 4%이고, 불리면 5~10초 걸린다.
+
+## 막히면 어떻게 되나
+
+Claude가 이런 메시지를 받는다.
+
+```
+근거 없는 결론 게이트 [R1]. 턴을 끝낼 수 없다.
+- R1: 도구 실행 없이 특정 경로/파일의 상태를 단정했다. 지금 실제로 확인하라.
+허용되는 행동은 두 가지뿐이다: (1) 지금 실측한다 (2) 실측이 불가능한
+이유를 답에 명시한다. 필요하면 AskUserQuestion으로 묻는다.
+```
+
+그리고 같은 턴에서 파일을 읽거나 명령을 돌린 뒤 다시 답한다.
+
+**갇히지 않는다.** 공식 문서대로 8회 연속 차단되면 Claude Code가 훅을 무시하고 턴을 끝낸다.
+
+## 오탐
+
+판정은 정규식이라 의도를 다 읽지 못한다. 실제 사용 기록 760턴을 세어 차단 130건 중 오탐이 5분의 1쯤이었고, 세 부류에 몰려 있었다. 셋 다 고쳤다.
+
+| 오탐 | 고친 방법 |
+|---|---|
+| 설계 의견 "어디에 두는 게 나아 보인다" | 평가 형용사 뒤의 유보는 지우고 판정. 남는 것은 Haiku가 가른다 |
+| 도구가 막힌 세션에서 "도구가 안 돈다"고 밝혀도 막힘 | 불가 면제를 R0·R2a·R2b·R4가 공유 |
+| A/B 판정 JSON `{"winner": …}` | 답 전체가 JSON이면 산문 규칙 면제 |
+
+알려진 한계가 하나 있다. R2a의 영어 패턴은 `should verify` 같은 능동형만 잡아 `should be verified`는 지나간다.
+
+오탐을 만나면 [이슈](../../issues/new?template=false-positive.md)로 알려 달라. `${CLAUDE_PLUGIN_DATA}/state/events.log`의 해당 줄이면 충분하다.
+
+## 끄기와 제거
+
+| 원하는 것 | 방법 |
+|---|---|
+| 이 저장소에서만 끄기 | `claude plugin disable grounded@claude-grounded --scope project` |
+| 나만 끄기 | 같은 명령에 `--scope local` |
+| 의미 판정만 끄기 | `NGG_JUDGE=0` |
+| 완전히 지우기 | `claude plugin uninstall grounded@claude-grounded` |
+
+상태는 `~/.claude/plugins/data/grounded-inline/`에 있고 지워도 된다. 남기려면 제거할 때 `--keep-data`를 붙인다.
+
+## 근거
+
+규칙마다 어디서 왔는지 밝힌다. 링크 없는 규칙은 두지 않는다.
+
+| 문서 | 가져온 것 |
+|---|---|
+| [Reduce hallucinations](https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations) | R0·R1·R2b·R4와 면제. "If it can't find a quote, it must retract the claim" (인용을 못 찾으면 그 주장을 철회해야 한다) |
+| [Best practices](https://code.claude.com/docs/en/best-practices) | R3, Stop 훅 방식. "Have Claude show evidence rather than asserting success" (성공을 주장하는 대신 근거를 보여 주게 하라) |
+| [Hooks](https://code.claude.com/docs/en/hooks) · [Hooks guide](https://code.claude.com/docs/en/hooks-guide) | exit 2 차단, 8회 상한, 타임아웃, 판단이 필요한 결정은 모델에게 |
+
+훅을 쓰는 이유도 문서에 있다.
+
+> "Unlike CLAUDE.md instructions which are advisory, hooks are deterministic and guarantee the action happens."
+> (권고에 그치는 CLAUDE.md 지시와 달리, 훅은 결정적이고 그 동작이 반드시 일어나게 보장한다.)
+
+## 개발
+
+```bash
+claude --plugin-dir .                         # 설치본 대신 이 폴더를 그 세션에 로드
+claude plugin validate .                      # 매니페스트와 훅 배선 검사
+hooks/no-guess-gate/unit.sh                   # 결정적 단위 테스트 87건, 9초. 모델을 부르지 않는다
+hooks/no-guess-gate/selftest.sh               # 실제 프롬프트 회귀 12케이스, 몇 분
+shellcheck -x -s bash hooks/no-guess-gate/*.sh
+```
+
+모든 검증은 실행 명령과 출력 원문을 [`docs/VERIFICATION.md`](docs/VERIFICATION.md)에 남긴다. 기여는 [CONTRIBUTING.md](CONTRIBUTING.md), 보안은 [SECURITY.md](SECURITY.md)를 보라.
+
+## 로드맵
+
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| 1 | 근거 게이트 | **배포됨** |
+| 2 | 완료 게이트(검사가 통과해야 턴이 끝남), 테스트 무결성 게이트(통과시키려고 테스트를 끄는 것을 차단), 프로젝트 가드(마이그레이션 등 append-only 경로), 저장소 프로필 | 설계 완료 |
+| 3 이후 | 작업 흐름 커맨드 | 검토 중 |
+
+## 비슷한 도구
+
+[Probity](https://github.com/nizos/probity)(이전 이름 tdd-guard)는 TDD 위반과 금지 패턴을 `PreToolUse`에서 막는다. 겹치지 않고 보완적이다. TDD 강제를 깊게 원하면 같이 쓰면 된다. 이쪽은 **근거 없이 턴이 끝나는 것**을 막는다.
+
+## 라이선스
+
+MIT.
