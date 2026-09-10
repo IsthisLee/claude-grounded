@@ -47,7 +47,13 @@ else bad "변수 확장이 한글을 먹는 곳이 있다. \${var} 로 감싸라
 # 문서가 적어 둔 개수가 실제와 같은지. 숫자는 조용히 낡는다.
 n_sk=$(find "$R/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 if [ "$n_sk" = 7 ]; then ok "커맨드가 일곱이다"; else bad "커맨드가 일곱이 아니다(${n_sk}개). 문서를 고쳐라"; fi
-n_gate=$(find "$R/hooks" -mindepth 1 -maxdepth 1 -type d ! -name lib | wc -l | tr -d ' ')
+# 훅 모듈은 '.sh 를 가진 디렉터리'다. 단순히 디렉터리를 세면 py_compile 이 만든
+# __pycache__ 까지 잡힌다. CI 에서 실제로 그렇게 오탐이 났다.
+n_gate=0
+for d in "$R"/hooks/*/; do
+  case "${d%/}" in */lib) continue;; esac
+  ls "$d"*.sh >/dev/null 2>&1 && n_gate=$((n_gate+1))
+done
 if [ "$n_gate" = 5 ]; then ok "훅 모듈이 다섯이다(게이트 넷 + 프로필)"; else bad "훅 모듈이 다섯이 아니다(${n_gate}개)"; fi
 n_in=$(python3 "$R/hooks/fuzz-inputs.py" | wc -l | tr -d ' ')
 n_hook=$(grep -oE '[a-z-]+/[a-z]+\.sh' "$R/hooks/fuzz.sh" | sort -u | wc -l | tr -d ' ')
