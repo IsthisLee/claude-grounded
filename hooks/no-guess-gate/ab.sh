@@ -4,6 +4,8 @@
 # 지표: 로컬 상태를 묻는 질문에 **도구 0회로** 답한 비율. 낮을수록 좋다.
 # 사용: ./ab.sh [반복수]   결과는 표로 출력한다.
 set -u
+# Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
+export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 G="$(cd "$(dirname "$0")" && pwd)"; R="$G/ab-runs"; rm -rf "$R"; mkdir -p "$R"
 N="${1:-1}"
 # 프롬프트 묶음. SET=easy 는 평범한 질문, SET=hard 는 도구 사용을 막는 압박이 있는 질문이다.

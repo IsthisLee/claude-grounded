@@ -3,6 +3,8 @@
 # 메시지 카탈로그 단위 테스트. 모델을 부르지 않는다.
 # shellcheck source-path=SCRIPTDIR
 set -u
+# Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
+export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 unset NGG_LANG NGG_L NGG_MSG_LOADED
 G="$(cd "$(dirname "$0")" && pwd)"
 fail=0

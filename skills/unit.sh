@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT
 # 스킬 정의 검사. 모델을 부르지 않는다. 배포물이므로 회귀로 고정한다.
 set -u
+# Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
+export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 unset NGG_STATE NGG_INNER NGG_JUDGE
 G="$(cd "$(dirname "$0")" && pwd)"
 fail=0

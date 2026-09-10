@@ -22,7 +22,7 @@ is_test() { printf '%s' "$1" | grep -qE "$TESTPATH"; }
 # 명령에서 파일 인자를 뽑는다. 따옴표로 감싼 경로(공백이 든 파일명은 반드시 그렇다)를 살린다.
 # 따옴표 안의 공백은 구분자가 아니므로 셸과 같은 방식으로 쪼갠다.
 cmd_paths() {
-  printf '%s' "$1" | python3 -c 'import shlex,sys
+  printf '%s' "$1" | py -c 'import shlex,sys
 t=sys.stdin.read()
 try: toks=shlex.split(t, posix=True)
 except ValueError: toks=t.split()

@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+### 추가
+- **Windows를 CI에서 실제로 검사한다.** `windows-latest`를 매트릭스에 넣었다. README가 세 곳에서 Windows를 주장했는데 한 번도 돌려 본 적이 없었고, 넣어 보니 13건이 깨졌다.
+- `hooks/attack-surface.sh`. `SECURITY.md`가 글로 약속한 것을 검사로 바꾼다. 네트워크 명령 없음, 모델 호출은 `judge.py` 하나, 판정기 격리 플래그 셋, 프로필이 `.env` 값을 안 읽음, 시스템 경로에 안 씀, 훅 열 개 전부 타임아웃.
+- `.github/workflows/release.yml`. 태그를 밀면 태그와 `plugin.json` 버전이 같은지, `CHANGELOG`에 그 항목이 있는지 보고 전체 검사를 돌린 뒤 릴리스를 만든다.
+- CI에 `actionlint`. 액션을 커밋 SHA로 고정해 두는 저장소라 배선이 틀어지면 공급망이 흔들린다.
+
+### 수정
+- **Windows에서 한국어가 파이썬을 지나면 훅이 죽던 것.** Windows 파이썬은 stdio와 파일 기본 인코딩이 UTF-8이 아니라 레거시 코드페이지(`cp1252`)다. `common.sh`의 `py()`가 우리 호출에만 `PYTHONUTF8=1`을 붙인다. 전역으로 걸지 않는 이유는 `done-gate`가 남의 테스트 명령을 `eval`로 돌리기 때문이다.
+- **판정기가 Windows에서 `cmd.exe`로 떨어지던 것.** `subprocess.run(cmd, shell=True)`는 Windows에서 `COMSPEC` 뒤에 `cmd.exe` 문법인 `/c`를 붙인다. `executable`로 bash를 넣어도 그 `/c`가 남는다. 셸을 `[bash, -c, cmd]` argv로 직접 부른다.
+- 판정기가 자식 출력을 읽을 때 `encoding`을 주지 않아 레거시 코드페이지로 읽던 것. `encoding="utf-8", errors="replace"`로 못 박았다. 플랫폼과 무관한 결함이다.
+- `attack-surface.sh`의 시스템 경로 검사가 ERE에 없는 전방탐색(`(?!…)`)을 써서 `grep`이 죽고 늘 통과하던 것. 변별 시험에서 잡았다.
+
 ## [1.1.0] - 2026-09-10
 
 ### 추가

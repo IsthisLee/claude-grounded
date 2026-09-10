@@ -1,8 +1,12 @@
 # SPDX-License-Identifier: MIT
 # shellcheck shell=bash
+# Windows 의 파이썬은 stdio 와 파일 기본 인코딩이 UTF-8 이 아니라 레거시 코드페이지다.
+# 한국어가 한 번이라도 지나가면 UnicodeDecodeError 로 훅이 죽는다. 우리 호출에만 UTF-8 을 못 박는다.
+# 전역으로 export 하지 않는 이유: done-gate 가 남의 테스트 명령을 eval 로 돌린다. 그 파이썬까지 바꾸면 안 된다.
+py() { PYTHONUTF8=1 PYTHONIOENCODING=utf-8 python3 "$@"; }
 # IN이 이미 채워져 있으면 그것을 쓴다. 빠른 경로가 stdin을 먼저 읽고 폴백할 때 필요하다.
 read_in() { [ -n "${IN:-}" ] || IN=$(cat); local parsed
-  parsed=$(printf '%s' "$IN" | python3 -c '
+  parsed=$(printf '%s' "$IN" | py -c '
 import sys,json,shlex
 d=json.load(sys.stdin)
 for k in ("session_id","prompt_id","agent_id","tool_name","stop_hook_active","hook_event_name","cwd"):

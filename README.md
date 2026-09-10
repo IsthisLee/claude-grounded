@@ -35,7 +35,7 @@ Claude Code 세션 안에서 두 줄.
 
 **당신의 `settings.json`과 `CLAUDE.md`는 한 글자도 바뀌지 않는다.** 설치하면 평소와 똑같다. 게이트는 걸릴 때만 나타난다.
 
-필요한 것은 `bash`와 `python3`다. macOS와 Linux에서 돌고, Windows는 Git Bash가 있을 때만이다.
+필요한 것은 `bash`와 `python3`다. **macOS · Linux · Windows 셋 다 CI에서 매번 검사한다.** Windows는 Git Bash가 있어야 한다.
 
 ## 무엇이 막히나
 

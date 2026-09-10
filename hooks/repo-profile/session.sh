@@ -23,7 +23,7 @@ pm=""; [ -f pnpm-lock.yaml ] && pm=pnpm
 
 stack=""
 if [ -f package.json ]; then
-  stack=$(python3 - <<'PY' 2>/dev/null || true
+  stack=$(py - <<'PY' 2>/dev/null || true
 import json
 d = json.load(open("package.json"))
 deps = {**(d.get("dependencies") or {}), **(d.get("devDependencies") or {})}
@@ -46,11 +46,11 @@ if [ -f .grounded.toml ]; then
   [ -n "$cmd" ] && src=".grounded.toml"
 fi
 if [ -z "$cmd" ] && [ -f package.json ]; then
-  t=$(python3 -c 'import json;print((json.load(open("package.json")).get("scripts") or {}).get("test",""))' 2>/dev/null || true)
+  t=$(py -c 'import json;print((json.load(open("package.json")).get("scripts") or {}).get("test",""))' 2>/dev/null || true)
   [ -n "$t" ] && { cmd="${pm:-npm} test"; src="package.json scripts.test → $t"; }
 fi
 if [ -z "$cmd" ] && [ -f Makefile ] && grep -qE '^test:' Makefile; then cmd="make test"; src="Makefile"; fi
-if [ -z "$cmd" ] && [ -f pyproject.toml ]; then cmd="python3 -m pytest -q"; src="pyproject.toml"; fi
+if [ -z "$cmd" ] && [ -f pyproject.toml ]; then cmd="py -m pytest -q"; src="pyproject.toml"; fi
 
 appendonly=""
 [ -f .grounded.toml ] && appendonly=$(sed -n 's/^[[:space:]]*append_only[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' .grounded.toml | head -1)
