@@ -1038,3 +1038,52 @@ prompt.sh OK
 공개 후에 성립한다고 적었던 OpenSSF 항목들이 채워졌다. `repo_public`, `sites_https`, `version_unique`(1.0.0), `report_archive`·`report_process`(GitHub Issues), `delivery_mitm`(HTTPS clone). 남은 것은 사람이 있어야 하는 `report_responses`, `vulnerability_report_response`, `discussion`이다.
 
 **실사용자 피드백과 제3자 감사는 여전히 없다.** 이제 받을 수 있는 상태가 됐을 뿐이다.
+
+## V16 새 사용자 실사용 (설치본으로 빈 프로젝트에서)
+
+배경: 지금까지 전부 이 저장소 안에서만 시험했다. **처음 설치한 사람이 남의 프로젝트에서 겪는 것**은 재 본 적이 없다. 빈 npm 프로젝트를 만들어 설치본(`cache/…/1.0.0/`)으로 돌렸다.
+
+### 처음 보는 화면
+
+```
+[grounded 프로필] newproj  (브랜치 HEAD)
+패키지 매니저: npm
+검사 명령: npm test   (출처: package.json scripts.test → node --test tests/)
+게이트: 근거(항상) · 완료(켜짐) · 테스트 무결성(항상) · 프로젝트 가드(설정 없어 --no-verify만 차단)
+```
+
+설정 파일을 하나도 만들지 않았는데 `package.json`에서 검사 명령을 찾아 완료 게이트가 켜졌다. 마지막 줄이 어느 게이트가 놀고 있는지 알려 준다.
+
+### 설정 없는 상태에서 네 게이트
+
+| 상황 | 결과 |
+|---|---|
+| `git commit --no-verify` (커밋 훅 없음) | 통과. 건너뛸 것이 없으므로 막지 않는다 |
+| 테스트에 `test.skip(` 추가 | 차단. "무력화하는 표기가 늘었다(0 → 1)" |
+| 도구 0회로 "tests/add.test.js 파일이 없다" | 차단 `[R0 R1]` |
+| 코드 고치고 턴 끝 | 차단. `npm test`가 실패했다 |
+
+### 마지막 것은 게이트가 옳았다
+
+내 시험용 프로젝트가 틀렸다. `node --test tests/`가 디렉터리를 모듈로 해석해 `MODULE_NOT_FOUND`가 났다. 직접 돌려도 `exit 1`이다. **게이트는 그 원인을 그대로 보여 줬다.**
+
+```
+- 출력 꼬리:
+    # Error: Cannot find module '.../np/tests'
+    #   code: 'MODULE_NOT_FOUND'
+```
+
+설계대로 동작한 것이다. 다만 이때 나가는 마지막 문장이 어긋났다. "테스트를 고쳐서 통과시키지 마라. 코드를 고쳐라"인데, 이건 **코드 문제가 아니라 설정 문제**다. 한 줄을 더했다.
+
+```
+출력이 'command not found', 'Cannot find module', 'No such file' 같은 것이면
+코드가 아니라 검사 설정 문제다. .grounded.toml의 test_command나 프로젝트 설정을 보라.
+```
+
+### CI
+
+```
+unit (ubuntu-latest)  success
+unit (macos-latest)   in_progress
+unit (macos-13)       queued      ← bash 3.2 + 시스템 python3 단계 포함
+```

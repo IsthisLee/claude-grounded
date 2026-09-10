@@ -78,5 +78,6 @@ fi
   echo "- 출력 꼬리:"
   tail -n 40 "$out" | sed 's/^/    /'
   echo "테스트를 고쳐서 통과시키지 마라. 코드를 고쳐라. 요구가 바뀌어 테스트가 틀린 것이면 그 이유를 밝히고 확인받아라."
+  echo "출력이 'command not found', 'Cannot find module', 'No such file' 같은 것이면 코드가 아니라 검사 설정 문제다. .grounded.toml의 test_command나 프로젝트 설정을 보라."
 } >&2
 exit 2
