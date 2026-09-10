@@ -108,6 +108,28 @@ The docs are explicit that this event's stdout becomes context: "The exceptions 
 
 **It carries facts, never instructions** — enforcement is the gates' job. It calls no model, only reads files, and never reads values out of secret files like `.env`. The last line shows which gate is idle, so a missing setting is visible immediately. Disable with `NGG_PROFILE=0`.
 
+## What it costs
+
+Installing this adds time to every turn. Here are the numbers, measured on macOS with bash 3.2 and python 3.13.
+
+| Hook | Runs | Measured |
+|---|---|---|
+| `no-guess-gate/prompt.sh` | once per turn | 72ms |
+| `no-guess-gate/stop.sh` | end of turn | 199ms |
+| `done-gate/stop.sh` | end of turn | 55ms |
+| `no-guess-gate/pre.sh` | per tool call | 20ms |
+| `no-guess-gate/bashres.sh` | per Bash call | 23ms |
+| `test-integrity/pre.sh` | per file edit | 71ms |
+| `project-guard/pre.sh` | per file edit | 46ms |
+| `repo-profile/session.sh` | once per session | 160ms |
+
+**The per-turn floor is about 326ms** (`prompt` plus both `stop` hooks), plus 20ms per tool call and 117ms per file edit. Opening a session costs 160ms once.
+
+Timing a whole session on one short prompt: 1,416ms without hooks, 2,367ms with them (median of 3 each). Most of the gap is the hooks above; the rest is the twenty-odd lines the repo profile puts in context.
+
+Most of the cost is Python startup. `stop.sh` invokes Python three times and startup alone is 26.9ms each. Folding them into one call would save roughly 50ms, but that code builds the input the rules judge, so it is untouched for now.
+
+If it feels slow, turn the profile off with `NGG_PROFILE=0`, or disable gates individually with `NGG_DONE=0`, `NGG_TESTGUARD=0`, `NGG_GUARD=0`.
 ## Seven commands
 
 The gates run on their own. What needs your judgment about *when* and *what it costs* stays a command. All seven are **user-invoked only** (`disable-model-invocation: true`), as the docs advise: "Use `disable-model-invocation: true` for workflows with side effects that you want to trigger manually."

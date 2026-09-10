@@ -119,6 +119,28 @@ append-only 경로: supabase/migrations
 
 **싣는 것은 사실뿐이고 행동 지시는 넣지 않는다.** 그건 게이트의 일이다. 모델을 부르지 않고 파일만 읽으며, `.env` 같은 비밀 파일의 값은 읽지 않는다. 마지막 줄이 어느 게이트가 놀고 있는지 알려 주므로 설정을 빼먹으면 바로 보인다. 끄려면 `NGG_PROFILE=0`이다.
 
+## 얼마나 느려지나
+
+설치하면 매 턴에 비용이 붙는다. 숨기지 않고 적는다. macOS, bash 3.2, python 3.13 에서 잰 값이다.
+
+| 훅 | 언제 도나 | 실측 |
+|---|---|---|
+| `no-guess-gate/prompt.sh` | 턴마다 1회 | 72ms |
+| `no-guess-gate/stop.sh` | 턴 끝 | 199ms |
+| `done-gate/stop.sh` | 턴 끝 | 55ms |
+| `no-guess-gate/pre.sh` | 도구 호출마다 | 20ms |
+| `no-guess-gate/bashres.sh` | Bash 호출마다 | 23ms |
+| `test-integrity/pre.sh` | 파일 편집마다 | 71ms |
+| `project-guard/pre.sh` | 파일 편집마다 | 46ms |
+| `repo-profile/session.sh` | 세션 1회 | 160ms |
+
+**턴마다 붙는 바닥은 약 326ms**(`prompt` + `stop` 둘)이고, 도구를 쓸 때마다 20ms, 파일을 고칠 때마다 117ms가 더 붙는다. 세션을 열 때 160ms가 한 번 든다.
+
+짧은 프롬프트 하나로 세션 전체를 재면 훅 없이 1,416ms, 켜고 2,367ms였다(각 3회 중앙값). 차이의 대부분이 위 훅들이고, 나머지는 프로필이 컨텍스트에 싣는 스무 줄 남짓의 토큰이다.
+
+비용의 대부분은 파이썬 기동이다. `stop.sh` 는 파이썬을 3회 부르고 기동만 회당 26.9ms다. 하나로 합치면 50ms 안팎을 줄일 수 있지만, 판정의 입력을 만드는 자리라 아직 손대지 않았다.
+
+느리면 `NGG_PROFILE=0` 으로 프로필을 끄고, 게이트별로 `NGG_DONE=0`·`NGG_TESTGUARD=0`·`NGG_GUARD=0` 을 쓸 수 있다.
 ## 커맨드 일곱
 
 게이트는 저절로 돌지만, 언제 할지와 비용을 내가 정해야 하는 일은 커맨드로 둔다. 전부 **내가 쳐야만** 돈다(`disable-model-invocation: true`). 공식 문서가 그렇게 권한다. "Use `disable-model-invocation: true` for workflows with side effects that you want to trigger manually."

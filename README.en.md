@@ -38,6 +38,8 @@ You receive 24 files under `plugin/`, and release tags are signed. [SECURITY.md]
 
 **Your `settings.json` and `CLAUDE.md` are not touched.** After installing, everything looks the same. The gate only shows up when it fires.
 
+It adds about 326ms per turn. Per-hook numbers are in [the detail doc](docs/gates.en.md#what-it-costs).
+
 Requires `bash` and `python3`. **macOS, Linux and Windows are all exercised on every CI run.** Windows needs Git Bash.
 
 ## What gets blocked
