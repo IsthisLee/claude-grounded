@@ -13,6 +13,16 @@ When only R2a/R2b fire, the evidence gate asks a small model whether the flagged
 | `NGG_JUDGE_CMD` | (unset) | Replace the whole judge command. Overrides the model setting |
 | `NGG_JUDGE_TIMEOUT` | `40` | Seconds |
 
+### Message language
+
+Every message the gates emit exists in Korean and English. The rule verdict is the same either way.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NGG_LANG` | (locale) | `ko` or `en`. Set it and the locale is ignored |
+
+Without `NGG_LANG` the gate reads `LC_ALL`, then `LC_MESSAGES`, then `LANG`: Korean locales get Korean, everything else gets English. All strings live in `hooks/lib/msg.sh`.
+
 If it fails or times out, the block stands. Each verdict is logged to `${CLAUDE_PLUGIN_DATA}/state/events.log` as `judge=released|kept|failed` with the elapsed seconds.
 
 ## Completion gate: the check must pass
@@ -120,14 +130,13 @@ The reason for using hooks at all is in the docs too:
 ```bash
 claude --plugin-dir .                         # load this folder instead of the installed copy
 claude plugin validate .                      # manifest and hook wiring
-hooks/no-guess-gate/unit.sh                   # evidence gate: 89 tests, no model calls
-hooks/done-gate/unit.sh                       # completion gate: 19 tests
-hooks/test-integrity/unit.sh                  # test integrity: 23 tests
-hooks/project-guard/unit.sh                   # project guard: 14 tests
-hooks/repo-profile/unit.sh                    # repo profile: 16 tests
-skills/unit.sh                                # skill definitions: 4 tests
+for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do
+  hooks/$g/unit.sh || break; done && skills/unit.sh    # 252 assertions, no model calls
+hooks/fuzz.sh                                 # 23 malformed inputs across nine hooks
 hooks/no-guess-gate/selftest.sh               # 12-case regression against real prompts, minutes
-shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
+shellcheck -x -s bash hooks/*/*.sh skills/unit.sh
 ```
+
+Every string the gates emit lives in `hooks/lib/msg.sh`, not in the hooks. A new string goes in with both its Korean and English form; leave one out and `hooks/lib/unit.sh` fails.
 
 Every verification records the exact command and its raw output in [`docs/VERIFICATION.md`](VERIFICATION.md). See [CONTRIBUTING.md](../CONTRIBUTING.md) and [SECURITY.md](../SECURITY.md).

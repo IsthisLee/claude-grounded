@@ -3,9 +3,11 @@
 # 프로젝트 가드 단위 테스트. 모델을 부르지 않는다.
 set -u
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_GUARD
+# 메시지 언어를 못 박는다. 로케일에 따라 문장이 바뀌면 이 아래 문자열 단언이 기계마다 달라진다.
+export NGG_LANG=ko
 G="$(cd "$(dirname "$0")" && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$T/lib/"; cp "$G"/pre.sh "$W"/
+W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$T/lib/"; cp "$G"/pre.sh "$W"/
 fail=0
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
 edit() { python3 -c 'import json,sys; print(json.dumps({"session_id":"pg","hook_event_name":"PreToolUse","cwd":sys.argv[1],"tool_name":sys.argv[2],"tool_input":{"file_path":sys.argv[3]}},ensure_ascii=False))' "$1" "$2" "$3"; }
@@ -61,5 +63,14 @@ mkdir -p "$P/supabase/migrations"; printf 'x\n' > "$P/supabase/migrations/0002 n
 bash_ "$P" 'rm "supabase/migrations/0002 new.sql"' | "$W/pre.sh" 2>/dev/null; check 2 $? "따옴표+공백 마이그레이션 rm → exit 2"
 bash_ "$P" "rm 'supabase/migrations/0001_init.sql'" | "$W/pre.sh" 2>/dev/null; check 2 $? "홑따옴표 마이그레이션 rm → exit 2"
 bash_ "$P" 'rm "src/my app.ts"' | "$W/pre.sh" 2>/dev/null; check 0 $? "따옴표라도 지정 밖이면 통과"
+
+# 메시지 언어
+for L in ko en; do
+  edit "$P" Edit "$P/supabase/migrations/0001_init.sql" | NGG_LANG="$L" "$W/pre.sh" 2>"$T/pl-$L"
+  check 2 $? "$L: append-only 수정 → exit 2"
+done
+grep -q '프로젝트 가드' "$T/pl-ko"; check 0 $? "ko: 한국어 머리글"
+grep -q 'Project guard' "$T/pl-en"; check 0 $? "en: 영어 머리글"
+grep -c '[가-힣]' "$T/pl-en" | grep -qx 0; check 0 $? "en: 한글이 섞이지 않는다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

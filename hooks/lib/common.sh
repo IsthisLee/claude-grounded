@@ -14,7 +14,27 @@ print("FILE_PATH="+shlex.quote(str(ti.get("file_path","") if isinstance(ti,dict)
 print("COMMAND="+shlex.quote(str(ti.get("command","") if isinstance(ti,dict) else "")))
 for k in ("old_string","new_string","content"):
     print(k.upper()+"="+shlex.quote(str(ti.get(k,"") if isinstance(ti,dict) else "")))' 2>/dev/null) || {
-    echo "no-guess-gate: python3로 훅 입력을 읽지 못했다. 이 턴은 판정하지 않았다. python3 설치와 PATH를 확인하라." >&2; exit 1; }
+    t err.python3 >&2; exit 1; }
   eval "$parsed"; }
+# 메시지 언어. NGG_LANG이 우선하고, 없으면 로케일(LC_ALL > LC_MESSAGES > LANG)이 ko 계열일 때만 한국어다.
+# 서브셸을 쓰지 않는다. 이 파일은 도구 호출마다 읽힌다.
+# NGG_L 은 msg.sh 가 읽는다. 파일이 갈려 있어 shellcheck 가 쓰임을 못 본다.
+# shellcheck disable=SC2034
+ngg_lang() {
+  case "${NGG_LANG:-}" in ko|en) NGG_L="$NGG_LANG"; return 0;; esac
+  case "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" in ko|ko_*|ko.*) NGG_L=ko;; *) NGG_L=en;; esac
+}
+NGG_LIB="${BASH_SOURCE[0]%/*}"; [ "$NGG_LIB" = "${BASH_SOURCE[0]}" ] && NGG_LIB=.
+ngg_lang
+# t <키> [인자...] — 카탈로그의 문장을 찍는다. 카탈로그는 처음 쓸 때만 읽는다.
+# tn은 줄바꿈 없이 찍는다. 키가 없으면 키를 그대로 내보내 조용히 사라지지 않게 한다.
+tn() { [ -n "${NGG_MSG_LOADED:-}" ] || {
+    # shellcheck source=hooks/lib/msg.sh
+    . "$NGG_LIB/msg.sh"; NGG_MSG_LOADED=1; }
+  local k="$1"; shift; msg "$k"; [ -n "$M" ] || M="$k"
+  # shellcheck disable=SC2059
+  printf -- "$M" "$@"; }
+t() { tn "$@"; echo; }
+
 state_root() { printf '%s' "${NGG_STATE:-$1}"; }
 state_dir() { local d; d="$(state_root "$1")/state/$SESSION_ID"; [ -n "$AGENT_ID" ] && d="$d/agent-$AGENT_ID"; mkdir -p "$d"; printf '%s' "$d"; }

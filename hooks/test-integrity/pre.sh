@@ -32,7 +32,7 @@ for x in toks:
 
 count() { printf '%s' "$2" | grep -oE "$1" | grep -c . || true; }
 
-block() { { echo "테스트 무결성 게이트: $1"; echo "$2"; echo "테스트가 아니라 코드를 고쳐라. 요구가 바뀌어 테스트가 틀린 것이면, 무엇이 바뀌어 그 테스트가 이제 틀렸는지 밝히고 확인받아라."; } >&2; exit 2; }
+block() { { t ti.prefix "$1"; echo "$2"; t ti.advice; } >&2; exit 2; }
 
 case "$TOOL_NAME" in
   Bash)
@@ -40,8 +40,7 @@ case "$TOOL_NAME" in
     printf '%s' "$COMMAND" | grep -qE '(^|[;&|]|\s)(rm|git[[:space:]]+rm)\b' || exit 0
     while IFS= read -r tok; do
       [ -n "$tok" ] || continue
-      is_test "$tok" && block "테스트 파일 삭제 명령이다." "- 명령: $COMMAND
-- 대상: $tok"
+      is_test "$tok" && block "$(tn ti.rm)" "$(t line.cmd "$COMMAND"; tn line.target "$tok")"
     done <<EOF
 $(cmd_paths "$COMMAND")
 EOF
@@ -60,12 +59,11 @@ fi
 db=$(count "$DISABLE" "$before"); da=$(count "$DISABLE" "$after")
 if [ "$da" -gt "$db" ]; then
   added=$(printf '%s' "$after" | grep -oE "$DISABLE" | sort -u | tr '\n' ' ')
-  block "테스트를 무력화하는 표기가 늘었다(${db} → ${da})." "- 파일: $FILE_PATH
-- 걸린 표기: $added"
+  block "$(tn ti.disable "$db" "$da")" "$(t line.file "$FILE_PATH"; tn ti.markers "$added")"
 fi
 
 ab=$(count "$ASSERT" "$before"); aa=$(count "$ASSERT" "$after")
 if [ "$aa" -lt "$ab" ]; then
-  block "단언이 줄었다(${ab} → ${aa})." "- 파일: $FILE_PATH"
+  block "$(tn ti.assert "$ab" "$aa")" "$(tn line.file "$FILE_PATH")"
 fi
 exit 0

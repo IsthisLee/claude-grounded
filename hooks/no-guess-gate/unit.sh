@@ -6,11 +6,13 @@ set -u
 # 테스트는 주변 환경에 기대지 않는다. 게이트가 자식에게 물려주는 변수가 남아 있으면
 # 폴백 검사 같은 것이 조용히 뒤집힌다(2026-09-10 도그푸딩에서 실측).
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_JUDGE_CMD NGG_JUDGE_TIMEOUT NGG_DONE DONE_TIMEOUT
+# 메시지 언어를 못 박는다. 로케일에 따라 문장이 바뀌면 이 아래 문자열 단언이 기계마다 달라진다.
+export NGG_LANG=ko
 # 단위 테스트는 모델을 부르지 않는다. 수준 2 판정은 기본 끄고, 12군에서만 가짜 판정기로 켠다.
 export NGG_JUDGE=0
 G="$(cd "$(dirname "$0")" && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$T/lib/"; cp "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$G"/judge.py "$W"/
+W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$T/lib/"; cp "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$G"/judge.py "$W"/
 fail=0
 # [ ... ] 뒤의 $?는 조건의 결과라 덮어쓰기 쉽다(SC2319). 파일 검사는 함수로 감싸 명령 결과로 만든다.
 isfile() { [ -f "$1" ]; }
@@ -310,13 +312,25 @@ printf '{"session_id":"t20","hook_event_name":"PreToolUse","tool_input":{"file_p
 grep -qx 'Edit' "$K20/state/t20/tools"; check 0 $? "폴백: 결과가 같다"
 printf 'not json at all' | NGG_STATE="$K20" "$W/pre.sh" 2>/dev/null; check 1 $? "폴백: JSON이 아니면 exit 1(조용히 통과하지 않음)"
 
-# 21. 로케일이 비어도 규칙이 그대로 걸린다. 대괄호 안 멀티바이트가 바이트로 쪼개져 R1이 조용히 빠지던 적이 있다.
+# 21. 메시지 언어. 규칙 판정은 언어와 무관하고 문장만 바뀐다.
+K21="$T/k21"
 mkstop() { printf '{"session_id":"t21","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"%s"}' "$1"; }
+EN='The file src/auth.ts does not exist.'
+printf '%s' "$(mkstop "$EN")" | NGG_LANG=ko NGG_STATE="$K21" "$W/stop.sh" 2>"$T/l1"; check 2 $? "한국어: R1 차단"
+grep -q '근거 없는 결론 게이트' "$T/l1"; check 0 $? "한국어: 한국어 머리글"
+rm -rf "$K21"
+printf '%s' "$(mkstop "$EN")" | NGG_LANG=en NGG_STATE="$K21" "$W/stop.sh" 2>"$T/l2"; check 2 $? "영어: 같은 답이 같은 규칙에 걸린다"
+grep -q 'Evidence gate' "$T/l2"; check 0 $? "영어: 영어 머리글"
+grep -qE '^- R1: you asserted' "$T/l2"; check 0 $? "영어: 규칙 설명도 영어"
+grep -c '[가-힣]' "$T/l2" | grep -qx 0; check 0 $? "영어: 한글이 한 줄도 섞이지 않는다"
+check "$(grep -oE '\[R[0-9a-b ]+\]' "$T/l1")" "$(grep -oE '\[R[0-9a-b ]+\]' "$T/l2")" "두 언어의 판정 코드가 같다"
+
+# 22. 로케일이 비어도 규칙이 그대로 걸린다. 대괄호 안 멀티바이트가 바이트로 쪼개져 R1이 조용히 빠지던 적이 있다.
 KO='src/auth.ts 파일에 버그가 있다.'
 for LC in "ko_KR.UTF-8" "C" ""; do
-  rm -rf "$T/k21"
+  rm -rf "$T/k22"
   # shellcheck disable=SC2016  # 안쪽 sh 가 받을 따옴표다
-  rc=$(env -u LANG -u LC_ALL -u LC_CTYPE LC_ALL="$LC" sh -c 'printf "%s" "$1" | NGG_STATE="$2" "$3" >/dev/null 2>&1; echo $?' _ "$(mkstop "$KO")" "$T/k21" "$W/stop.sh")
+  rc=$(env -u LANG -u LC_ALL -u LC_CTYPE LC_ALL="$LC" sh -c 'printf "%s" "$1" | NGG_STATE="$2" "$3" >/dev/null 2>&1; echo $?' _ "$(mkstop "$KO")" "$T/k22" "$W/stop.sh")
   check 2 "$rc" "LC_ALL=${LC:-(없음)}: 한국어 단정이 R1에 걸린다"
 done
 

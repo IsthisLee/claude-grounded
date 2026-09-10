@@ -3,9 +3,11 @@
 # 저장소 프로필 단위 테스트. 모델을 부르지 않는다.
 set -u
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_PROFILE
+# 메시지 언어를 못 박는다. 로케일에 따라 문장이 바뀌면 이 아래 문자열 단언이 기계마다 달라진다.
+export NGG_LANG=ko
 G="$(cd "$(dirname "$0")" && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$T/lib/"; cp "$G"/session.sh "$W"/
+W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$T/lib/"; cp "$G"/session.sh "$W"/
 fail=0
 lt() { [ "$1" -lt "$2" ]; }
 blank() { [ -z "$1" ]; }
@@ -62,5 +64,10 @@ out=$(run "$P7"); printf '%s' "$out" | grep -qi 'python\|pytest'; check 0 $? "py
 
 # 9. 게이트 상태를 알린다
 out=$(run "$P3"); printf '%s' "$out" | grep -q '게이트'; check 0 $? "켜져 있는 게이트 표시"
+
+# 메시지 언어. 프로필은 컨텍스트에 실리는 글이라 언어가 맞아야 읽힌다.
+out=$(NGG_LANG=ko run "$P3"); printf '%s' "$out" | grep -q 'grounded 프로필'; check 0 $? "ko: 한국어 머리글"
+out=$(NGG_LANG=en run "$P3"); printf '%s' "$out" | grep -q 'grounded profile'; check 0 $? "en: 영어 머리글"
+out=$(NGG_LANG=en run "$P3"); printf '%s' "$out" | grep -c '[가-힣]' | grep -qx 0; check 0 $? "en: 한글이 섞이지 않는다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

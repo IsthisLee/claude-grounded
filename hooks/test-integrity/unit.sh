@@ -3,9 +3,11 @@
 # 테스트 무결성 게이트 단위 테스트. 모델을 부르지 않는다.
 set -u
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_TESTGUARD
+# 메시지 언어를 못 박는다. 로케일에 따라 문장이 바뀌면 이 아래 문자열 단언이 기계마다 달라진다.
+export NGG_LANG=ko
 G="$(cd "$(dirname "$0")" && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$T/lib/"; cp "$G"/pre.sh "$W"/
+W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$T/lib/"; cp "$G"/pre.sh "$W"/
 fail=0
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
 edit() { python3 -c 'import json,sys; print(json.dumps({"session_id":"ti","hook_event_name":"PreToolUse","cwd":sys.argv[1],"tool_name":"Edit","tool_input":{"file_path":sys.argv[2],"old_string":sys.argv[3],"new_string":sys.argv[4]}},ensure_ascii=False))' "$1" "$2" "$3" "$4"; }
@@ -56,5 +58,14 @@ bash_ "$P" 'rm "src/my test.test.ts"' | "$W/pre.sh" 2>/dev/null; check 2 $? "따
 bash_ "$P" "rm 'tests/a b_test.go'" | "$W/pre.sh" 2>/dev/null; check 2 $? "홑따옴표 테스트 파일 rm → exit 2"
 bash_ "$P" 'git rm "src/x.spec.ts"' | "$W/pre.sh" 2>/dev/null; check 2 $? "따옴표 git rm → exit 2"
 bash_ "$P" 'rm "build/my out.js"' | "$W/pre.sh" 2>/dev/null; check 0 $? "따옴표라도 테스트가 아니면 통과"
+
+# 메시지 언어
+for L in ko en; do
+  edit "$P" "$P/src/a.test.ts" "it('works', () => { expect(x).toBe(1) })" "it.skip('works', () => { expect(x).toBe(1) })" \
+    | NGG_LANG="$L" "$W/pre.sh" 2>"$T/tl-$L"; check 2 $? "$L: .skip 추가 → exit 2"
+done
+grep -q '테스트 무결성 게이트' "$T/tl-ko"; check 0 $? "ko: 한국어 머리글"
+grep -q 'Test-integrity gate' "$T/tl-en"; check 0 $? "en: 영어 머리글"
+grep -c '[가-힣]' "$T/tl-en" | grep -qx 0; check 0 $? "en: 한글이 섞이지 않는다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

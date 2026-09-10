@@ -27,7 +27,7 @@ n=$(grep -c . "$ch" 2>/dev/null || echo 0)
 code=$(awk -v root="$root/" 'index($0, root)==1' "$ch" 2>/dev/null | grep -cE "$CODE_RE" || true)
 [ "${code:-0}" -gt 0 ] || exit 0
 
-note() { printf '완료 게이트: %s\n' "$1" >&2; }
+note() { t done.prefix "$1" >&2; }
 
 # 검사 명령을 찾는다. 저장소 설정이 먼저다.
 cmd=""; src=""
@@ -50,7 +50,7 @@ if [ -z "$cmd" ] && [ -f "$root/Makefile" ] && grep -qE '^test:' "$root/Makefile
 fi
 if [ -z "$cmd" ] && [ -f "$root/pyproject.toml" ]; then cmd="python3 -m pytest -q"; src="pyproject.toml"; fi
 if [ -z "$cmd" ]; then
-  note "코드 파일 ${code}개를 고쳤지만 검사 명령을 찾지 못했다. .grounded.toml에 test_command를 적으면 이 턴부터 검사한다. 막지 않는다."
+  note "$(tn done.nocmd "$code")"
   exit 0
 fi
 
@@ -58,7 +58,7 @@ out="$s/done-out"; to="${DONE_TIMEOUT:-180}"; slow="${DONE_SLOW:-30}"; t0=$(date
 ( cd "$root" && eval "$cmd" ) > "$out" 2>&1 &
 pid=$!; i=0
 while kill -0 "$pid" 2>/dev/null; do
-  i=$((i+1)); [ "$i" -ge "$((to*10))" ] && { kill -9 "$pid" 2>/dev/null; wait "$pid" 2>/dev/null; note "검사가 제한 시간 ${to}초를 넘겨 시간초과로 중단했다($src: $cmd). 판정하지 못했으므로 막지 않는다."; exit 0; }
+  i=$((i+1)); [ "$i" -ge "$((to*10))" ] && { kill -9 "$pid" 2>/dev/null; wait "$pid" 2>/dev/null; note "$(tn done.timeout "$to" "$src" "$cmd")"; exit 0; }
   sleep 0.1
 done
 wait "$pid"; rc=$?
@@ -66,18 +66,18 @@ if [ "$rc" -eq 0 ]; then
   : > "$ch"
   el=$(( $(date +%s) - t0 ))
   if [ "$el" -ge "$slow" ] && ! printf '%s' "$src" | grep -q fast_test_command; then
-    note "검사에 ${el}초 걸렸다. 턴마다 이만큼 기다리면 게이트를 꺼 버리게 된다. .grounded.toml에 fast_test_command로 빠른 검사를 따로 적으면 턴 끝에는 그것만 돌리고 전체는 커밋 직전에 한 번 돌린다."
+    note "$(tn done.slow "$el")"
   fi
   exit 0
 fi
 
 {
-  echo "완료 게이트: 검사가 실패했다(exit $rc). 턴을 끝낼 수 없다."
-  echo "- 돌린 명령: $cmd   (출처: $src)"
-  echo "- 고친 코드 파일: ${code}개 (이 턴 변경 ${n}개 중)"
-  echo "- 출력 꼬리:"
+  t done.failhead "$rc"
+  t done.ran "$cmd" "$src"
+  t done.files "$code" "$n"
+  t done.tail
   tail -n 40 "$out" | sed 's/^/    /'
-  echo "테스트를 고쳐서 통과시키지 마라. 코드를 고쳐라. 요구가 바뀌어 테스트가 틀린 것이면 그 이유를 밝히고 확인받아라."
-  echo "출력이 'command not found', 'Cannot find module', 'No such file' 같은 것이면 코드가 아니라 검사 설정 문제다. .grounded.toml의 test_command나 프로젝트 설정을 보라."
+  t done.fixcode
+  t done.setup
 } >&2
 exit 2

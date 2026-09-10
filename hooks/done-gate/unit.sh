@@ -5,9 +5,11 @@ set -u
 # 테스트는 주변 환경에 기대지 않는다. 게이트가 자식에게 물려주는 변수가 남아 있으면
 # 폴백 검사 같은 것이 조용히 뒤집힌다(2026-09-10 도그푸딩에서 실측).
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_JUDGE_CMD NGG_JUDGE_TIMEOUT NGG_DONE DONE_TIMEOUT
+# 메시지 언어를 못 박는다. 로케일에 따라 문장이 바뀌면 이 아래 문자열 단언이 기계마다 달라진다.
+export NGG_LANG=ko
 G="$(cd "$(dirname "$0")" && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$T/lib/"; cp "$G"/post.sh "$G"/stop.sh "$G"/pre.sh "$W"/
+W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$T/lib/"; cp "$G"/post.sh "$G"/stop.sh "$G"/pre.sh "$W"/
 fail=0
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
 isfile() { [ -f "$1" ]; }
@@ -117,5 +119,18 @@ printf 'test_command = "sleep 2"\n' > "$PD/.grounded.toml"
 printf '%s' "$(post td "$PD" "$PD/src/a.ts")" | NGG_STATE="$SD" "$W/post.sh"
 printf '%s' "$(stop td "$PD")" | DONE_SLOW=1 NGG_STATE="$SD" "$W/stop.sh" 2>"$T/e14"; check 0 $? "느려도 통과는 통과"
 grep -q 'fast_test_command' "$T/e14"; check 0 $? "느리면 fast_test_command 분리를 권한다"
+
+# 메시지 언어. 같은 실패가 두 언어에서 같게 걸리고 문장만 바뀐다.
+PL="$T/lang"; mkdir -p "$PL/src"; printf 'x\n' > "$PL/src/a.ts"
+printf 'test_command = "exit 1"\n' > "$PL/.grounded.toml"
+for L in ko en; do
+  SL="$T/sl-$L"
+  printf '%s' "$(post "tl$L" "$PL" "$PL/src/a.ts")" | NGG_STATE="$SL" "$W/post.sh"
+  printf '%s' "$(stop "tl$L" "$PL")" | NGG_LANG="$L" NGG_STATE="$SL" "$W/stop.sh" 2>"$T/el-$L"
+  check 2 $? "$L: 검사 실패 → exit 2"
+done
+grep -q '완료 게이트' "$T/el-ko"; check 0 $? "ko: 한국어 머리글"
+grep -q 'Completion gate' "$T/el-en"; check 0 $? "en: 영어 머리글"
+grep -c '[가-힣]' "$T/el-en" | grep -qx 0; check 0 $? "en: 한글이 섞이지 않는다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

@@ -21,6 +21,16 @@ Claude Code는 코드를 대신 써 주는 AI 조수다. 일은 잘한다. 그�
 | `NGG_JUDGE_CMD` | (없음) | 판정 명령 전체를 다른 것으로 바꾼다. 이걸 주면 모델 설정은 무시된다 |
 | `NGG_JUDGE_TIMEOUT` | `40` | 초 |
 
+### 메시지 언어
+
+게이트가 내보내는 문장은 한국어와 영어 두 벌이다. 규칙 판정은 언어와 상관없이 같다.
+
+| 환경변수 | 기본값 | 뜻 |
+|---|---|---|
+| `NGG_LANG` | (로케일) | `ko` 또는 `en`. 주면 로케일을 무시한다 |
+
+`NGG_LANG`이 없으면 `LC_ALL` → `LC_MESSAGES` → `LANG` 순으로 보고, `ko` 계열이면 한국어, 그 밖에는 영어다. 문장은 `hooks/lib/msg.sh` 한 곳에 모여 있다.
+
 실패하거나 시간을 넘기면 막은 채로 둔다. 결과는 `${CLAUDE_PLUGIN_DATA}/state/events.log`에 `judge=released|kept|failed`와 걸린 초로 남는다.
 
 ## 완료 게이트: 검사가 통과해야 턴이 끝난다
@@ -132,14 +142,13 @@ append-only 경로: supabase/migrations
 ```bash
 claude --plugin-dir .                         # 설치본 대신 이 폴더를 그 세션에 로드
 claude plugin validate .                      # 매니페스트와 훅 배선 검사
-hooks/no-guess-gate/unit.sh                   # 근거 게이트 89건. 모델을 부르지 않는다
-hooks/done-gate/unit.sh                       # 완료 게이트 19건
-hooks/test-integrity/unit.sh                  # 테스트 무결성 23건
-hooks/project-guard/unit.sh                   # 프로젝트 가드 14건
-hooks/repo-profile/unit.sh                    # 저장소 프로필 16건
-skills/unit.sh                                # 스킬 정의 4건
+for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do
+  hooks/$g/unit.sh || break; done && skills/unit.sh    # 합계 252건. 모델을 부르지 않는다
+hooks/fuzz.sh                                 # 망가진 입력 23종 × 훅 아홉
 hooks/no-guess-gate/selftest.sh               # 실제 프롬프트 회귀 12케이스, 몇 분
-shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
+shellcheck -x -s bash hooks/*/*.sh skills/unit.sh
 ```
+
+게이트가 내보내는 문장은 훅이 아니라 `hooks/lib/msg.sh` 한 곳에 있다. 새 문장은 한국어와 영어를 함께 넣는다. 한쪽만 넣으면 `hooks/lib/unit.sh`가 잡는다.
 
 모든 검증은 실행 명령과 출력 원문을 [`docs/VERIFICATION.md`](VERIFICATION.md)에 남긴다. 기여는 [CONTRIBUTING.md](../CONTRIBUTING.md), 보안은 [SECURITY.md](../SECURITY.md)를 보라.

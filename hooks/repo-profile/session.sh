@@ -56,16 +56,16 @@ appendonly=""
 [ -f .grounded.toml ] && appendonly=$(sed -n 's/^[[:space:]]*append_only[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' .grounded.toml | head -1)
 
 {
-  printf '[grounded 프로필] %s' "$name"
-  [ -n "$branch" ] && printf '  (브랜치 %s)' "$branch"
-  printf '\n'
-  [ -n "$pm" ] && printf '패키지 매니저: %s\n' "$pm"
-  [ -n "$stack" ] && printf '스택: %s\n' "$stack"
-  if [ -n "$cmd" ]; then printf '검사 명령: %s   (출처: %s)\n' "$cmd" "$src"
-  else printf '검사 명령을 찾지 못했다. .grounded.toml에 test_command를 적으면 완료 게이트가 이 저장소에서 동작한다.\n'; fi
-  [ -n "$appendonly" ] && printf 'append-only 경로: %s\n' "$appendonly"
-  printf '게이트: 근거(항상) · 완료(%s) · 테스트 무결성(항상) · 프로젝트 가드(%s)\n' \
-    "$([ -n "$cmd" ] && echo 켜짐 || echo '검사 명령 없어 대기')" \
-    "$([ -n "$appendonly" ] && echo 켜짐 || echo '설정 없어 --no-verify만 차단')"
+  tn rp.head "$name"
+  [ -n "$branch" ] && tn rp.branch "$branch"
+  echo
+  [ -n "$pm" ] && t rp.pm "$pm"
+  [ -n "$stack" ] && t rp.stack "$stack"
+  if [ -n "$cmd" ]; then t rp.cmd "$cmd" "$src"
+  else t rp.nocmd; fi
+  [ -n "$appendonly" ] && t rp.appendonly "$appendonly"
+  if [ -n "$cmd" ]; then g1=$(tn rp.on); else g1=$(tn rp.wait); fi
+  if [ -n "$appendonly" ]; then g2=$(tn rp.on); else g2=$(tn rp.noconf); fi
+  t rp.gates "$g1" "$g2"
 } | cut -c1-400 | head -30
 exit 0

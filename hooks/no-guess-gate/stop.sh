@@ -65,23 +65,23 @@ if [ -n "$v" ] && [ "${NGG_JUDGE:-$JUDGE_DEFAULT}" != "0" ] && ! printf '%s' "$v
   jel=$(( $(date +%s) - jt0 ))
   case "$jr" in
     0) judged="($v 판정 면제)"; judge_log="judge=released ${jel}s"; v="";;
-    1) judge_note="- 모델 판정: 상태 주장으로 봄($why). 규칙 판정을 유지한다."; judge_log="judge=kept ${jel}s";;
-    *) judge_note="- 모델 판정 실패 또는 시간초과($why). 규칙 판정을 유지한다."; judge_log="judge=failed ${jel}s";;
+    1) judge_note=$(tn ngg.judgekept "$why"); judge_log="judge=kept ${jel}s";;
+    *) judge_note=$(tn ngg.judgefail "$why"); judge_log="judge=failed ${jel}s";;
   esac
 fi
 tag="$v"; if [ -z "$v" ]; then [ "$jsononly" -eq 1 ] && tag="(JSON 면제)"; [ "$cannot" -eq 1 ] && tag="(불가 면제)"; [ -n "$judged" ] && tag="$judged"; fi
 log "$ctx" "$tag"; if [ -z "$v" ]; then rm -f "$s/blocked_at"; touch "$s/turn_closed"; exit 0; fi
 echo "$ntools" > "$s/blocked_at"
 {
-  echo "근거 없는 결론 게이트 [$v]. 턴을 끝낼 수 없다."
-  case " $v " in *" R0 "*) echo "- R0: 사용자가 이 디렉터리/파일/코드의 상태를 물었는데 도구를 한 번도 실행하지 않았다. 지금 Read/Grep/Glob/Bash로 확인하라.";; esac
-  case " $v " in *" R1 "*) echo "- R1: 도구 실행 없이 특정 경로/파일의 상태를 단정했다. 지금 실제로 확인하라.";; esac
-  case " $v " in *" R2a "*) echo "- R2a: 도구를 한 번도 쓰지 않고 '확인이 필요하다'류의 유보 표현으로 끝냈다. 지금 확인하라. 정말 확인할 수 없는 상황이면 왜 불가능한지 답에 적어라. 모른다고 말하는 것은 허용되지만, 확인할 수 있는데 미루는 것은 안 된다.";; esac
-  case " $v " in *" R2b "*) echo "- R2b: 로컬 상태에 대해 추정 표현('아마', 'probably', 'appears')을 썼다. 실측해서 단정하라.";; esac
-  case " $v " in *" R4 "*) echo "- R4: 직전 차단 이후 도구를 하나도 실행하지 않았다. 사과나 설명으로 턴을 끝낼 수 없다. 지금 실측하거나 AskUserQuestion으로 물어라.";; esac
+  t ngg.head "$v"
+  case " $v " in *" R0 "*) t ngg.r0;; esac
+  case " $v " in *" R1 "*) t ngg.r1;; esac
+  case " $v " in *" R2a "*) t ngg.r2a;; esac
+  case " $v " in *" R2b "*) t ngg.r2b;; esac
+  case " $v " in *" R4 "*) t ngg.r4;; esac
   [ -n "$judge_note" ] && echo "$judge_note"
-  case " $v " in *" R3 "*) echo "- R3: 테스트/검증/확인을 했다고 주장하지만 이 턴에 Bash 실행이 0건이다. 실제로 실행하고 그 출력을 근거로 답하라.";; esac
-  echo "허용되는 행동은 둘뿐이다. (1) 지금 실측한다 (2) 실측이 불가능한 이유를 답에 적는다(예: '이 세션에서는 도구 실행이 안 된다'). 그러면 R0·R2a·R4는 걸리지 않는다. 사용자가 '명령 실행하지 말라'고 했더라도 추측으로 답할 수는 없다. 필요하면 AskUserQuestion으로 물어라."
-  echo "**막힌 답은 이미 화면에 남아 사용자가 읽었다.** 통째로 다시 쓰지 마라. 실측 결과와 그 때문에 달라진 것만 이어서 써라. 앞 답의 결론이 틀렸으면 무엇이 틀렸는지 한 줄로 정정하고 넘어가라. 게이트에 대한 불평은 답변에 내지 마라."
+  case " $v " in *" R3 "*) t ngg.r3;; esac
+  t ngg.allowed
+  t ngg.noretell
 } >&2
 exit 2

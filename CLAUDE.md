@@ -4,16 +4,17 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 
 ## 검사 명령
 
-- `hooks/no-guess-gate/unit.sh` — 근거 게이트 110건. 모델을 부르지 않는다.
-- `hooks/done-gate/unit.sh` — 완료 게이트 29건.
-- `hooks/test-integrity/unit.sh` — 테스트 무결성 27건.
-- `hooks/project-guard/unit.sh` — 프로젝트 가드 21건.
-- `hooks/repo-profile/unit.sh` — 저장소 프로필 16건.
-- `skills/unit.sh` — 스킬 정의 4건.  **합계 207건.**
+- `hooks/lib/unit.sh` — 메시지 카탈로그 17건. 두 언어의 키가 맞는지, 언어 결정 순서가 맞는지 본다.
+- `hooks/no-guess-gate/unit.sh` — 근거 게이트 120건. 모델을 부르지 않는다.
+- `hooks/done-gate/unit.sh` — 완료 게이트 34건.
+- `hooks/test-integrity/unit.sh` — 테스트 무결성 32건.
+- `hooks/project-guard/unit.sh` — 프로젝트 가드 26건.
+- `hooks/repo-profile/unit.sh` — 저장소 프로필 19건.
+- `skills/unit.sh` — 스킬 정의 4건.  **합계 252건.**
 - `hooks/fuzz.sh` — 망가진 입력을 아홉 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
 - `hooks/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다.
 - `hooks/no-guess-gate/ab.sh` — 게이트 켠 채와 끈 채를 비교해 효과를 잰다. `SET=hard`가 압박 프롬프트.
-- `shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh skills/unit.sh`
+- `shellcheck -x -s bash hooks/*/*.sh skills/unit.sh`
 - `claude plugin validate .` · `claude --plugin-dir .`
 
 ## 규칙
@@ -28,12 +29,15 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 ## 구조
 
 - `hooks/hooks.json` — SessionStart · UserPromptSubmit · PreToolUse(넷) · PostToolUse · Stop(둘) · SubagentStop 배선. 상태는 `${CLAUDE_PLUGIN_DATA}`.
-- `hooks/lib/common.sh` — 모든 훅이 공유하는 입력 파서. `no-guess-gate/pre.sh`는 도구 호출마다 돌아 파라미터 확장만 쓰는 빠른 경로가 따로 있다.
+- `hooks/lib/common.sh` — 모든 훅이 공유하는 입력 파서와 메시지 함수 `t`·`tn`. `no-guess-gate/pre.sh`는 도구 호출마다 돌아 파라미터 확장만 쓰는 빠른 경로가 따로 있다.
+- `hooks/lib/msg.sh` — 사람과 모델에게 나가는 문장 46개를 한국어와 영어로 담는다. 차단이 일어날 때만 읽는다. **훅 안에 문장을 직접 쓰지 않는다.** 한쪽 언어에만 넣으면 `hooks/lib/unit.sh`가 잡는다.
 - `hooks/no-guess-gate/stop.sh` — 규칙 R0~R4와 면제 셋. `judge.py`가 R2a·R2b만 걸렸을 때 의견인지 상태 주장인지 작은 모델에게 묻는다(`NGG_JUDGE_MODEL`, 기본 haiku).
 - `hooks/done-gate/` — 코드를 고친 턴에 저장소 검사를 돌린다. 이 저장소의 `.grounded.toml`이 자기 테스트를 가리킨다.
 - `hooks/test-integrity/` — 테스트 무력화 편집과 테스트 파일 삭제를 막는다.
 - `hooks/project-guard/` — `append_only` 경로의 기존 파일 수정·삭제와 `--no-verify` 커밋을 막는다.
 - `hooks/repo-profile/` — `SessionStart`에 저장소 사실을 컨텍스트로 싣는다. 사실만 싣고 행동 지시는 넣지 않는다.
 - `skills/` — 사용자 전용 커맨드 일곱. 내장과 겹치는 것은 만들지 않는다. 새 스킬을 넣으면 `skills/unit.sh`가 정의를 검사한다.
+- **정규식의 대괄호 안에 멀티바이트 문자를 넣지 않는다.** `[.!?。]`처럼 쓰면 `LC_ALL=C`에서 `grep`·`sed`가 바이트로 매칭해 한국어 글자를 한가운데서 자르고 R1이 조용히 안 걸린다. 교체(`|`)로 쓴다.
+- **메시지 언어는 로케일을 따른다.** `NGG_LANG`이 우선하고 없으면 `LC_ALL` → `LC_MESSAGES` → `LANG` 순으로 본다. `ko` 계열이면 한국어, 그 외에는 영어다. 단위 테스트는 머리에서 `NGG_LANG=ko`를 못 박아 기계마다 결과가 달라지지 않게 한다.
 - **테스트는 주변 환경에 기대지 않는다.** `unit.sh`가 머리에서 `NGG_*`를 `unset`한다. 게이트가 자식에게 물려주는 변수 때문에 폴백 검사가 조용히 뒤집힌 적이 있다.
 - 요구 사항: bash, python3. macOS와 Linux. Windows는 Git Bash가 있을 때만.

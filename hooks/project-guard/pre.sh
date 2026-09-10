@@ -15,7 +15,7 @@ d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
 [ "${NGG_GUARD:-1}" = "0" ] && exit 0
 root="${CWD:-$PWD}"; conf="$root/.grounded.toml"
 
-block() { { echo "프로젝트 가드: $1"; echo "$2"; } >&2; exit 2; }
+block() { { t pg.prefix "$1"; echo "$2"; } >&2; exit 2; }
 # 명령에서 파일 인자를 뽑는다. 따옴표로 감싼 경로(공백이 든 파일명은 반드시 그렇다)를 살린다.
 # 따옴표 안의 공백은 구분자가 아니므로 셸과 같은 방식으로 쪼갠다.
 cmd_paths() {
@@ -40,8 +40,7 @@ has_hooks() {
   return 1
 }
 if [ "$TOOL_NAME" = "Bash" ] && has_hooks && printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+commit\b[^|;&]*(--no-verify|[[:space:]]-n\b)'; then
-  block "git commit --no-verify로 커밋 훅을 건너뛰려 했다." "- 명령: $COMMAND
-- 검사를 건너뛰지 말고 통과시켜라. 정말 비상이면 사람이 직접 실행한다."
+  block "$(tn pg.noverify)" "$(t line.cmd "$COMMAND"; tn pg.noverifyt)"
 fi
 
 [ -f "$conf" ] || exit 0
@@ -65,18 +64,14 @@ case "$TOOL_NAME" in
     [ -n "$FILE_PATH" ] || exit 0
     guarded "$FILE_PATH" || exit 0
     [ -f "$FILE_PATH" ] || exit 0     # 새 파일 추가는 허용
-    block "이 경로는 추가만 가능하다(append-only). 기존 파일은 고칠 수 없다." "- 파일: $FILE_PATH
-- 설정: append_only = \"$paths\"  (.grounded.toml)
-- 고쳐야 할 내용이 있으면 지난 파일을 바꾸지 말고 새 파일을 더해라." ;;
+    block "$(tn pg.appendedit)" "$(t line.file "$FILE_PATH"; t pg.conf "$paths"; tn pg.appendtail)" ;;
   Bash)
     printf '%s' "$COMMAND" | grep -qE '(^|[;&|]|\s)(rm|git[[:space:]]+rm|mv)\b' || exit 0
     while IFS= read -r tok; do
       [ -n "$tok" ] || continue
       case "$tok" in /*) f="$tok";; *) f="$root/$tok";; esac
       if guarded "$f" && [ -f "$f" ]; then
-        block "이 경로는 추가만 가능하다(append-only). 삭제나 이동을 막는다." "- 명령: $COMMAND
-- 대상: $tok
-- 설정: append_only = \"$paths\"  (.grounded.toml)"
+        block "$(tn pg.appendrm)" "$(t line.cmd "$COMMAND"; t line.target "$tok"; tn pg.conf "$paths")"
       fi
     done <<EOF
 $(cmd_paths "$COMMAND")

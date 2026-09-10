@@ -73,11 +73,17 @@ What the judge did is recorded in `events.log` as `judge=released` / `kept` / `f
 Claude receives this:
 
 ```
-근거 없는 결론 게이트 [R1]. 턴을 끝낼 수 없다.
-- R1: 도구 실행 없이 특정 경로/파일의 상태를 단정했다. 지금 실제로 확인하라.
+Evidence gate [R1]. This turn cannot end.
+- R1: you asserted the state of a specific path or file without running a tool.
+  Go check it now.
+Only two moves are allowed: (1) measure it now, or (2) state in your answer
+why measuring is impossible (for example, 'tool execution is disabled in
+this session'). (…)
 ```
 
-(Messages are Korean today; English messages are planned.) Claude then reads the file or runs the command in the same turn and answers again.
+Claude then reads the file or runs the command in the same turn and answers again.
+
+Messages follow your locale. `LC_ALL`, `LC_MESSAGES` or `LANG` set to Korean gives Korean; anything else gives English. `NGG_LANG=ko` or `NGG_LANG=en` overrides that.
 
 **You can't get stuck.** Per the official docs, Claude Code overrides the hook and ends the turn after 8 consecutive blocks.
 

@@ -26,16 +26,16 @@ to="${DONE_FULL_TIMEOUT:-600}"
 pid=$!; i=0
 while kill -0 "$pid" 2>/dev/null; do
   i=$((i+1)); [ "$i" -ge "$((to*10))" ] && { kill -9 "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
-    echo "완료 게이트: 커밋 전 전체 검사가 ${to}초를 넘겨 중단했다. 판정하지 못했으므로 막지 않는다." >&2; exit 0; }
+    t done.pretime "$to" >&2; exit 0; }
   sleep 0.1
 done
 wait "$pid"; rc=$?
 [ "$rc" -eq 0 ] && exit 0
 {
-  echo "완료 게이트: 커밋 전 전체 검사가 실패했다(exit $rc). 커밋할 수 없다."
-  echo "- 돌린 명령: $full   (.grounded.toml test_command)"
-  echo "- 출력 꼬리:"
+  t done.prehead "$rc"
+  t done.preran "$full"
+  t done.tail
   tail -n 40 "$out" | sed 's/^/    /'
-  echo "테스트를 고쳐서 통과시키지 마라. 코드를 고쳐라."
+  t done.fixshort
 } >&2
 exit 2
