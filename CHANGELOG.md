@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-10
+
 ### 추가
 - **커맨드 일곱**: `/grounded:spec` · `init` · `tdd` · `ship` · `handoff` · `status` · `auto`. 전부 사용자 전용(`disable-model-invocation: true`)이다. 계획·탐색·리뷰·실행 확인·반복은 내장(plan mode, Explore, `/code-review`, `/verify`, `/goal`)을 부르고 새로 만들지 않았다.
 - **저장소 프로필**: `SessionStart`에서 패키지 매니저·스택·검사 명령·append-only 경로·게이트 상태를 스무 줄 안팎으로 컨텍스트에 싣는다. 모델을 부르지 않고 비밀 파일 값은 읽지 않는다. `NGG_PROFILE=0`으로 끈다.
