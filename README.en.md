@@ -34,7 +34,7 @@ Two lines inside a Claude Code session.
 /plugin install grounded@claude-grounded
 ```
 
-You receive 23 files under `plugin/`, and release tags are signed. [SECURITY.md](SECURITY.md#설치할-것을-직접-확인하는-법) shows how to check.
+You receive 24 files under `plugin/`, and release tags are signed. [SECURITY.md](SECURITY.md#설치할-것을-직접-확인하는-법) shows how to check.
 
 **Your `settings.json` and `CLAUDE.md` are not touched.** After installing, everything looks the same. The gate only shows up when it fires.
 

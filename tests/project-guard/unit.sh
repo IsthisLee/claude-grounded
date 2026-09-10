@@ -81,4 +81,13 @@ grep -q '프로젝트 가드' "$T/pl-ko"; check 0 $? "ko: 한국어 머리글"
 grep -q 'Project guard' "$T/pl-en"; check 0 $? "en: 영어 머리글"
 nohangul "$(cat "$T/pl-en")"; check 0 $? "en: 한글이 섞이지 않는다"
 
+# 문서에 플래그 이름을 적는 것은 사용이 아니다.
+# 근거 게이트에는 인용 면제가 있는데 프로젝트 가드에는 없어서, README 표에 적다가 막혔다.
+bash_ "$P" 'echo '\''use --no-verify to skip'\'' > doc.md' | "$W/pre.sh" 2>/dev/null; check 0 $? "인용: 문서에 플래그를 적는 것은 사용이 아니다"
+bash_ "$P" 'printf '\''%s'\'' '\''| 가드 | --no-verify 차단 |'\'' >> README.md' | "$W/pre.sh" 2>/dev/null; check 0 $? "인용: 표에 적는 것도 사용이 아니다"
+bash_ "$P" 'git commit -m '\''docs: --no-verify 설명 추가'\''' | "$W/pre.sh" 2>/dev/null; check 0 $? "인용: 커밋 메시지에 든 것은 사용이 아니다"
+bash_ "$P" 'git commit --no-verify -m x' | "$W/pre.sh" 2>/dev/null; check 2 $? "인용: 진짜 사용은 그대로 막는다"
+bash_ "$P" 'echo hi; git commit --no-verify -m x' | "$W/pre.sh" 2>/dev/null; check 2 $? "인용: 뒤 문장의 진짜 사용도 막는다"
+bash_ "$P" 'git commit -m x' | "$W/pre.sh" 2>/dev/null; check 0 $? "인용: 평범한 커밋은 통과"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

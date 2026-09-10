@@ -27,10 +27,10 @@ cd claude-grounded
 git tag -v v1.3.1        # Good "git" signature 가 나와야 한다
 ```
 
-**실리는 것은 `plugin/` 뿐이다.** 23개 파일이고 그중 도는 것은 훅 열과 스킬 일곱이다. 테스트·문서·CI는 설치본에 들어가지 않는다.
+**실리는 것은 `plugin/` 뿐이다.** 24개 파일이고 그중 도는 것은 훅 열과 스킬 일곱이다. 테스트·문서·CI는 설치본에 들어가지 않는다.
 
 ```bash
-find plugin -type f | wc -l          # 23
+git ls-files plugin | wc -l          # 24
 cat plugin/hooks/hooks.json          # 어느 이벤트에 무엇이 걸리는지 전부
 ```
 

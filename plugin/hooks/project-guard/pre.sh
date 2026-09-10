@@ -51,7 +51,20 @@ has_hooks() {
   [ -n "$hp" ] && [ -e "$root/$hp/pre-commit" ] && return 0
   return 1
 }
-if [ "$TOOL_NAME" = "Bash" ] && has_hooks && printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+commit\b[^|;&]*(--no-verify|[[:space:]]-n\b)'; then
+# 플래그가 '쓰였는지' 는 토큰으로 봐야 한다. 명령 문자열을 통째로 훑으면
+# 커밋 메시지 안에 플래그 이름을 적기만 해도 걸린다. 실제로 README 표에 적다가 막혔다.
+# 문장을 나눈 뒤 git commit 으로 시작하는 문장의 인자에 플래그가 토큰으로 있는지만 본다.
+skips_hooks() {
+  printf '%s' "$1" | py -c 'import re,shlex,sys
+t = sys.stdin.read()
+for stmt in re.split(r"[;&|\n]+", t):
+    try: toks = shlex.split(stmt, posix=True)
+    except ValueError: continue
+    if len(toks) < 2 or toks[0] != "git" or toks[1] != "commit": continue
+    if "--no-verify" in toks[2:] or "-n" in toks[2:]:
+        print("yes"); break' | grep -q yes
+}
+if [ "$TOOL_NAME" = "Bash" ] && has_hooks && skips_hooks "$COMMAND"; then
   block "$(tn pg.noverify)" "$(t line.cmd "$COMMAND"; tn pg.noverifyt)"
 fi
 
