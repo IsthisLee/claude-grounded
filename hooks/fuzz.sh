@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# 훅 견고성 시험. 망가진 입력을 아홉 훅 전부에 던져 **조용히 통과하지 않는지** 본다.
+# 훅 견고성 시험. 망가진 입력을 열 훅 전부에 던져 **조용히 통과하지 않는지** 본다.
 #
 # 게이트가 조용히 꺼지는 것이 이 프로젝트의 최악이다. 그래서 이상한 입력에서도
 # (a) 정상 판정하거나 (b) 알리고 종료해야 한다. 트레이스백을 내며 exit 0 이면 실패다.
@@ -32,7 +32,7 @@ try() { # $1 훅 경로, $2 입력
 # 명령 치환이 실행되면 이 파일이 생긴다. 가드가 인자를 쪼갤 때 eval 하지 않는지 본다.
 CANARY="$T/canary"
 
-HOOKS="no-guess-gate/prompt.sh no-guess-gate/pre.sh no-guess-gate/stop.sh \
+HOOKS="no-guess-gate/prompt.sh no-guess-gate/pre.sh no-guess-gate/stop.sh no-guess-gate/bashres.sh \
 done-gate/post.sh done-gate/stop.sh done-gate/pre.sh \
 test-integrity/pre.sh project-guard/pre.sh repo-profile/session.sh"
 

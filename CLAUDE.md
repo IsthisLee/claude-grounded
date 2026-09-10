@@ -5,15 +5,15 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 ## 검사 명령
 
 - `hooks/lib/unit.sh` — 메시지 카탈로그 21건. 두 언어의 키가 맞는지, 언어 결정 순서가 맞는지, 카탈로그가 사라져도 조용히 통과하지 않는지 본다.
-- `hooks/no-guess-gate/unit.sh` — 근거 게이트 120건. 모델을 부르지 않는다.
+- `hooks/no-guess-gate/unit.sh` — 근거 게이트 130건. 모델을 부르지 않는다.
 - `hooks/done-gate/unit.sh` — 완료 게이트 34건.
 - `hooks/test-integrity/unit.sh` — 테스트 무결성 32건.
 - `hooks/project-guard/unit.sh` — 프로젝트 가드 26건.
 - `hooks/repo-profile/unit.sh` — 저장소 프로필 19건.
 - `skills/unit.sh` — 스킬 정의 4건.
 - `hooks/attack-surface.sh` — SECURITY.md가 적은 공격면과 코드가 맞는지 9건.
-- `hooks/invariants.sh` — 매니페스트·CHANGELOG·문서의 숫자, 셸 인용, 하네스의 카탈로그 복사 14건.  **합계 281건.**
-- `hooks/fuzz.sh` — 망가진 입력을 아홉 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
+- `hooks/invariants.sh` — 매니페스트·CHANGELOG·문서의 숫자, 셸 인용, 하네스의 카탈로그 복사 14건.  **합계 289건.**
+- `hooks/fuzz.sh` — 망가진 입력을 열 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
 - `hooks/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다.
 - `hooks/no-guess-gate/ab.sh` — 게이트 켠 채와 끈 채를 비교해 효과를 잰다. `SET=hard`가 압박 프롬프트.
 - `hooks/no-guess-gate/judge-accuracy.sh` — 판정기 정확도와 소요 시간. 의견 여섯·상태 주장 여섯. README가 인용하는 숫자가 여기서 나온다. 모델을 부르고 몇 분 걸린다.
@@ -32,9 +32,10 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 ## 구조
 
 - `hooks/hooks.json` — SessionStart · UserPromptSubmit · PreToolUse(넷) · PostToolUse · Stop(둘) · SubagentStop 배선. 상태는 `${CLAUDE_PLUGIN_DATA}`.
+- `hooks/no-guess-gate/bashres.sh` — `PostToolUse`·`PostToolUseFailure`(Bash)에서 이 턴의 Bash 결과를 `S`/`F`로 남긴다. R5가 마지막 글자만 본다.
 - `hooks/lib/common.sh` — 모든 훅이 공유하는 입력 파서와 메시지 함수 `t`·`tn`. `no-guess-gate/pre.sh`는 도구 호출마다 돌아 파라미터 확장만 쓰는 빠른 경로가 따로 있다.
 - `hooks/lib/msg.sh` — 사람과 모델에게 나가는 문장 46개를 한국어와 영어로 담는다. 차단이 일어날 때만 읽는다. **훅 안에 문장을 직접 쓰지 않는다.** 한쪽 언어에만 넣으면 `hooks/lib/unit.sh`가 잡는다.
-- `hooks/no-guess-gate/stop.sh` — 규칙 R0~R4와 면제 셋. `judge.py`가 R2a·R2b만 걸렸을 때 의견인지 상태 주장인지 작은 모델에게 묻는다(`NGG_JUDGE_MODEL`, 기본 haiku).
+- `hooks/no-guess-gate/stop.sh` — 규칙 R0~R5와 면제 다섯. `judge.py`가 R2a·R2b만 걸렸을 때 의견인지 상태 주장인지 작은 모델에게 묻는다(`NGG_JUDGE_MODEL`, 기본 haiku).
 - `hooks/done-gate/` — 코드를 고친 턴에 저장소 검사를 돌린다. 이 저장소의 `.grounded.toml`이 자기 테스트를 가리킨다.
 - `hooks/test-integrity/` — 테스트 무력화 편집과 테스트 파일 삭제를 막는다.
 - `hooks/project-guard/` — `append_only` 경로의 기존 파일 수정·삭제와 `--no-verify` 커밋을 막는다.

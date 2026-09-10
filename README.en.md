@@ -39,7 +39,7 @@ Requires `bash` and `python3`. **macOS, Linux and Windows are all exercised on e
 
 ## What gets blocked
 
-When Claude tries to finish a turn, a `Stop` hook checks six rules. If any fires, the turn does not end — Claude has to go measure something, or ask.
+When Claude tries to finish a turn, a `Stop` hook checks seven rules. If any fires, the turn does not end — Claude has to go measure something, or ask.
 
 | Code | Blocks | Example |
 |---|---|---|
@@ -49,6 +49,7 @@ When Claude tries to finish a turn, a `Stop` hook checks six rules. If any fires
 | **R2b** | Filling in checkable local state with a guess | "It's probably because the config file is missing" |
 | **R3** | Claiming tests or verification ran with zero Bash calls | "Tests pass" — without running them |
 | **R4** | After a block, ending again without a single tool call | Apology, then stop |
+| **R5** | The last command you ran **failed**, yet you claim it passed | `npm test` broke, but "all tests pass" |
 
 ### What does not get blocked
 

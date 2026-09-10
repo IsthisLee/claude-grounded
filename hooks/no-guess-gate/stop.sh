@@ -51,13 +51,17 @@ ba=$(cat "$s/blocked_at" 2>/dev/null); if [ "$STOP_HOOK_ACTIVE" = "True" ] && [ 
 [ "$ntools" -eq 0 ] && [ "$prose" -eq 1 ] && printf '%s' "$prompt" | grep -qiE "$LOCALQ" && v="$v R0"
 [ "$ntools" -eq 0 ] && [ "$jsononly" -eq 0 ] && r1_hit && v="$v R1"
 [ "$ntools" -eq 0 ] && [ "$prose" -eq 1 ] && printf '%s' "$resid" | grep -qiE "$R2a" && v="$v R2a"
+# R5: 이 턴에 마지막으로 돌린 Bash 가 실패했는데 검증·성공을 주장한다. R3 은 Bash 0건만 보므로
+# 돌렸는데 실패한 경우가 비어 있었다. bashres.sh 가 S/F 를 순서대로 남긴다.
+lastb=$(tail -c 1 "$s/bashseq" 2>/dev/null || true)
+[ "$prose" -eq 1 ] && [ "$lastb" = "F" ] && printf '%s' "$resid" | grep -qiE "$R3" && v="$v R5"
 [ "$ctx" -eq 1 ] && [ "$prose" -eq 1 ] && printf '%s' "$resid" | grep -qiE "$R2b" && ! printf '%s' "$last" | grep -qiE "$NG2" && v="$v R2b"
 [ "$nbash" -eq 0 ] && printf '%s' "$last" | grep -qiE "$R3" && ! printf '%s' "$last" | grep -qiE "$NEG" && v="$v R3"
 v="${v# }"
 # 수준 2. 정규식이 R2a·R2b만 잡았으면 모델에게 의견인지 상태 주장인지 묻는다. 풀어 줄 수만 있고 새로 막지 못한다.
 # R0·R1·R3·R4(도구를 안 돌린 사실, 단정, 검증 주장)는 판정 대상이 아니다. 실패·시간초과면 막은 채로 둔다(fail closed).
 JUDGE_DEFAULT=1; judge_note=""; judged=""; judge_log=""
-if [ -n "$v" ] && [ "${NGG_JUDGE:-$JUDGE_DEFAULT}" != "0" ] && ! printf '%s' "$v" | grep -qE 'R0|R1|R3|R4'; then
+if [ -n "$v" ] && [ "${NGG_JUDGE:-$JUDGE_DEFAULT}" != "0" ] && ! printf '%s' "$v" | grep -qE 'R0|R1|R3|R4|R5'; then
   # 걸린 문장만 뽑아 보낸다. 판정 대상이 분명해지고 입력이 짧아진다.
   flagged=$(printf '%s\n' "$last" | sed -E 's/(\.|!|\?|。)([[:space:]]|$)/\1\n/g' | while IFS= read -r sent; do [ -n "$sent" ] && printf '%s' "$sent" | xform | grep -qiE "$R2a|$R2b" && printf '%s\n' "$sent"; done)
   jt0=$(date +%s)
@@ -81,6 +85,7 @@ echo "$ntools" > "$s/blocked_at"
   case " $v " in *" R4 "*) t ngg.r4;; esac
   [ -n "$judge_note" ] && echo "$judge_note"
   case " $v " in *" R3 "*) t ngg.r3;; esac
+  case " $v " in *" R5 "*) t ngg.r5;; esac
   t ngg.allowed
   t ngg.noretell
 } >&2

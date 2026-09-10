@@ -17,11 +17,11 @@ run() { local e="$1"; shift
   env -u LANG -u LC_ALL -u LC_MESSAGES -u LC_CTYPE $e bash -c '. "$1"/common.sh; shift; "$@"' _ "$G" "$@"; }
 
 # 1. 키가 두 언어에 다 있는가. 한쪽만 있으면 그 언어에서 키 이름이 새어 나간다.
-nko=$(sed -n '/^msg_ko()/,/^msg_en()/p' "$G/msg.sh" | sed -n 's/^  \([a-z][a-z.]*\)).*/\1/p' | sort -u | wc -l | tr -d ' ')
-nen=$(sed -n '/^msg_en()/,$p'          "$G/msg.sh" | sed -n 's/^  \([a-z][a-z.]*\)).*/\1/p' | sort -u | wc -l | tr -d ' ')
+nko=$(sed -n '/^msg_ko()/,/^msg_en()/p' "$G/msg.sh" | sed -n 's/^  \([a-z][a-z0-9.]*\)).*/\1/p' | sort -u | wc -l | tr -d ' ')
+nen=$(sed -n '/^msg_en()/,$p'          "$G/msg.sh" | sed -n 's/^  \([a-z][a-z0-9.]*\)).*/\1/p' | sort -u | wc -l | tr -d ' ')
 check "$nko" "$nen" "키 개수가 두 언어에서 같다 (ko=$nko en=$nen)"
-diffkeys=$(diff <(sed -n '/^msg_ko()/,/^msg_en()/p' "$G/msg.sh" | sed -n 's/^  \([a-z][a-z.]*\)).*/\1/p' | sort -u) \
-                <(sed -n '/^msg_en()/,$p'          "$G/msg.sh" | sed -n 's/^  \([a-z][a-z.]*\)).*/\1/p' | sort -u) | grep -c '^[<>]' || true)
+diffkeys=$(diff <(sed -n '/^msg_ko()/,/^msg_en()/p' "$G/msg.sh" | sed -n 's/^  \([a-z][a-z0-9.]*\)).*/\1/p' | sort -u) \
+                <(sed -n '/^msg_en()/,$p'          "$G/msg.sh" | sed -n 's/^  \([a-z][a-z0-9.]*\)).*/\1/p' | sort -u) | grep -c '^[<>]' || true)
 check 0 "$diffkeys" "한쪽에만 있는 키가 없다"
 
 # 2. 모든 키가 두 언어에서 오류 없이 찍히는가. '-'로 시작하는 문장이 printf 옵션으로 읽히던 버그가 있었다.
@@ -32,7 +32,7 @@ for L in ko en; do
     out=$(run "NGG_LANG=$L" t "$k" A B C 2>&1)
     case "$out" in ""|*"invalid option"*|*"usage: printf"*) bad=$((bad+1)) ;; esac
   done <<EOF
-$(sed -n '/^msg_ko()/,/^msg_en()/p' "$G/msg.sh" | sed -n 's/^  \([a-z][a-z.]*\)).*/\1/p')
+$(sed -n '/^msg_ko()/,/^msg_en()/p' "$G/msg.sh" | sed -n 's/^  \([a-z][a-z0-9.]*\)).*/\1/p')
 EOF
   check 0 "$bad" "$L: 모든 키가 오류 없이 찍힌다"
 done

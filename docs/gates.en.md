@@ -132,7 +132,7 @@ claude --plugin-dir .                         # load this folder instead of the 
 claude plugin validate .                      # manifest and hook wiring
 for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do
   hooks/$g/unit.sh || break; done && skills/unit.sh    # 252 assertions, no model calls
-hooks/fuzz.sh                                 # 24 malformed inputs x nine hooks = 216 runs
+hooks/fuzz.sh                                 # 24 malformed inputs x ten hooks = 240 runs
 hooks/no-guess-gate/selftest.sh               # 12-case regression against real prompts, minutes
 hooks/no-guess-gate/judge-accuracy.sh         # judge accuracy and latency, minutes
 shellcheck -x -s bash hooks/*/*.sh skills/unit.sh

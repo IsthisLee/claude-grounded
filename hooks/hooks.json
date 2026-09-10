@@ -111,6 +111,17 @@
           }
         ],
         "matcher": "Edit|Write"
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/no-guess-gate/bashres.sh",
+            "shell": "bash",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -122,6 +133,19 @@
             "shell": "bash",
             "timeout": 15,
             "statusMessage": "저장소 프로필"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/no-guess-gate/bashres.sh",
+            "shell": "bash",
+            "timeout": 5
           }
         ]
       }

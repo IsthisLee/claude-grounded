@@ -18,6 +18,7 @@ msg_ko() { case "$1" in
   ngg.r2b)       M="- R2b: 로컬 상태에 대해 추정 표현('아마', 'probably', 'appears')을 썼다. 실측해서 단정하라." ;;
   ngg.r3)        M="- R3: 테스트/검증/확인을 했다고 주장하지만 이 턴에 Bash 실행이 0건이다. 실제로 실행하고 그 출력을 근거로 답하라." ;;
   ngg.r4)        M="- R4: 직전 차단 이후 도구를 하나도 실행하지 않았다. 사과나 설명으로 턴을 끝낼 수 없다. 지금 실측하거나 AskUserQuestion으로 물어라." ;;
+  ngg.r5)        M="- R5: 이 턴에 마지막으로 돌린 명령이 실패했는데 검증·성공을 주장했다. 실패한 출력을 근거로 삼을 수는 없다. 고쳐서 다시 돌리거나, 무엇이 실패했는지 답에 적어라." ;;
   ngg.judgekept) M="- 모델 판정: 상태 주장으로 봄(%s). 규칙 판정을 유지한다." ;;
   ngg.judgefail) M="- 모델 판정 실패 또는 시간초과(%s). 규칙 판정을 유지한다." ;;
   ngg.allowed)   M="허용되는 행동은 둘뿐이다. (1) 지금 실측한다 (2) 실측이 불가능한 이유를 답에 적는다(예: '이 세션에서는 도구 실행이 안 된다'). 그러면 R0·R2a·R4는 걸리지 않는다. 사용자가 '명령 실행하지 말라'고 했더라도 추측으로 답할 수는 없다. 필요하면 AskUserQuestion으로 물어라." ;;
@@ -80,6 +81,7 @@ msg_en() { case "$1" in
   ngg.r2b)       M="- R2b: you guessed at local state with words like 'probably' or 'appears'. Measure it, then say what is true." ;;
   ngg.r3)        M="- R3: you claim you tested or verified something, but this turn has zero Bash calls. Actually run it and answer from the output." ;;
   ngg.r4)        M="- R4: you have run no tool since the last block. An apology or an explanation cannot end this turn. Measure something now, or ask with AskUserQuestion." ;;
+  ngg.r5)        M="- R5: the last command you ran this turn failed, yet you are claiming it verified or passed. A failed run is not evidence. Fix it and run again, or say in your answer what failed." ;;
   ngg.judgekept) M="- Judge: read as a claim about state (%s). The rule verdict stands." ;;
   ngg.judgefail) M="- Judge failed or timed out (%s). The rule verdict stands." ;;
   ngg.allowed)   M="Only two moves are allowed: (1) measure it now, or (2) state in your answer why measuring is impossible (for example, 'tool execution is disabled in this session'). Either one clears R0, R2a and R4. Even if the user told you not to run commands, you still may not answer by guessing. Ask with AskUserQuestion if you need to." ;;

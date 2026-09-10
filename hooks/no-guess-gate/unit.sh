@@ -225,7 +225,8 @@ d = json.load(open(sys.argv[1])); root = os.path.dirname(os.path.abspath(sys.arg
 want = {
     "UserPromptSubmit": [("no-guess-gate", "prompt.sh")],
     "PreToolUse":       [("no-guess-gate", "pre.sh"), ("test-integrity", "pre.sh"), ("project-guard", "pre.sh"), ("done-gate", "pre.sh")],
-    "PostToolUse":      [("done-gate", "post.sh")],
+    "PostToolUse":      [("done-gate", "post.sh"), ("no-guess-gate", "bashres.sh")],
+    "PostToolUseFailure": [("no-guess-gate", "bashres.sh")],
     "Stop":             [("no-guess-gate", "stop.sh"), ("done-gate", "stop.sh")],
     "SubagentStop":     [("no-guess-gate", "stop.sh")],
     "SessionStart":     [("repo-profile", "session.sh")],
@@ -248,11 +249,13 @@ for ev, expected in want.items():
         assert os.path.isfile(os.path.join(root, gate, script)), f"{ev}: {gate}/{script} 파일 없음"
 # PostToolUse는 파일을 고치는 도구에만 걸려야 한다
 pm = [g.get("matcher") for g in hooks["PostToolUse"]]
-assert pm == ["Edit|Write"], f"PostToolUse matcher={pm}"
+assert pm == ["Edit|Write", "Bash"], f"PostToolUse matcher={pm}"
+fm = [g.get("matcher") for g in hooks["PostToolUseFailure"]]
+assert fm == ["Bash"], f"PostToolUseFailure matcher={fm}"
 tm = [g.get("matcher") for g in hooks["PreToolUse"]]
 assert tm == [None, "Edit|Write|Bash", "Edit|Write|Bash", "Bash"], f"PreToolUse matcher={tm}"
 PY
-check 0 $? "hooks.json: 여섯 이벤트에 다섯 모듈 배선·PLUGIN_ROOT/DATA·shell·타임아웃·matcher"
+check 0 $? "hooks.json: 일곱 이벤트에 다섯 모듈 배선·PLUGIN_ROOT/DATA·shell·타임아웃·matcher"
 for f in "$G/prompt.sh" "$G/pre.sh" "$G/stop.sh" "$G/judge.py" "$G/../done-gate/post.sh" "$G/../done-gate/stop.sh" "$G/../test-integrity/pre.sh" "$G/../project-guard/pre.sh" "$G/../repo-profile/session.sh" "$G/../done-gate/pre.sh"; do [ -x "$f" ] || { echo "❌ $(basename "$f") 실행 비트 없음"; fail=$((fail+1)); }; done
 check 0 0 "훅 스크립트 열 실행 비트"
 
@@ -342,5 +345,35 @@ for LC in "ko_KR.UTF-8" "C" ""; do
   rc=$(env -u LANG -u LC_ALL -u LC_CTYPE LC_ALL="$LC" sh -c 'printf "%s" "$1" | NGG_STATE="$2" "$3" >/dev/null 2>&1; echo $?' _ "$(mkstop "$KO")" "$T/k22" "$W/stop.sh")
   check 2 "$rc" "LC_ALL=${LC:-(없음)}: 한국어 단정이 R1에 걸린다"
 done
+
+# 23. R5: 이 턴에 마지막으로 돌린 Bash 가 실패했는데 검증·성공을 주장한다.
+#     R3 은 Bash 0건일 때만 걸린다. 돌렸는데 실패한 경우가 구멍이었다(2026-09-10 실측).
+K23="$T/r5"
+mk23() { printf '{"session_id":"t23","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"%s"}' "$1"; }
+seq23() { rm -rf "$K23"; mkdir -p "$K23/state/t23"; printf 'Bash\n' > "$K23/state/t23/tools"; [ -n "$1" ] && printf '%s' "$1" > "$K23/state/t23/bashseq"; }
+
+seq23 F
+mk23 "테스트를 실행했고 전부 통과했습니다." | NGG_JUDGE=0 NGG_STATE="$K23" "$W/stop.sh" 2>"$T/e23"; check 2 $? "R5: 마지막 Bash 실패 + 통과 주장 → exit 2"
+grep -qE '게이트 \[[^]]*R5' "$T/e23"; check 0 $? "R5: 판정 헤더에 R5"
+
+seq23 FS
+mk23 "테스트를 실행했고 전부 통과했습니다." | NGG_JUDGE=0 NGG_STATE="$K23" "$W/stop.sh" 2>/dev/null; check 0 $? "R5: 실패 뒤 성공했으면 통과"
+
+seq23 F
+mk23 "명령이 실패해서 원인을 찾고 있습니다." | NGG_JUDGE=0 NGG_STATE="$K23" "$W/stop.sh" 2>/dev/null; check 0 $? "R5: 실패했다고 밝히면 통과"
+
+seq23 F
+mk23 "All tests pass now." | NGG_JUDGE=0 NGG_STATE="$K23" "$W/stop.sh" 2>"$T/e23b"; check 2 $? "R5: 영어 주장도 잡는다"
+
+seq23 ""
+mk23 "테스트를 실행했고 전부 통과했습니다." | NGG_JUDGE=0 NGG_STATE="$K23" "$W/stop.sh" 2>/dev/null; check 0 $? "R5: 기록이 없으면 걸지 않는다"
+
+seq23 S
+mk23 "테스트를 실행했고 전부 통과했습니다." | NGG_JUDGE=0 NGG_STATE="$K23" "$W/stop.sh" 2>/dev/null; check 0 $? "R5: 마지막이 성공이면 통과"
+
+# JSON 전체 답은 산문 규칙 대상이 아니다
+seq23 F
+printf '%s' '{"session_id":"t23","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"{\"winner\": \"1\"}"}' \
+  | NGG_JUDGE=0 NGG_STATE="$K23" "$W/stop.sh" 2>/dev/null; check 0 $? "R5: 답 전체가 JSON 이면 면제"
 
 echo; echo "실패 ${fail}건"; exit "$fail"
