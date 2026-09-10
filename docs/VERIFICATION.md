@@ -1511,3 +1511,39 @@ test_cases.json 에서 케이스 삭제 → exit=0
 ### 검증
 
 단위 296건, 퍼징 240회 실패 0, 세 OS 초록.
+
+## V23 내장 프롬프트 훅과 우리 판정기를 나란히 재다
+
+배경: 공식 훅 가이드를 다시 읽다가 `type: "prompt"` 와 `type: "agent"` 훅을 봤다. **우리가 `judge.py` 로 직접 만든 것을 Claude Code 가 내장하고 있다.** 쓰지 않을 이유가 있는지 쟀다.
+
+> "For decisions that require judgment rather than deterministic rules, use `type: "prompt"` hooks. Instead of running a shell command, Claude Code sends your prompt … The model's only job is to return its decision as JSON."
+
+### 실측
+
+같은 프롬프트(`2+2는? 숫자만 답해.`)를 세 조건에서 돌렸다.
+
+```
+── 훅 없음(기준선)          턴수 1  4,786ms
+── type: prompt, ok:true    턴수 1  6,356ms
+── type: prompt, ok:false   턴수 6  28,099ms   (막고 모델이 계속 일함)
+```
+
+프롬프트 훅은 **모든 턴에** 약 1.6초를 더한다. 우리 판정기는 중앙값 8초지만 **차단의 약 4% 에서만** 돈다. 정규식이 공짜로 바닥을 깔고 모델은 드물게 부른다.
+
+| 방식 | 언제 도나 | 턴당 비용 |
+|---|---|---|
+| `type: "prompt"` Stop 훅 | 모든 턴 | +1.6초 |
+| 정규식 + `judge.py` | 차단의 약 4% | 걸릴 때만 8초, 나머지 0 |
+
+**옮기지 않기로 했다.** 아무 일 없는 턴까지 느려진다. `ok:false` 로 막는 경로가 실제로 도는 것은 확인했으므로, 결론은 "동작하지 않아서"가 아니라 "호출 빈도가 다르기 때문"이다. 이 판단을 `docs/gates.*.md` 에 적어 두었다. 같은 질문을 다음 사람이 다시 하지 않도록.
+
+`type: "agent"` 훅은 문서가 스스로 **experimental** 이라고 적고 있어("Behavior and configuration may change in future releases. For production workflows, prefer command hooks") 대상에서 뺐다.
+
+### 문서에 없던 사용자 탈출구 둘
+
+공식 문서에서 우리가 안 적어 둔 것을 찾았다. 둘 다 원문 그대로다.
+
+- "To disable hooks, set `"disableAllHooks": true` in your settings file."
+- "If your hook legitimately needs more than eight iterations to converge, raise the cap with `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`."
+
+README 의 "끄기와 제거" 표에 넣었다. 게이트를 끄는 방법을 숨기지 않는 것이 이 저장소의 태도와 맞는다.

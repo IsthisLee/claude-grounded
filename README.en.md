@@ -119,6 +119,8 @@ Hit a false positive? [Open an issue](../../issues/new?template=false-positive.m
 | Off in this repo | `claude plugin disable grounded@claude-grounded --scope project` |
 | Off for me only | Same, with `--scope local` |
 | Semantic judge only | `NGG_JUDGE=0` |
+| Every hook, not just this plugin | `"disableAllHooks": true` in settings |
+| Raise the 8-block cap | `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` |
 | Remove entirely | `claude plugin uninstall grounded@claude-grounded` |
 
 State lives in `~/.claude/plugins/data/grounded-inline/` and is safe to delete. Add `--keep-data` on uninstall to preserve it.

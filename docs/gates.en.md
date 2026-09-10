@@ -23,6 +23,17 @@ Every message the gates emit exists in Korean and English. The rule verdict is t
 
 Without `NGG_LANG` the gate reads `LC_ALL`, then `LC_MESSAGES`, then `LANG`: Korean locales get Korean, everything else gets English. All strings live in `hooks/lib/msg.sh`.
 
+### Why not the built-in `type: "prompt"` hook
+
+Claude Code ships [prompt hooks](https://code.claude.com/docs/en/hooks) for judgment calls: instead of a shell command, it asks a model and reads back `{"ok": bool, "reason": …}`. That is what `judge.py` does. The difference is **how often it runs**.
+
+| Approach | Runs on | Cost per turn |
+|---|---|---|
+| `type: "prompt"` Stop hook | **every turn** | measured +1.6s (4.8s baseline → 6.4s) |
+| Ours (regex + `judge.py`) | about 4% of blocks | median 8s when it fires, zero otherwise |
+
+The regex floor is free and the model is consulted rarely. Moving to a prompt hook would slow down every uneventful turn. The `ok:false` path does work: the model kept going for 6 turns after being blocked.
+
 If it fails or times out, the block stands. Each verdict is logged to `${CLAUDE_PLUGIN_DATA}/state/events.log` as `judge=released|kept|failed` with the elapsed seconds.
 
 ## Completion gate: the check must pass
