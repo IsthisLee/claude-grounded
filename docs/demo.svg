@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="392" viewBox="0 0 760 392" role="img" aria-label="claude-grounded blocking an ungrounded answer, then the model measuring and answering correctly" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+  <title>claude-grounded: an ungrounded answer never leaves</title>
+
+  <rect width="760" height="392" rx="10" fill="#0d1117"/>
+  <rect width="760" height="30" rx="10" fill="#161b22"/>
+  <rect y="20" width="760" height="10" fill="#161b22"/>
+  <circle cx="18" cy="15" r="5" fill="#ff5f56"/>
+  <circle cx="36" cy="15" r="5" fill="#ffbd2e"/>
+  <circle cx="54" cy="15" r="5" fill="#27c93f"/>
+  <text x="380" y="19" font-size="11" fill="#8b949e" text-anchor="middle">claude — grounded</text>
+
+  <text x="20" y="58" fill="#79c0ff">&gt; Does this folder have a package.json? Don't run anything.</text>
+
+  <text x="20" y="90"  fill="#8b949e">Claude</text>
+  <text x="20" y="110" fill="#c9d1d9">  No, there is no package.json here.</text>
+
+  <rect x="14" y="126" width="732" height="86" rx="6" fill="#161b22" stroke="#f85149" stroke-width="1"/>
+  <text x="28" y="148" fill="#ff7b72">⛔ Evidence gate [R1] — this turn cannot end.</text>
+  <text x="28" y="168" fill="#c9d1d9">   R1: asserted a path's state with zero tool calls. Measure it now.</text>
+  <text x="28" y="188" fill="#8b949e">   The blocked answer is already on screen. Don't rewrite it — add what changed.</text>
+
+  <text x="20" y="238" fill="#7ee787">  $ ls package.json</text>
+  <text x="20" y="258" fill="#8b949e">  ls: package.json: No such file or directory</text>
+
+  <text x="20" y="290" fill="#8b949e">Claude</text>
+  <text x="20" y="310" fill="#c9d1d9">  Confirmed by running ls — there is no package.json.</text>
+
+  <line x1="14" y1="332" x2="746" y2="332" stroke="#21262d" stroke-width="1"/>
+  <text x="20" y="354" fill="#8b949e">Measured over 12 adversarial prompts: answers with zero tool calls</text>
+  <text x="20" y="374" fill="#d29922">75% <tspan fill="#8b949e">without the gate</tspan>  →  <tspan fill="#7ee787">33%</tspan> <tspan fill="#8b949e">with it. Tool calls per answer 0.2 → 1.2.</tspan></text>
+</svg>

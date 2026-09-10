@@ -1,0 +1,12 @@
+# 줄바꿈을 저장소에서 LF로 통일한다. 훅이 셸 스크립트라 CRLF가 섞이면 실행이 깨진다.
+* text=auto eol=lf
+*.sh   text eol=lf
+*.py   text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.toml text eol=lf
+*.svg  text eol=lf
+
+# 언어 통계에서 제외 — 검증 기록은 산출물이지 코드가 아니다
+docs/VERIFICATION.md linguist-documentation
+docs/demo.svg        linguist-generated
