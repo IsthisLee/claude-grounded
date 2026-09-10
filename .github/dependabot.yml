@@ -1,0 +1,9 @@
+# 액션을 커밋 SHA로 고정해 두어 사람이 손대지 않으면 낡는다. 주마다 올려 준다.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci

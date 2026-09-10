@@ -2,6 +2,8 @@
 
 이 저장소의 규칙은 하나로 요약된다. **주장에는 근거를 붙인다.** 플러그인이 Claude에게 요구하는 것과 같은 기준을 기여자에게도 적용한다.
 
+참여하는 모든 사람은 [행동 강령](CODE_OF_CONDUCT.md)을 따른다.
+
 ## 개발 환경
 
 필요한 것은 `bash`, `python3`, 그리고 Claude Code다. macOS와 Linux에서 돌아간다. Windows는 Git Bash가 있을 때만이다.
