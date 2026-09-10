@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # shellcheck source-path=SCRIPTDIR
 # PreToolUse(Edit|Write|Bash): 저장소가 정한 구조 규칙을 그 순간에 강제한다.
 #

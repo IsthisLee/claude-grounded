@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # 완료 게이트 단위 테스트. 모델을 부르지 않는다. 사용: ./unit.sh
 set -u
 # 테스트는 주변 환경에 기대지 않는다. 게이트가 자식에게 물려주는 변수가 남아 있으면

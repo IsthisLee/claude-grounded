@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # 프로젝트 가드 단위 테스트. 모델을 부르지 않는다.
 set -u
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_GUARD

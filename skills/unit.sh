@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # 스킬 정의 검사. 모델을 부르지 않는다. 배포물이므로 회귀로 고정한다.
 set -u
 unset NGG_STATE NGG_INNER NGG_JUDGE

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # 게이트 회귀 테스트. 사용: ./selftest.sh   (케이스별 격리 디렉터리, 병렬 실행)
 # --setting-sources "" 로 사용자 설정·CLAUDE.md·플러그인·standalone 훅을 전부 끊는다. 케이스 훅은 --settings 로만 들어간다.
 G="$(cd "$(dirname "$0")" && pwd)"; R="$G/selftest-runs"; rm -rf "$R"; mkdir -p "$R"

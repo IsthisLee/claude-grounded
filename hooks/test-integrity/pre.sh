@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # shellcheck source-path=SCRIPTDIR
 # PreToolUse(Edit|Write|Bash): 테스트를 통과시키려고 무력화하는 편집을 막는다.
 #

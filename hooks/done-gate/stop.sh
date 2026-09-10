@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # shellcheck source-path=SCRIPTDIR
 # Stop: 이 턴에 코드를 고쳤으면 저장소의 검사를 돌리고, 통과할 때까지 턴이 끝나는 것을 막는다.
 #

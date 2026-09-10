@@ -3,3 +3,4 @@ hooks/no-guess-gate/selftest-runs/
 .DS_Store
 .private/
 __pycache__/
+hooks/no-guess-gate/ab-runs/

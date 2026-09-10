@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # shellcheck source-path=SCRIPTDIR
 # PreToolUse(Bash): git commit 직전에 전체 검사를 한 번 돌린다.
 #

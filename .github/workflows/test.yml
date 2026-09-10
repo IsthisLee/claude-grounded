@@ -1,5 +1,8 @@
 name: test
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:
@@ -34,3 +37,6 @@ jobs:
           hooks/project-guard/unit.sh
           hooks/repo-profile/unit.sh
           skills/unit.sh
+
+      - name: 견고성 퍼징 (모델 호출 없음)
+        run: hooks/fuzz.sh

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # shellcheck source-path=SCRIPTDIR
 # SessionStart: 이 저장소의 사실을 20줄 안팎으로 요약해 Claude의 컨텍스트에 싣는다.
 #

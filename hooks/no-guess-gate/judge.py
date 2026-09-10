@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 # 의미 판정기(수준 2). stop.sh가 R2a·R2b만 걸렸을 때 부른다.
 # stdin: JSON {prompt, rules, tools, bash, last}. stdout: 한 줄 사유. exit 0 풀어 줌 / 1 유지 / 2 실패·시간초과.
 # 판정 모델은 NGG_JUDGE_MODEL(기본 haiku), 명령 전체를 바꾸려면 NGG_JUDGE_CMD,

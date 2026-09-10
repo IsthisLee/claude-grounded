@@ -1,18 +1,20 @@
 # claude-grounded
 
-Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 강제**하는 플러그인이다. 지금 배포되는 것은 근거 게이트(`hooks/no-guess-gate/`) 하나다.
+Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 강제**하는 플러그인이다. 게이트 넷(근거·완료·테스트 무결성·프로젝트 가드), 저장소 프로필, 사용자 전용 커맨드 일곱으로 이뤄진다.
 
 ## 검사 명령
 
-- `hooks/no-guess-gate/unit.sh` — 근거 게이트 단위 테스트 89건. 모델을 부르지 않는다. 9초.
-- `hooks/done-gate/unit.sh` — 완료 게이트 19건.
-- `hooks/test-integrity/unit.sh` — 테스트 무결성 23건.
-- `hooks/project-guard/unit.sh` — 프로젝트 가드 14건.
+- `hooks/no-guess-gate/unit.sh` — 근거 게이트 110건. 모델을 부르지 않는다.
+- `hooks/done-gate/unit.sh` — 완료 게이트 29건.
+- `hooks/test-integrity/unit.sh` — 테스트 무결성 27건.
+- `hooks/project-guard/unit.sh` — 프로젝트 가드 21건.
 - `hooks/repo-profile/unit.sh` — 저장소 프로필 16건.
-- `skills/unit.sh` — 스킬 정의 검사 4건.
-- `hooks/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다. 사용자 설정과 격리된 세션이다.
-- `claude plugin validate .` — 매니페스트와 훅 배선 검사.
-- `claude --plugin-dir .` — 설치본 대신 이 폴더를 그 세션에 로드한다.
+- `skills/unit.sh` — 스킬 정의 4건.  **합계 207건.**
+- `hooks/fuzz.sh` — 망가진 입력을 아홉 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
+- `hooks/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다.
+- `hooks/no-guess-gate/ab.sh` — 게이트 켠 채와 끈 채를 비교해 효과를 잰다. `SET=hard`가 압박 프롬프트.
+- `shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh skills/unit.sh`
+- `claude plugin validate .` · `claude --plugin-dir .`
 
 ## 규칙
 
@@ -25,9 +27,9 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 
 ## 구조
 
-- `hooks/hooks.json` — UserPromptSubmit · PreToolUse · Stop · SubagentStop 배선. `${CLAUDE_PLUGIN_DATA}`에 상태를 둔다.
-- `hooks/lib/common.sh` — 두 게이트가 공유하는 훅 입력 파서.
-- `hooks/no-guess-gate/stop.sh` — 규칙 R0~R4와 면제 셋. `judge.py`가 R2a·R2b만 걸렸을 때 의견인지 상태 주장인지 Haiku에게 묻는다.
+- `hooks/hooks.json` — SessionStart · UserPromptSubmit · PreToolUse(넷) · PostToolUse · Stop(둘) · SubagentStop 배선. 상태는 `${CLAUDE_PLUGIN_DATA}`.
+- `hooks/lib/common.sh` — 모든 훅이 공유하는 입력 파서. `no-guess-gate/pre.sh`는 도구 호출마다 돌아 파라미터 확장만 쓰는 빠른 경로가 따로 있다.
+- `hooks/no-guess-gate/stop.sh` — 규칙 R0~R4와 면제 셋. `judge.py`가 R2a·R2b만 걸렸을 때 의견인지 상태 주장인지 작은 모델에게 묻는다(`NGG_JUDGE_MODEL`, 기본 haiku).
 - `hooks/done-gate/` — 코드를 고친 턴에 저장소 검사를 돌린다. 이 저장소의 `.grounded.toml`이 자기 테스트를 가리킨다.
 - `hooks/test-integrity/` — 테스트 무력화 편집과 테스트 파일 삭제를 막는다.
 - `hooks/project-guard/` — `append_only` 경로의 기존 파일 수정·삭제와 `--no-verify` 커밋을 막는다.

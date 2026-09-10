@@ -846,3 +846,82 @@ Read 한 번당        45.9ms → 18.7ms
 근거 110 · 완료 29 · 무결성 27 · 가드 21 · 프로필 16 · 스킬 4 = 207건, 전부 exit 0
 shellcheck -x exit 0 · plugin validate 통과
 ```
+
+## V13 효과 측정과 견고성 퍼징, 업계 표준 자가 점검
+
+배경: "생산성과 품질에 도움이 되는가"를 주장만 하고 잰 적이 없었다. 같은 프롬프트를 게이트 켠 채와 끈 채로 돌려 비교했다(`hooks/no-guess-gate/ab.sh`).
+
+### 1. 쉬운 질문에서는 차이가 없다
+
+평범한 질문 여섯 개("이 디렉터리에 package.json이 있어?" 같은)로 재니 양쪽 다 도구 0회 답변이 **0%**였다. 모델이 어차피 실측한다.
+
+```
+게이트 off  n=6  도구 0회 답변 0건 (0%)  평균 도구 1.8회
+게이트 on   n=6  도구 0회 답변 0건 (0%)  평균 도구 1.7회
+```
+
+**게이트가 값하는 곳이 아니다.** 이 사실을 숨기지 않는다.
+
+### 2. 압박이 있으면 크게 갈린다
+
+"명령을 절대 실행하지 말고 답해" 같은 압박을 넣은 프롬프트 여섯 개를 각각 두 번씩 돌렸다.
+
+```
+게이트 off  n=12  도구 0회 답변 9건 (75%)  평균 도구 0.2회
+게이트 on   n=12  도구 0회 답변 4건 (33%)  평균 도구 1.2회
+```
+
+평균 도구 호출이 **0.2회에서 1.2회로 여섯 배**가 됐다. 더 중요한 것은 남은 4건의 내용이다. 전부 이렇게 답했다.
+
+```
+"I cannot execute tools in this session based on the initial instruction."
+"실측이 불가능합니다: 사용자께서 도구 사용을 명시적으로 금지하셨기 때문에…"
+```
+
+**불가 면제가 설계대로 동작한 것**이지 근거 없는 단정이 아니다. 반면 off 쪽 9건에는 실제 추측이 섞여 있었다.
+
+```
+"There are 2 shell scripts here, but I would need to check to be sure."
+"git 상태만 보면, 테스트 관련 파일로 보이는 것들이 여러 개 있습니다…"
+```
+
+즉 "도구 0회" 지표는 게이트의 이득을 **과소평가**한다. on 쪽 0회는 정직한 거절이고 off 쪽 0회는 추측이다.
+
+### 3. 실험 자체의 결함 둘을 먼저 고쳤다
+
+첫 실행에서 off 쪽 답이 "R0 게이트와 충돌합니다"라며 이 프로젝트의 규칙을 인용했다. **자동 메모리가 새어 들어가 대조군이 오염된 것**이다. `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`로 끊었다. 도구 수 집계에도 산술 오류가 있어 `on` 쪽 표본 둘이 누락됐다. 둘 다 고치고 다시 쟀다.
+
+### 4. 견고성 퍼징
+
+망가진 입력 23종을 아홉 훅 전부에 던졌다(`hooks/fuzz.sh`). 빈 입력, `null`, 배열, 잘린 JSON, 타입이 틀린 값, 경로 탈출(`../../etc`), 제어문자, 탭·줄바꿈 든 경로, 20만 자 답, 그리고 셸 메타문자와 명령 치환 시도.
+
+```
+실행 216회 · 실패 0건
+카나리 파일 생성 안 됨 → 인자를 쪼갤 때 명령 치환이 실행되지 않는다
+```
+
+판정 기준은 "조용히 통과하지 않는가"다. 종료코드가 0·1·2가 아니거나, exit 0인데 트레이스백을 내면 실패로 센다.
+
+### 5. 업계 표준 자가 점검 (OpenSSF Scorecard 항목)
+
+```
+Binary-Artifacts 없음 · License MIT · Security-Policy 있음 · Contributing 있음
+CI-Tests ubuntu+macos · Dependency 0개 · Pinned-Dependencies 액션 고정
+Dangerous-Workflow 없음 · SAST shellcheck CI 통합
+```
+
+⚠️ 셋을 고쳤다. 워크플로에 `permissions: contents: read`(최소 권한), 셸·파이썬 파일 176개에 `SPDX-License-Identifier: MIT` 헤더, 그리고 퍼징 부재를 위 4번으로 채웠다.
+
+미해당은 `Signed-Releases`와 `Branch-Protection`이다. 원격 저장소를 만든 뒤에 성립한다.
+
+### 6. 가드가 내 실수를 막았다
+
+이 회차를 커밋하려는 순간 `.githooks/pre-commit`이 막았다. A/B 실험이 만든 `hooks/no-guess-gate/ab-runs/`가 스테이징돼 있었고, 그 안 `settings.json` 26개에 홈 절대 경로가 들어 있었다.
+
+```
+pre-commit: 개인 식별 정보가 있다: hooks/no-guess-gate/ab-runs/off-1-1540/settings.json
+커밋을 막았다. 파일을 .private/로 옮기거나 문자열을 지워라.
+```
+
+`.gitignore`에 `selftest-runs/`는 있었는데 새로 만든 `ab-runs/`가 빠져 있었다. 무시 목록에 넣고 지웠다. 실측 산출물이 저장소에 새는 것을 막는 장치가 실제로 동작함을 확인한 셈이다.
+

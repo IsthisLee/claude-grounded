@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
 # shellcheck source-path=SCRIPTDIR
 # UserPromptSubmit: 프롬프트 저장. 도구 카운터는 "턴이 닫힌 뒤 첫 프롬프트"에서만 초기화한다.
 # 예외 1: 백그라운드 작업 완료 알림(<task-notification>)은 같은 턴의 내부 재호출이다. 카운터 유지.
