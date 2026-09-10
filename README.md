@@ -120,7 +120,7 @@ Claude가 이런 메시지를 받는다.
 
 ## 비슷한 도구
 
-[Probity](https://github.com/nizos/probity)(이전 이름 tdd-guard)는 TDD 위반과 금지 패턴을 `PreToolUse`에서 막는다. 겹치지 않고 보완적이다. TDD 강제를 깊게 원하면 같이 쓰면 된다. 이쪽은 **근거 없이 턴이 끝나는 것**을 막는다.
+[Probity](https://github.com/nizos/probity)는 TDD 위반과 금지 패턴을 `PreToolUse`에서 막는다. [TDD Guard](https://github.com/nizos/tdd-guard)에서 자라 나온 프로젝트이고, TDD Guard도 "쓰고 있는 프로젝트를 위해 계속 유지된다"고 밝히고 있다. 겹치지 않고 보완적이다. TDD 강제를 깊게 원하면 같이 쓰면 된다. 이쪽이 막는 것은 편집이 아니라 **근거 없이 끝나는 턴**이다.
 
 ## 라이선스
 

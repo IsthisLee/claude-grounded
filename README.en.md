@@ -118,7 +118,7 @@ Grounded in [Reduce hallucinations](https://platform.claude.com/docs/en/test-and
 
 ## Related
 
-[Probity](https://github.com/nizos/probity) (formerly tdd-guard) blocks TDD violations and forbidden patterns at `PreToolUse`. It is complementary, not competing — use both if you want deep TDD enforcement. This one stops **turns from ending without evidence**.
+[Probity](https://github.com/nizos/probity) blocks TDD violations and forbidden patterns at `PreToolUse`. It grew out of [TDD Guard](https://github.com/nizos/tdd-guard), which is still maintained for projects that rely on it. Either is complementary, not competing — use both if you want deep TDD enforcement. What this one blocks is not an edit but a **turn that ends without evidence**.
 
 ## License
 
