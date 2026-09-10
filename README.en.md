@@ -60,9 +60,16 @@ The official docs say to give Claude explicit permission to admit uncertainty, s
 | **Mention** | Text inside quotes or backticks. A document explaining the rules doesn't trip the rules |
 | **Opinion** | "This structure seems better" is a design preference, not a claim about state |
 
-The last two cannot be fully separated by regex. So when *only* R2a/R2b fire, the gate asks Haiku whether the flagged wording is an opinion or a state claim, and releases it if it's an opinion. **That judge can only release, never block.** R0, R1, R3, and R4 — the rules grounded in "no tool was run" — are never sent to the judge, so the deterministic floor stays. If the judge fails or times out, the block stands.
+The last two cannot be fully separated by regex. So when *only* R2a/R2b fire, the gate asks a small model whether the flagged wording is an opinion or a state claim, and releases it if it's an opinion. **That judge can only release, never block.** R0, R1, R3, and R4 — the rules grounded in "no tool was run" — are never sent to the judge, so the deterministic floor stays. If the judge fails or times out, the block stands.
 
-Turn it off with `NGG_JUDGE=0`. It runs on about 4% of blocks; median 7.8s when it does (measured over 12 cases, max 12.0s).
+| Variable | Default | Meaning |
+|---|---|---|
+| `NGG_JUDGE` | `1` | `0` disables judging entirely |
+| `NGG_JUDGE_MODEL` | `haiku` | Judge model. One classification call, so a large model is not needed, but you can change it |
+| `NGG_JUDGE_CMD` | (unset) | Replace the whole judge command. Overrides the model setting |
+| `NGG_JUDGE_TIMEOUT` | `40` | Seconds |
+
+It runs on about 4% of blocks; median 7.8s when it does (measured over 12 cases, max 12.0s).
 
 What the judge did is recorded in `events.log` as `judge=released` / `kept` / `failed` with the elapsed seconds, so you can count how often it runs or fails. Accuracy measured on 6 opinions and 6 state claims: 12/12.
 
