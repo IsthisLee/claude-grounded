@@ -62,7 +62,9 @@ The official docs say to give Claude explicit permission to admit uncertainty, s
 
 The last two cannot be fully separated by regex. So when *only* R2a/R2b fire, the gate asks Haiku whether the flagged wording is an opinion or a state claim, and releases it if it's an opinion. **That judge can only release, never block.** R0, R1, R3, and R4 — the rules grounded in "no tool was run" — are never sent to the judge, so the deterministic floor stays. If the judge fails or times out, the block stands.
 
-Turn it off with `NGG_JUDGE=0`. It runs on about 4% of blocks and takes 5–10 seconds when it does.
+Turn it off with `NGG_JUDGE=0`. It runs on about 4% of blocks; median 7.8s when it does (measured over 12 cases, max 12.0s).
+
+What the judge did is recorded in `events.log` as `judge=released` / `kept` / `failed` with the elapsed seconds, so you can count how often it runs or fails. Accuracy measured on 6 opinions and 6 state claims: 12/12.
 
 ## Completion gate: the check must pass
 

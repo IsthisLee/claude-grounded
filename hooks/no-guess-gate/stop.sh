@@ -9,7 +9,7 @@ ntools=$({ wc -l < "$f"; } 2>/dev/null | tr -d ' '); ntools=${ntools:-0}
 nbash=$(grep -c '^Bash$' "$f" 2>/dev/null); nbash=${nbash:-0}
 nask=$(grep -c '^AskUserQuestion$' "$f" 2>/dev/null); nask=${nask:-0}
 log() { local lf; lf="$(state_root "$d")/state/events.log"
-  echo "$HOOK_EVENT_NAME${AGENT_ID:+/agent} active=$STOP_HOOK_ACTIVE tools=$ntools bash=$nbash ctx=$1 viol=[$2] last=$(printf '%s' "$last" | head -c 80 | LC_ALL=C tr '\n' ' ')" >> "$lf"
+  echo "$HOOK_EVENT_NAME${AGENT_ID:+/agent} active=$STOP_HOOK_ACTIVE tools=$ntools bash=$nbash ctx=$1${judge_log:+ $judge_log} viol=[$2] last=$(printf '%s' "$last" | head -c 80 | LC_ALL=C tr '\n' ' ')" >> "$lf"
   if [ "$(wc -l < "$lf" 2>/dev/null || echo 0)" -gt 2200 ]; then tail -n 2000 "$lf" > "$lf.tmp" 2>/dev/null && mv "$lf.tmp" "$lf"; fi; }
 if [ "$nask" -gt 0 ]; then log - "(질문 면제)"; touch "$s/turn_closed"; exit 0; fi
 ASKRE='(\?[[:space:]]*$|which (one|takes priority|do you)|should I|do you want|would you like|please (confirm|clarify|tell me)|어느 쪽|어떻게 할까|할까요\?|원하시|확인해 주|알려 주|선택해 주)'
@@ -53,12 +53,18 @@ ba=$(cat "$s/blocked_at" 2>/dev/null); if [ "$STOP_HOOK_ACTIVE" = "True" ] && [ 
 v="${v# }"
 # 수준 2. 정규식이 R2a·R2b만 잡았으면 모델에게 의견인지 상태 주장인지 묻는다. 풀어 줄 수만 있고 새로 막지 못한다.
 # R0·R1·R3·R4(도구를 안 돌린 사실, 단정, 검증 주장)는 판정 대상이 아니다. 실패·시간초과면 막은 채로 둔다(fail closed).
-JUDGE_DEFAULT=1; judge_note=""; judged=""
+JUDGE_DEFAULT=1; judge_note=""; judged=""; judge_log=""
 if [ -n "$v" ] && [ "${NGG_JUDGE:-$JUDGE_DEFAULT}" != "0" ] && ! printf '%s' "$v" | grep -qE 'R0|R1|R3|R4'; then
   # 걸린 문장만 뽑아 보낸다. 판정 대상이 분명해지고 입력이 짧아진다.
   flagged=$(printf '%s\n' "$last" | sed -E 's/([.!?。])([[:space:]]|$)/\1\n/g' | while IFS= read -r sent; do [ -n "$sent" ] && printf '%s' "$sent" | xform | grep -qiE "$R2a|$R2b" && printf '%s\n' "$sent"; done)
+  jt0=$(date +%s)
   why=$(python3 -c 'import json,sys; print(json.dumps(dict(prompt=sys.argv[1],rules=sys.argv[2],tools=sys.argv[3],bash=sys.argv[4],last=sys.argv[5],flagged=sys.argv[6]),ensure_ascii=False))' "$prompt" "$v" "$ntools" "$nbash" "$last" "$flagged" | "$d/judge.py" 2>/dev/null); jr=$?
-  case "$jr" in 0) judged="($v 판정 면제)"; v="";; 1) judge_note="- 모델 판정: 상태 주장으로 봄($why). 규칙 판정을 유지한다.";; *) judge_note="- 모델 판정 실패 또는 시간초과($why). 규칙 판정을 유지한다.";; esac
+  jel=$(( $(date +%s) - jt0 ))
+  case "$jr" in
+    0) judged="($v 판정 면제)"; judge_log="judge=released ${jel}s"; v="";;
+    1) judge_note="- 모델 판정: 상태 주장으로 봄($why). 규칙 판정을 유지한다."; judge_log="judge=kept ${jel}s";;
+    *) judge_note="- 모델 판정 실패 또는 시간초과($why). 규칙 판정을 유지한다."; judge_log="judge=failed ${jel}s";;
+  esac
 fi
 tag="$v"; if [ -z "$v" ]; then [ "$jsononly" -eq 1 ] && tag="(JSON 면제)"; [ "$cannot" -eq 1 ] && tag="(불가 면제)"; [ -n "$judged" ] && tag="$judged"; fi
 log "$ctx" "$tag"; if [ -z "$v" ]; then rm -f "$s/blocked_at"; touch "$s/turn_closed"; exit 0; fi

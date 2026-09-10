@@ -264,4 +264,22 @@ grep -qE '다시 쓰지|반복하지|되풀이' "$T/e17"; check 0 $? "차단 메
 grep -qE '달라진|바뀐|정정' "$T/e17"; check 0 $? "차단 메시지: 달라진 것만 쓰라고 지시"
 lines=$(grep -c . "$T/e17"); lt "$lines" 12; check 0 $? "차단 메시지 ${lines}줄 < 12 (길면 안 읽는다)"
 
+# 18. 판정기가 돌았는지 로그로 알 수 있어야 한다. 지금은 풀어 준 경우만 보이고
+#     유지·실패는 규칙 판정과 구분되지 않아 "판정기가 잘 도나"에 답할 수 없었다.
+K18="$T/obs"; P18='{"session_id":"t18","hook_event_name":"UserPromptSubmit","prompt":"훅 배치를 검토해줘"}'
+mk18() { printf '{"session_id":"t18","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"%s"}' "$1"; }
+M18="hooks/stop.sh가 깨져 보인다."
+printf '%s' "$P18" | NGG_STATE="$K18" "$W/prompt.sh"
+mk18 "$M18" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/ok.sh" NGG_STATE="$K18" "$W/stop.sh" 2>/dev/null
+grep -q 'judge=released' "$K18/state/events.log"; check 0 $? "로그: 판정기가 풀어 주면 judge=released"
+mk18 "$M18" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/no.sh" NGG_STATE="$K18" "$W/stop.sh" 2>/dev/null
+grep -q 'judge=kept' "$K18/state/events.log"; check 0 $? "로그: 유지하면 judge=kept"
+mk18 "$M18" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/bad.sh" NGG_STATE="$K18" "$W/stop.sh" 2>/dev/null
+grep -q 'judge=failed' "$K18/state/events.log"; check 0 $? "로그: 실패하면 judge=failed"
+mk18 "$M18" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/slow.sh" NGG_JUDGE_TIMEOUT=1 NGG_STATE="$K18" "$W/stop.sh" 2>/dev/null
+grep -q 'judge=failed' "$K18/state/events.log"; check 0 $? "로그: 시간초과도 judge=failed"
+grep -qE 'judge=[a-z]+ [0-9]+s' "$K18/state/events.log"; check 0 $? "로그: 판정에 걸린 초까지 남긴다"
+mk18 "$M18" | NGG_JUDGE=0 NGG_STATE="$K18" "$W/stop.sh" 2>/dev/null
+tail -1 "$K18/state/events.log" | grep -q 'judge='; r=$?; check 1 "$r" "로그: 끄면 judge 항목 없음"
+
 echo; echo "실패 ${fail}건"; exit "$fail"
