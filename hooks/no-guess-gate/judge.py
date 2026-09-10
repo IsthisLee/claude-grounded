@@ -54,10 +54,15 @@ def main():
     env = dict(os.environ, NGG_INNER="1", CLAUDE_CODE_DISABLE_AUTO_MEMORY="1")
     try:
         # 셸은 bash 로 맞춘다. 훅 배선이 shell: bash 이고 판정 명령도 그 문법으로 적힌다.
-        # Windows 에서 shell=True 는 COMSPEC(cmd.exe)을 쓰므로 executable 로 덮는다. POSIX 는 None 이라 그대로 /bin/sh 다.
-        # encoding 을 안 주면 Windows 파이썬이 레거시 코드페이지로 읽어 한국어 답이 깨진다.
-        shell_exe = shutil.which("bash") if os.name == "nt" else None
-        r = subprocess.run(cmd, shell=True, executable=shell_exe, input=prompt, capture_output=True,
+        # Windows 에서 shell=True 는 COMSPEC 뒤에 cmd.exe 문법인 " /c " 를 붙인다. executable 로 bash 를 넣어도
+        # 그 /c 가 그대로 남아 bash 가 파일명으로 읽는다. 그래서 셸을 직접 argv 로 부른다.
+        # encoding 을 안 주면 Windows 파이썬이 레거시 코드페이지(cp1252)로 읽어 한국어 답이 깨진다.
+        bash = shutil.which("bash") if os.name == "nt" else None
+        if bash:
+            proc, use_shell = [bash, "-c", cmd], False
+        else:
+            proc, use_shell = cmd, True
+        r = subprocess.run(proc, shell=use_shell, input=prompt, capture_output=True,
                            text=True, encoding="utf-8", errors="replace", timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
         print("timeout"); return 2
