@@ -143,16 +143,19 @@ nohangul "$(cat "$T/el-en")"; check 0 $? "en: 한글이 섞이지 않는다"
 
 # 심링크로 갈린 경로. macOS 에서 PostToolUse 는 /private/var/... 를 주는데 cwd 는 /var/... 다.
 # 문자열로만 비교하면 코드 파일을 0개로 세고 조용히 통과한다. 실제 세션에서 그렇게 새어 나갔다.
+# 플랫폼에 기대지 않도록 진짜 심링크를 만들어 두 형태를 만든다.
 PS="$T/sym"; mkdir -p "$PS/src"
 printf '{"name":"s","scripts":{"test":"exit 1"}}' > "$PS/package.json"
 printf 'module.exports=1;\n' > "$PS/src/a.js"
+LN="$T/symlink"; ln -sfn "$PS" "$LN"
 SS="$T/symstate"
 symrun() { rm -rf "$SS"; mkdir -p "$SS/state/sy"; printf '%s\n' "$1" > "$SS/state/sy/changed"
   python3 -c 'import json,sys;print(json.dumps({"session_id":"sy","hook_event_name":"Stop","stop_hook_active":False,"cwd":sys.argv[1]},ensure_ascii=False))' "$2" \
     | NGG_STATE="$SS" "$W/stop.sh" >/dev/null 2>&1; }
-symrun "$PS/src/a.js" "$PS"; check 2 $? "심링크: 같은 형태면 막는다(기준선)"
-symrun "/private$PS/src/a.js" "$PS"; check 2 $? "심링크: changed 만 /private 이어도 막는다"
-symrun "$PS/src/a.js" "/private$PS"; check 2 $? "심링크: cwd 만 /private 이어도 막는다"
-symrun "/other/place/a.js" "$PS"; check 0 $? "심링크: 정말 저장소 밖이면 세지 않는다"
+symrun "$PS/src/a.js" "$PS"; check 2 $? "심링크: 둘 다 실경로면 막는다(기준선)"
+symrun "$LN/src/a.js" "$PS"; check 2 $? "심링크: changed 만 링크 경로여도 막는다"
+symrun "$PS/src/a.js" "$LN"; check 2 $? "심링크: cwd 만 링크 경로여도 막는다"
+symrun "$LN/src/a.js" "$LN"; check 2 $? "심링크: 둘 다 링크 경로여도 막는다"
+symrun "$T/elsewhere/a.js" "$PS"; check 0 $? "심링크: 정말 저장소 밖이면 세지 않는다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"
