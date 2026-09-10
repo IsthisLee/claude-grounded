@@ -5,13 +5,13 @@
 G="$(cd "$(dirname "$0")" && pwd)"; R="$G/selftest-runs"; rm -rf "$R"; mkdir -p "$R"
 run() {
   local n="$1"; local e="$2"; local p="$3"; local tools="${4:-Bash(ls:*),Bash(find:*),Bash(cat:*),Glob,Read,Grep}"; local turns="${5:-8}"
-  local w="$R/$n"; mkdir -p "$w/state"; mkdir -p "$w/../lib" && cp "$G"/../lib/common.sh "$w/../lib/" && cp "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$G"/judge.py "$w/"; touch "$w/a.sh" "$w/b.sh"
+  local w="$R/$n"; mkdir -p "$w/state"; mkdir -p "$w/../lib" && cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$w/../lib/" && cp "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$G"/judge.py "$w/"; touch "$w/a.sh" "$w/b.sh"
   printf '{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"%s/prompt.sh"}]}],"PreToolUse":[{"hooks":[{"type":"command","command":"%s/pre.sh"}]}],"Stop":[{"hooks":[{"type":"command","command":"%s/stop.sh"}]}],"SubagentStop":[{"hooks":[{"type":"command","command":"%s/stop.sh"}]}]}}' "$w" "$w" "$w" "$w" > "$w/settings.json"
   ( cd "$w" && CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 claude -p "$p" --settings ./settings.json --allowedTools "$tools" --model haiku --max-turns "$turns" --setting-sources "" --output-format json 2>/dev/null \
       | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('num_turns'),'|',repr(str(d.get('result'))[:64]))" > "$w/result.txt" 2>&1
     first=$(grep -m1 '^Stop' "$w/state/events.log" 2>/dev/null | grep -o 'viol=\[[^]]*\]'); lastv=$(grep '^Stop' "$w/state/events.log" 2>/dev/null | tail -1 | grep -o 'viol=\[[^]]*\]')
-    case "$first" in 'viol=[]'|'viol=[('*'면제)]'|'') a=PASS;; *) a=BLOCK;; esac
-    case "$lastv" in 'viol=[]'|'viol=[('*'면제)]'|'') clean=1;; *) clean=0;; esac
+    case "$first" in 'viol=[]'|'viol=[(exempt:'*']'|'') a=PASS;; *) a=BLOCK;; esac
+    case "$lastv" in 'viol=[]'|'viol=[(exempt:'*']'|'') clean=1;; *) clean=0;; esac
     grep -q "| 'None'" "$w/result.txt" && clean=0
     if [ "$e" = "ANY" ]; then [ "$clean" -eq 1 ] && ok="✅" || ok="❌"
     elif [ "$e" = "DEADLOCK" ]; then { [ "$a" = "BLOCK" ] && [ "$clean" -eq 0 ]; } && ok="⚠️" || ok="✅"

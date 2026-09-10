@@ -12,6 +12,9 @@ fail=0
 lt() { [ "$1" -lt "$2" ]; }
 blank() { [ -z "$1" ]; }
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
+# 한글이 섞였는지는 python3 로 본다. grep 의 [가-힣] 는 LC_ALL=C 에서 바이트 범위가 되어
+# 영어 문장의 가운뎃점(·)이나 화살표(→)까지 잡는다. 테스트가 로케일에 흔들리면 안 된다.
+nohangul() { printf '%s' "$1" | python3 -c 'import sys,re; sys.exit(1 if re.search(r"[\uac00-\ud7a3]", sys.stdin.read()) else 0)'; }
 run() { python3 -c 'import json,sys; print(json.dumps({"session_id":"rp","hook_event_name":"SessionStart","cwd":sys.argv[1]},ensure_ascii=False))' "$1" | "$W/session.sh"; }
 
 # 1. 빈 폴더에서도 죽지 않는다
@@ -68,6 +71,6 @@ out=$(run "$P3"); printf '%s' "$out" | grep -q '게이트'; check 0 $? "켜져 �
 # 메시지 언어. 프로필은 컨텍스트에 실리는 글이라 언어가 맞아야 읽힌다.
 out=$(NGG_LANG=ko run "$P3"); printf '%s' "$out" | grep -q 'grounded 프로필'; check 0 $? "ko: 한국어 머리글"
 out=$(NGG_LANG=en run "$P3"); printf '%s' "$out" | grep -q 'grounded profile'; check 0 $? "en: 영어 머리글"
-out=$(NGG_LANG=en run "$P3"); printf '%s' "$out" | grep -c '[가-힣]' | grep -qx 0; check 0 $? "en: 한글이 섞이지 않는다"
+out=$(NGG_LANG=en run "$P3"); nohangul "$out"; check 0 $? "en: 한글이 섞이지 않는다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

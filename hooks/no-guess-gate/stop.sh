@@ -12,9 +12,9 @@ nask=$(grep -c '^AskUserQuestion$' "$f" 2>/dev/null); nask=${nask:-0}
 log() { local lf; lf="$(state_root "$d")/state/events.log"
   echo "$HOOK_EVENT_NAME${AGENT_ID:+/agent} active=$STOP_HOOK_ACTIVE tools=$ntools bash=$nbash ctx=$1${judge_log:+ $judge_log} viol=[$2] last=$(printf '%s' "$last" | head -c 80 | LC_ALL=C tr '\n' ' ')" >> "$lf"
   if [ "$(wc -l < "$lf" 2>/dev/null || echo 0)" -gt 2200 ]; then tail -n 2000 "$lf" > "$lf.tmp" 2>/dev/null && mv "$lf.tmp" "$lf"; fi; }
-if [ "$nask" -gt 0 ]; then log - "(질문 면제)"; touch "$s/turn_closed"; exit 0; fi
+if [ "$nask" -gt 0 ]; then log - "(exempt:ask-tool)"; touch "$s/turn_closed"; exit 0; fi
 ASKRE='(\?[[:space:]]*$|which (one|takes priority|do you)|should I|do you want|would you like|please (confirm|clarify|tell me)|어느 쪽|어떻게 할까|할까요\?|원하시|확인해 주|알려 주|선택해 주)'
-if printf '%s' "$last" | grep -qiE "$ASKRE"; then log - "(질문문 면제)"; rm -f "$s/blocked_at"; touch "$s/turn_closed"; exit 0; fi
+if printf '%s' "$last" | grep -qiE "$ASKRE"; then log - "(exempt:question)"; rm -f "$s/blocked_at"; touch "$s/turn_closed"; exit 0; fi
 
 FILE='[A-Za-z0-9_.-]+\.(json|js|jsx|ts|tsx|md|sh|yml|yaml|env|lock|sql|css|scss|py|go|rs)'
 LOCALQ="(this (directory|folder|file|repo|repository|project|codebase|code|config|setting)|the (code|codebase|repo|repository|project|config|current directory)|current directory|in here|이 (디렉터리|폴더|파일|저장소|프로젝트|코드|설정)|여기|현재 (디렉터리|폴더)|코드베이스|저장소|$FILE)"
@@ -64,12 +64,12 @@ if [ -n "$v" ] && [ "${NGG_JUDGE:-$JUDGE_DEFAULT}" != "0" ] && ! printf '%s' "$v
   why=$(python3 -c 'import json,sys; print(json.dumps(dict(prompt=sys.argv[1],rules=sys.argv[2],tools=sys.argv[3],bash=sys.argv[4],last=sys.argv[5],flagged=sys.argv[6]),ensure_ascii=False))' "$prompt" "$v" "$ntools" "$nbash" "$last" "$flagged" | "$d/judge.py" 2>/dev/null); jr=$?
   jel=$(( $(date +%s) - jt0 ))
   case "$jr" in
-    0) judged="($v 판정 면제)"; judge_log="judge=released ${jel}s"; v="";;
+    0) judged="(exempt:judge $v)"; judge_log="judge=released ${jel}s"; v="";;
     1) judge_note=$(tn ngg.judgekept "$why"); judge_log="judge=kept ${jel}s";;
     *) judge_note=$(tn ngg.judgefail "$why"); judge_log="judge=failed ${jel}s";;
   esac
 fi
-tag="$v"; if [ -z "$v" ]; then [ "$jsononly" -eq 1 ] && tag="(JSON 면제)"; [ "$cannot" -eq 1 ] && tag="(불가 면제)"; [ -n "$judged" ] && tag="$judged"; fi
+tag="$v"; if [ -z "$v" ]; then [ "$jsononly" -eq 1 ] && tag="(exempt:json)"; [ "$cannot" -eq 1 ] && tag="(exempt:cannot)"; [ -n "$judged" ] && tag="$judged"; fi
 log "$ctx" "$tag"; if [ -z "$v" ]; then rm -f "$s/blocked_at"; touch "$s/turn_closed"; exit 0; fi
 echo "$ntools" > "$s/blocked_at"
 {

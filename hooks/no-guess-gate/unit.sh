@@ -20,6 +20,9 @@ lt() { [ "$1" -lt "$2" ]; }
 empty() { [ ! -s "$1" ]; }
 nodir()  { [ ! -d "$1" ]; }
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
+# 한글이 섞였는지는 python3 로 본다. grep 의 [가-힣] 는 LC_ALL=C 에서 바이트 범위가 되어
+# 영어 문장의 가운뎃점(·)이나 화살표(→)까지 잡는다. 테스트가 로케일에 흔들리면 안 된다.
+nohangul() { printf '%s' "$1" | python3 -c 'import sys,re; sys.exit(1 if re.search(r"[\uac00-\ud7a3]", sys.stdin.read()) else 0)'; }
 P='{"session_id":"t1","hook_event_name":"UserPromptSubmit","prompt":"이 디렉터리에 package.json 있어?"}'
 R='{"session_id":"t1","hook_event_name":"PreToolUse","tool_name":"Read"}'
 S='{"session_id":"t1","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"이 디렉터리에는 package.json 파일이 없다."}'
@@ -143,8 +146,8 @@ printf '%s' '{"session_id":"t11","hook_event_name":"Stop","stop_hook_active":fal
 # shellcheck disable=SC2016  # JSON 리터럴이라 확장하지 않는다
 printf '%s' '{"session_id":"t11","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"```json\n{\"winner\": \"2\"}\n```"}' | NGG_STATE="$K11" "$W/stop.sh" 2>/dev/null; check 0 $? "JSON 면제: 코드 펜스 안 JSON → 통과"
 printf '%s' '{"session_id":"t11","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"{중괄호로 시작하는 문장. 저장소에 package.json 파일이 없다.}"}' | NGG_STATE="$K11" "$W/stop.sh" 2>/dev/null; check 2 $? "JSON 면제 아님: JSON이 아닌 텍스트 → exit 2"
-grep -q '(JSON 면제)' "$K11/state/events.log"; check 0 $? "events.log에 (JSON 면제) 태그"
-grep -q '(불가 면제)' "$K10/state/events.log"; check 0 $? "events.log에 (불가 면제) 태그"
+grep -q '(exempt:json)' "$K11/state/events.log"; check 0 $? "events.log에 (exempt:json) 태그"
+grep -q '(exempt:cannot)' "$K10/state/events.log"; check 0 $? "events.log에 (exempt:cannot) 태그"
 
 # 12. 수준 2 의미 판정. 정규식이 R2a·R2b만 잡았을 때 모델이 "의견"이라 하면 풀어 준다. 풀어 줄 수만 있고 새로 막지 못한다.
 #     R0·R1·R3·R4가 섞이면 부르지 않는다. 실패·시간초과·엉뚱한 출력이면 막은 채로 둔다. 중첩 세션(NGG_INNER)에서는 게이트 자체가 돌지 않는다.
@@ -160,7 +163,7 @@ mk12() { printf '{"session_id":"t12","hook_event_name":"Stop","stop_hook_active"
 printf '%s' "$P12" | NGG_STATE="$K12" "$W/prompt.sh"
 M="hooks/stop.sh가 깨져 보인다."
 mk12 "$M" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/ok.sh" NGG_STATE="$K12" "$W/stop.sh" 2>/dev/null; check 0 $? "판정: R2b만 걸림 + 판정기 release → 통과"
-grep -q '(R2b 판정 면제)' "$K12/state/events.log"; check 0 $? "events.log에 (R2b 판정 면제) 태그"
+grep -q '(exempt:judge R2b)' "$K12/state/events.log"; check 0 $? "events.log에 (exempt:judge R2b) 태그"
 mk12 "$M" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/no.sh" NGG_STATE="$K12" "$W/stop.sh" 2>/dev/null; check 2 $? "판정: 판정기 keep → exit 2 유지"
 mk12 "$M" | NGG_JUDGE=1 NGG_JUDGE_CMD="$J/bad.sh" NGG_STATE="$K12" "$W/stop.sh" 2>"$T/e12"; check 2 $? "판정: 엉뚱한 출력 → 막은 채로(fail closed)"
 grep -q '판정' "$T/e12"; check 0 $? "stderr에 판정 실패 안내"
@@ -322,7 +325,7 @@ rm -rf "$K21"
 printf '%s' "$(mkstop "$EN")" | NGG_LANG=en NGG_STATE="$K21" "$W/stop.sh" 2>"$T/l2"; check 2 $? "영어: 같은 답이 같은 규칙에 걸린다"
 grep -q 'Evidence gate' "$T/l2"; check 0 $? "영어: 영어 머리글"
 grep -qE '^- R1: you asserted' "$T/l2"; check 0 $? "영어: 규칙 설명도 영어"
-grep -c '[가-힣]' "$T/l2" | grep -qx 0; check 0 $? "영어: 한글이 한 줄도 섞이지 않는다"
+nohangul "$(cat "$T/l2")"; check 0 $? "영어: 한글이 한 줄도 섞이지 않는다"
 check "$(grep -oE '\[R[0-9a-b ]+\]' "$T/l1")" "$(grep -oE '\[R[0-9a-b ]+\]' "$T/l2")" "두 언어의 판정 코드가 같다"
 
 # 22. 로케일이 비어도 규칙이 그대로 걸린다. 대괄호 안 멀티바이트가 바이트로 쪼개져 R1이 조용히 빠지던 적이 있다.

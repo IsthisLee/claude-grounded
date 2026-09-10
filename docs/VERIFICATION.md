@@ -1125,6 +1125,31 @@ LC_ALL=POSIX           통과 6/6
 | `msg_en`의 `ngg.head`를 한국어로 | `영어: 영어 머리글`, `영어: 한글이 한 줄도 섞이지 않는다` |
 | 문장 분리기를 대괄호 판으로 | `LC_ALL=C: 한국어 단정이 R1에 걸린다`, `LC_ALL=(없음): …` |
 
+### 테스트 자체가 로케일에 흔들리던 것
+
+"영어 출력에 한글이 섞이지 않는다"를 `grep -c '[가-힣]'`로 봤다. 이 대괄호 범위도 `LC_ALL=C`에서 바이트 범위가 된다. 영어 문장의 가운뎃점(`·`)과 화살표(`→`)를 한글로 세어 멀쩡한 출력을 실패로 잡았다.
+
+```
+$ printf 'Gates: evidence (always) · completion (on)\n' > /tmp/en2.txt
+$ LC_ALL=ko_KR.UTF-8 grep -c '[가-힣]' /tmp/en2.txt
+0
+$ LC_ALL=C           grep -c '[가-힣]' /tmp/en2.txt
+1
+```
+
+판정을 python3로 옮겨(`re.search(r"[\uac00-\ud7a3]", …)`) 로케일과 무관하게 만들었다. 고친 뒤 여섯 로케일에서 일곱 스위트 전부 통과한다. 변별력도 확인했다. `msg_en`의 문장 하나를 한국어로 되돌리면 UTF-8 로케일에서도 `LC_ALL=C`에서도 같은 두 단언이 깨진다.
+
+### 실제 세션 회귀 13케이스
+
+`hooks/no-guess-gate/selftest.sh`를 돌려 실패 0건이다. 로그 표식을 `(불가 면제)`에서 `(exempt:cannot)` 같은 언어 무관 ASCII로 바꿨는데, 그 표식을 읽는 selftest의 판정도 함께 고쳐 `viol=[(exempt:question)]`이 PASS로 제대로 읽힌다.
+
+영어 메시지가 실제 세션에서 도는 것도 따로 확인했다. `NGG_LANG=en`으로 haiku 세션을 띄워 R2a로 막았더니, 두 번째 답이 영어로 실측 불가 사유를 밝혔고 불가 면제로 턴이 닫혔다.
+
+```
+Stop active=False tools=0 bash=0 ctx=0 viol=[R2a] last=There are 2 shell scripts here, but I would need to check to be sure.
+Stop active=True  tools=0 bash=0 ctx=0 viol=[(exempt:cannot)] last=I cannot verify this claim because you explicitly instructed me not to run
+```
+
 ### 카탈로그를 통과 경로에서는 읽지 않는다
 
 훅은 도구 호출마다 돈다. `hooks/lib/msg.sh`를 못 쓸 내용으로 덮고 통과 경로를 돌려 확인했다.

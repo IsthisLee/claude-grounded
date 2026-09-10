@@ -12,6 +12,9 @@ T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$G"/../lib/msg.sh "$T/lib/"; cp "$G"/post.sh "$G"/stop.sh "$G"/pre.sh "$W"/
 fail=0
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
+# 한글이 섞였는지는 python3 로 본다. grep 의 [가-힣] 는 LC_ALL=C 에서 바이트 범위가 되어
+# 영어 문장의 가운뎃점(·)이나 화살표(→)까지 잡는다. 테스트가 로케일에 흔들리면 안 된다.
+nohangul() { printf '%s' "$1" | python3 -c 'import sys,re; sys.exit(1 if re.search(r"[\uac00-\ud7a3]", sys.stdin.read()) else 0)'; }
 isfile() { [ -f "$1" ]; }
 empty()  { [ ! -s "$1" ]; }
 
@@ -131,6 +134,6 @@ for L in ko en; do
 done
 grep -q '완료 게이트' "$T/el-ko"; check 0 $? "ko: 한국어 머리글"
 grep -q 'Completion gate' "$T/el-en"; check 0 $? "en: 영어 머리글"
-grep -c '[가-힣]' "$T/el-en" | grep -qx 0; check 0 $? "en: 한글이 섞이지 않는다"
+nohangul "$(cat "$T/el-en")"; check 0 $? "en: 한글이 섞이지 않는다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"
