@@ -124,7 +124,17 @@ Grounded in [Reduce hallucinations](https://platform.claude.com/docs/en/test-and
 
 ## Related
 
-[Probity](https://github.com/nizos/probity) blocks TDD violations and forbidden patterns at `PreToolUse`. It grew out of [TDD Guard](https://github.com/nizos/tdd-guard), which is still maintained for projects that rely on it. Either is complementary, not competing — use both if you want deep TDD enforcement. What this one blocks is not an edit but a **turn that ends without evidence**.
+This space has several tools, and most of them block a **tool call** (`PreToolUse`). What this one blocks is a **turn that ends without evidence** (`Stop`). They don't overlap; run them together.
+
+| Tool | What it blocks | When |
+|---|---|---|
+| [cc-safety-net](https://github.com/kenryu42/cc-safety-net) | Destructive git and filesystem commands | Before the call |
+| [Probity](https://github.com/nizos/probity) · [TDD Guard](https://github.com/nizos/tdd-guard) | TDD violations and forbidden patterns | Before the call |
+| [failproofai](https://github.com/FailproofAI/failproofai) | Records every run and enforces rules | Around the call |
+| [Stop That Shit](https://github.com/lennney/stop-that-shit) | Unrequested hashes, checksums, scope creep (Codex/GPT) | Before the call |
+| **claude-grounded** | **Ungrounded conclusions, false "done", disabled tests** | **When the turn tries to end** |
+
+Each description is taken from that project's own words.
 
 ## License
 

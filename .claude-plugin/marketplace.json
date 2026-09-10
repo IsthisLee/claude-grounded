@@ -1,5 +1,7 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "claude-grounded",
+  "version": "1.0.0",
   "description": "Turns Claude Code best practices into enforced gates: no ungrounded claims, no false \"done\", no disabled tests, no rewritten migrations. Four hooks, a repo profile, and seven commands.",
   "owner": {
     "name": "IsthisLee",
@@ -8,8 +10,40 @@
   "plugins": [
     {
       "name": "grounded",
+      "version": "1.1.1",
+      "description": "Turns Claude Code best practices into enforced gates: no ungrounded claims, no false \"done\", no disabled tests, no rewritten migrations. Four hooks, a repo profile, and seven commands.",
+      "author": {
+        "name": "IsthisLee",
+        "url": "https://github.com/IsthisLee"
+      },
+      "homepage": "https://github.com/IsthisLee/claude-grounded",
+      "repository": "https://github.com/IsthisLee/claude-grounded",
+      "license": "MIT",
+      "category": "development",
+      "tags": [
+        "claude-code",
+        "hooks",
+        "stop-hook",
+        "guardrails",
+        "evidence",
+        "verification",
+        "hallucination",
+        "code-quality",
+        "tdd",
+        "agentic-coding"
+      ],
+      "keywords": [
+        "claude-code",
+        "hooks",
+        "evidence",
+        "verification",
+        "tdd",
+        "guardrails",
+        "agentic-coding",
+        "code-quality"
+      ],
       "source": ".",
-      "description": "Turns Claude Code best practices into enforced gates: no ungrounded claims, no false \"done\", no disabled tests, no rewritten migrations. Four hooks, a repo profile, and seven commands."
+      "strict": true
     }
   ]
 }

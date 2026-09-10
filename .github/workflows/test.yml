@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: 문법 검사
         run: |
-          bash -n hooks/*/*.sh skills/unit.sh
+          bash -n hooks/*.sh hooks/*/*.sh skills/unit.sh
           python3 -m py_compile hooks/no-guess-gate/judge.py
       - name: actionlint (워크플로 문법·보안)
         if: runner.os == 'Linux'
@@ -48,7 +48,7 @@ jobs:
             fi
           fi
           shellcheck --version
-          shellcheck -x -s bash hooks/*/*.sh skills/unit.sh
+          shellcheck -x -s bash hooks/*.sh hooks/*/*.sh skills/unit.sh
 
       - name: 결정적 단위 테스트 (모델 호출 없음)
         run: |
@@ -62,6 +62,9 @@ jobs:
 
       - name: 공격면 점검 (SECURITY.md 가 적은 것과 코드가 맞는지)
         run: hooks/attack-surface.sh
+
+      - name: 매니페스트 정합 (버전·이름·CHANGELOG)
+        run: hooks/manifest.sh
 
       - name: 견고성 퍼징 (모델 호출 없음)
         run: hooks/fuzz.sh

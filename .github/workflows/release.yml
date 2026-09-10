@@ -31,6 +31,9 @@ jobs:
           tag="${GITHUB_REF_NAME#v}"
           grep -q "^## \[$tag\]" CHANGELOG.md || { echo "::error::CHANGELOG.md 에 [$tag] 항목이 없다"; exit 1; }
 
+      - name: 매니페스트 정합
+        run: hooks/manifest.sh
+
       - name: 전체 검사
         run: |
           for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do
@@ -38,6 +41,7 @@ jobs:
           done
           skills/unit.sh
           hooks/attack-surface.sh
+          hooks/manifest.sh
           hooks/fuzz.sh
 
       - name: 릴리스 노트를 CHANGELOG 에서 뽑는다

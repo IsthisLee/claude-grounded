@@ -122,7 +122,17 @@ Claude가 이런 메시지를 받는다.
 
 ## 비슷한 도구
 
-[Probity](https://github.com/nizos/probity)는 TDD 위반과 금지 패턴을 `PreToolUse`에서 막는다. [TDD Guard](https://github.com/nizos/tdd-guard)에서 자라 나온 프로젝트이고, TDD Guard도 "쓰고 있는 프로젝트를 위해 계속 유지된다"고 밝히고 있다. 겹치지 않고 보완적이다. TDD 강제를 깊게 원하면 같이 쓰면 된다. 이쪽이 막는 것은 편집이 아니라 **근거 없이 끝나는 턴**이다.
+이 공간에는 도구가 여럿이고, 대부분 **도구 호출을 막는다**(`PreToolUse`). 이쪽이 막는 것은 **근거 없이 끝나는 턴**이다(`Stop`). 겹치지 않아 같이 써도 된다.
+
+| 도구 | 무엇을 막나 | 어디서 |
+|---|---|---|
+| [cc-safety-net](https://github.com/kenryu42/cc-safety-net) | 되돌릴 수 없는 git·파일 시스템 명령 | 실행 전 |
+| [Probity](https://github.com/nizos/probity) · [TDD Guard](https://github.com/nizos/tdd-guard) | TDD 위반과 금지 패턴 | 실행 전 |
+| [failproofai](https://github.com/FailproofAI/failproofai) | 실행을 기록하고 규칙을 강제 | 실행 전후 |
+| [Stop That Shit](https://github.com/lennney/stop-that-shit) | 요청하지 않은 해시·체크섬·범위 확장 (Codex·GPT) | 실행 전 |
+| **claude-grounded** | **근거 없는 결론, 거짓 완료, 테스트 무력화** | **턴이 끝나는 순간** |
+
+설명은 각 저장소가 스스로 적은 설명문을 옮긴 것이다.
 
 ## 라이선스
 

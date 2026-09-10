@@ -3,7 +3,7 @@
 # 턴 끝에는 이것만 (빠름)
 fast_test_command = "hooks/lib/unit.sh && hooks/no-guess-gate/unit.sh && skills/unit.sh"
 # 커밋 직전에 이것 (전체)
-test_command = "for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do hooks/$g/unit.sh || exit 1; done && skills/unit.sh && hooks/attack-surface.sh"
+test_command = "for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do hooks/$g/unit.sh || exit 1; done && skills/unit.sh && hooks/attack-surface.sh && hooks/manifest.sh"
 
 # 이 저장소는 마이그레이션이 없어 append_only를 두지 않는다. 실제 프로젝트에서는 이렇게 적는다.
 # append_only = "supabase/migrations, db/migrate"

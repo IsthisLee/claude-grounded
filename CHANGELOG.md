@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+### 추가
+- **마켓플레이스 항목을 공식 스키마대로 채웠다.** `$schema`·`version`·`author`·`homepage`·`repository`·`license`·`category`·`tags`·`keywords`·`strict`. `tags`는 Claude Code 안에서의 검색 필드인데 비어 있었다. 플러그인의 실제 유통 경로가 저장소가 아니라 이 목록이다.
+- `hooks/manifest.sh` 9건. 두 매니페스트와 `CHANGELOG`의 버전·이름이 어긋나지 않는지 본다. 버전이 세 곳에 적히면 하나만 올리고 끝내기 쉽다.
+
+### 변경
+- README의 "비슷한 도구"를 이 공간의 실제 지도로 다시 썼다. cc-safety-net · Probity · failproofai · Stop That Shit을 각자의 설명문 그대로 넣고, 대부분이 `PreToolUse`에서 도구 호출을 막는 데 반해 이쪽은 `Stop`에서 턴을 막는다는 차이를 표로 밝혔다. 이웃 셋이 빠져 있었다.
+
+### 수정
+- CI의 `shellcheck`·`bash -n` 글롭이 `hooks/*/*.sh`뿐이라 `hooks/` 바로 아래 파일이 빠졌다. **`fuzz.sh`가 한 번도 린트되지 않았다.** `hooks/*.sh`를 더했고, 드러난 지적을 전부 고쳤다.
+
 ## [1.1.1] - 2026-09-10
 
 ### 추가

@@ -11,11 +11,12 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 - `hooks/project-guard/unit.sh` — 프로젝트 가드 26건.
 - `hooks/repo-profile/unit.sh` — 저장소 프로필 19건.
 - `skills/unit.sh` — 스킬 정의 4건.
-- `hooks/attack-surface.sh` — SECURITY.md가 적은 공격면과 코드가 맞는지 9건.  **합계 263건.**
+- `hooks/attack-surface.sh` — SECURITY.md가 적은 공격면과 코드가 맞는지 9건.
+- `hooks/manifest.sh` — 매니페스트 둘과 CHANGELOG의 버전·이름이 어긋나지 않는지 9건.  **합계 272건.**
 - `hooks/fuzz.sh` — 망가진 입력을 아홉 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
 - `hooks/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다.
 - `hooks/no-guess-gate/ab.sh` — 게이트 켠 채와 끈 채를 비교해 효과를 잰다. `SET=hard`가 압박 프롬프트.
-- `shellcheck -x -s bash hooks/*/*.sh skills/unit.sh` · `actionlint`
+- `shellcheck -x -s bash hooks/*.sh hooks/*/*.sh skills/unit.sh` · `actionlint`
 - `claude plugin validate .` · `claude --plugin-dir .`
 
 ## 규칙
