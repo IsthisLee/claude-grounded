@@ -410,3 +410,5 @@ stderr: - 모델 판정: 상태 주장으로 봄(The hedged statement "깨져 �
 ```
 
 판정: 통과. 참양성 둘(`tp-defer` R2a, `tp-path` R0)이 그대로 걸리고, 판정기가 상태 유보를 풀어 주지 않으며, 위양성 다섯과 되묻기 케이스가 전부 통과한다.
+
+**4차(격리 + 자식 세션 자동 메모리 차단).** `selftest.sh`가 띄우는 세션에 `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`을 줬다. 테스트가 사용자의 메모리를 읽거나 쓰면 안 된다. 12케이스 실패 0건. `tp-defer` R2a, `tp-path` R0 그대로 걸림.
