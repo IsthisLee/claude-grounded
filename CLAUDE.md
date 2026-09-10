@@ -10,11 +10,12 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 - `hooks/test-integrity/unit.sh` — 테스트 무결성 32건.
 - `hooks/project-guard/unit.sh` — 프로젝트 가드 26건.
 - `hooks/repo-profile/unit.sh` — 저장소 프로필 19건.
-- `skills/unit.sh` — 스킬 정의 4건.  **합계 252건.**
+- `skills/unit.sh` — 스킬 정의 4건.
+- `hooks/attack-surface.sh` — SECURITY.md가 적은 공격면과 코드가 맞는지 9건.  **합계 263건.**
 - `hooks/fuzz.sh` — 망가진 입력을 아홉 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
 - `hooks/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다.
 - `hooks/no-guess-gate/ab.sh` — 게이트 켠 채와 끈 채를 비교해 효과를 잰다. `SET=hard`가 압박 프롬프트.
-- `shellcheck -x -s bash hooks/*/*.sh skills/unit.sh`
+- `shellcheck -x -s bash hooks/*/*.sh skills/unit.sh` · `actionlint`
 - `claude plugin validate .` · `claude --plugin-dir .`
 
 ## 규칙
@@ -40,4 +41,5 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 - **정규식의 대괄호 안에 멀티바이트 문자를 넣지 않는다.** `[.!?。]`처럼 쓰면 `LC_ALL=C`에서 `grep`·`sed`가 바이트로 매칭해 한국어 글자를 한가운데서 자르고 R1이 조용히 안 걸린다. 교체(`|`)로 쓴다.
 - **메시지 언어는 로케일을 따른다.** `NGG_LANG`이 우선하고 없으면 `LC_ALL` → `LC_MESSAGES` → `LANG` 순으로 본다. `ko` 계열이면 한국어, 그 외에는 영어다. 단위 테스트는 머리에서 `NGG_LANG=ko`를 못 박아 기계마다 결과가 달라지지 않게 한다.
 - **테스트는 주변 환경에 기대지 않는다.** `unit.sh`가 머리에서 `NGG_*`를 `unset`한다. 게이트가 자식에게 물려주는 변수 때문에 폴백 검사가 조용히 뒤집힌 적이 있다.
-- 요구 사항: bash, python3. macOS와 Linux. Windows는 Git Bash가 있을 때만.
+- 요구 사항: bash, python3. macOS · Linux · Windows 셋 다 CI 매트릭스에 있다. Windows는 Git Bash가 있어야 한다.
+- **우리 파이썬 호출에는 `py`를 쓴다.** Windows 파이썬은 기본 인코딩이 UTF-8이 아니라 한국어가 지나가면 죽는다. `common.sh`의 `py()`가 `PYTHONUTF8=1`을 붙인다. 전역으로 export하지 않는 이유는 `done-gate`가 남의 테스트 명령을 그대로 돌리기 때문이다.

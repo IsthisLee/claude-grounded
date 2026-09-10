@@ -28,23 +28,11 @@ jobs:
         run: |
           bash -n hooks/*/*.sh skills/unit.sh
           python3 -m py_compile hooks/no-guess-gate/judge.py
-      - name: (임시) 판정기 진단 — Windows
-        if: runner.os == 'Windows'
-        continue-on-error: true
+      - name: actionlint (워크플로 문법·보안)
+        if: runner.os == 'Linux'
         run: |
-          echo "bash=$(command -v bash)  python3=$(command -v python3)"
-          python3 -c "import os,shutil,sys;print('os.name',os.name);print('which bash',shutil.which('bash'));print('stdout enc',sys.stdout.encoding)"
-          J=$(mktemp -d)
-          printf '#!/usr/bin/env bash\ncat >/dev/null; echo '\''{"release": true, "why": "ok"}'\''\n' > "$J/ok.sh"
-          chmod +x "$J/ok.sh"
-          echo "--- 가짜 판정기 직접 실행"
-          bash "$J/ok.sh" </dev/null; echo "직접 exit=$?"
-          echo "--- judge.py 통과"
-          printf '%s' '{"prompt":"p","rules":"R2b","tools":"0","bash":"0","last":"x","flagged":"y"}' \
-            | NGG_JUDGE_CMD="$J/ok.sh" python3 hooks/no-guess-gate/judge.py; echo "judge exit=$?"
-          echo "--- 셔뱅 실행"
-          printf '%s' '{"prompt":"p","rules":"R2b","tools":"0","bash":"0","last":"x","flagged":"y"}' \
-            | NGG_JUDGE_CMD="$J/ok.sh" hooks/no-guess-gate/judge.py; echo "셔뱅 exit=$?"
+          bash <(curl -sSf https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) >/dev/null
+          ./actionlint -color
 
       - name: shellcheck
         if: runner.os != 'Windows'

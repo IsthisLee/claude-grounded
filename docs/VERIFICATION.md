@@ -1183,3 +1183,94 @@ README 두 개가 차단 메시지를 옮겨 적고 있었는데 **실제 출력
 ### 남은 것
 
 `judge.py`가 판정 모델에게 보내는 프롬프트는 한국어 그대로 두었다. 사람에게 보이지 않고, 정확도 12/12를 잰 그 문장이라 바꾸면 다시 재야 한다.
+
+## V18 저장소 구조 전수 조사와 Windows 실측
+
+배경: 동종 저장소가 어떻게 생겼는지 몇 축으로만 재고 넘어갔다. 구조 자체를 조사한 기록이 없어 GitHub API 로 여덟 곳을 뽑아 파일 목록까지 비교했다.
+
+### 무엇을 어떻게 뽑았나
+
+저장소 선정은 기억이 아니라 검색이다. `search/repositories` 를 `topic:claude-code` 와 별 500 이상 키워드로 두 번 돌려 상위를 확인하고, 그중 **플러그인·훅 도구 성격인 것**만 골랐다. awesome 목록과 스킬 모음은 비교 대상이 아니다. 각 저장소는 `git/trees?recursive=1` 로 전체 파일 목록을 받아 구조 항목을 셌다.
+
+| 저장소 | 별 | README 줄 | 릴리스 | 커뮤니티 | 파일 | CI |
+|---|---|---|---|---|---|---|
+| obra/superpowers | 284,260 | 345 | 12 | 71 | 195 | 0 |
+| anthropics/skills | 175,497 | 95 | 0 | 25 | 419 | 0 |
+| anthropics/claude-code | 144,604 | 71 | 100+ | 50 | 784 | 12 |
+| farion1231/cc-switch | 132,070 | 601 | 53 | 100 | 1,244 | 7 |
+| thedotmack/claude-mem | 93,594 | 457 | 100+ | 71 | 1,141 | 8 |
+| disler/claude-code-hooks-mastery | 3,916 | 935 | 0 | 28 | 130 | 0 |
+| nizos/tdd-guard | 2,334 | 83 | 80 | 57 | 429 | 2 |
+| **claude-grounded** | 0 | 128 | 2 | **100** | 55 | 1 → 2 |
+
+### 구조 항목은 이미 다 있었다
+
+`.claude-plugin/` · `marketplace.json` · `hooks/` · `skills/` · `docs/` · `CLAUDE.md` · 이슈/PR 템플릿 · `dependabot` · `CONTRIBUTING` · 행동 강령 · `SECURITY` · `CHANGELOG` · `LICENSE` · `.gitattributes` 를 우리는 전부 갖고 있고, 여덟 곳 중 이 전부를 갖춘 곳은 없다. `.editorconfig` 만 없는데 일곱 중 하나(claude-mem)만 갖고 있어 넣지 않았다.
+
+**차이는 파일이 아니라 CI 였다.** 별이 많은 저장소는 워크플로가 여러 개다. 무엇을 하는지 보면 셋으로 갈린다. 검증(`ci.yml` · `security.yml` · `windows.yml`), 릴리스 자동화(`release.yml` · `npm-publish.yml`), 그리고 이슈 운영(`stale.yml` · `labeler.yml` · `claude-issue-triage.yml`)이다. anthropics/claude-code 의 워크플로 12 개 중 10 개가 이슈 운영이다. 별 144,000 개짜리 저장소가 받는 유입량 때문이지 품질 때문이 아니다. 별 0 개인 저장소에 stale 봇을 다는 것은 흉내다. **앞의 둘만 가져왔다.**
+
+### Windows: 문서가 거짓이었다
+
+README 두 개와 CLAUDE.md 가 "Windows 는 Git Bash 가 있을 때만" 이라고 적어 두었는데 **한 번도 돌려 본 적이 없다.** 근거 없는 주장을 막는 저장소가 근거 없는 주장을 싣고 있었다. `windows-latest` 를 매트릭스에 넣고 처음 돌리자 **13 건이 깨졌다.**
+
+원인 하나: Windows 파이썬은 stdio 와 파일 기본 인코딩이 UTF-8 이 아니라 레거시 코드페이지다.
+
+```
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 103-105
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 270
+```
+
+`common.sh` 에 `py()` 를 두어 우리 호출에만 `PYTHONUTF8=1` 을 붙였다. 전역으로 export 하지 않았다. `done-gate` 가 남의 테스트 명령을 `eval` 로 그대로 돌리는데 거기까지 바꾸면 남의 프로젝트 동작이 달라진다. 13 건이 6 건으로 줄었다.
+
+남은 6 건은 전부 판정기였다. 추측하지 않고 러너에서 판정기만 따로 돌리는 진단 단계를 넣어 쟀다.
+
+```
+which bash C:\Program Files\Git\usr\bin\bash.EXE
+stdout enc cp1252
+--- 가짜 판정기 직접 실행
+{"release": true, "why": "ok"}
+직접 exit=0
+--- judge.py 통과
+malformed
+```
+
+가짜 판정기는 bash 로 직접 돌리면 멀쩡한데 `judge.py` 를 지나면 죽었다. `subprocess.run(cmd, shell=True)` 가 Windows 에서 `COMSPEC` 뒤에 `cmd.exe` 문법인 ` /c ` 를 붙인다. `executable` 로 bash 를 넣어도 그 `/c` 가 남아 bash 가 파일명으로 읽는다. **처음 낸 수정이 틀렸고 측정이 그것을 잡았다.** 셸을 `[bash, -c, cmd]` argv 로 직접 부르도록 고쳤다. 같이 `encoding="utf-8"` 을 못 박았다. 이건 플랫폼과 무관한 결함이다.
+
+결과는 세 OS 전부 통과다.
+
+```
+success  unit (macos-latest)
+success  unit (windows-latest)
+success  unit (ubuntu-latest)
+```
+
+### SECURITY.md 를 검사로 바꿨다
+
+문서가 적어 둔 공격면을 `hooks/attack-surface.sh` 가 매번 확인한다. 여섯 항목을 하나씩 일부러 깨뜨려 전부 잡히는 것을 봤다.
+
+| 깨뜨린 것 | 잡혔나 |
+|---|---|
+| 훅에 `curl` 심기 | 잡힘 |
+| 셸 훅이 모델 호출 | 잡힘 |
+| 판정기 격리 플래그 제거 | 잡힘 |
+| 프로필이 `.env` 값 읽기 | 잡힘 |
+| 시스템 경로에 쓰기 | **안 잡힘 → 고침** |
+| 훅 타임아웃 하나 제거 | 잡힘 |
+
+다섯째가 안 잡힌 이유는 그 검사가 ERE 에 없는 전방탐색 `(?!/folders)` 을 써서 `grep` 이 오류로 죽고 `|| true` 가 그것을 삼켰기 때문이다. 늘 통과하는 검사였다. 경로를 나열하는 방식으로 고쳤고 다시 시험해 잡히는 것을 확인했다.
+
+### 단위 테스트
+
+| 스위트 | 건수 |
+|---|---|
+| `hooks/lib/unit.sh` | 17 |
+| `hooks/no-guess-gate/unit.sh` | 122 |
+| `hooks/done-gate/unit.sh` | 34 |
+| `hooks/test-integrity/unit.sh` | 32 |
+| `hooks/project-guard/unit.sh` | 26 |
+| `hooks/repo-profile/unit.sh` | 19 |
+| `skills/unit.sh` | 4 |
+| `hooks/attack-surface.sh` | 9 |
+| **합계** | **263건** |
+
+세 OS(ubuntu · macOS · Windows), 여섯 로케일, bash 3.2.57 + python 3.9.6 에서 전부 통과한다. 퍼징 216 회 실패 0, `shellcheck` exit 0, `actionlint` 통과, `claude plugin validate` 통과.

@@ -35,7 +35,7 @@ Two lines inside a Claude Code session.
 
 **Your `settings.json` and `CLAUDE.md` are not touched.** After installing, everything looks the same. The gate only shows up when it fires.
 
-Requires `bash` and `python3`. Runs on macOS and Linux; on Windows only with Git Bash.
+Requires `bash` and `python3`. **macOS, Linux and Windows are all exercised on every CI run.** Windows needs Git Bash.
 
 ## What gets blocked
 
