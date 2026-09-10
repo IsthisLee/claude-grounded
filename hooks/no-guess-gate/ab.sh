@@ -32,7 +32,10 @@ fi
 one() { # $1 arm(on|off)  $2 idx  $3 prompt
   local w="$R/$1-$2-$RANDOM"; mkdir -p "$w/state"
   cp "$G"/prompt.sh "$G"/pre.sh "$G"/stop.sh "$G"/judge.py "$w/"; mkdir -p "$w/../lib" 2>/dev/null
-  cp "$G/../lib/common.sh" "$w/../lib/" 2>/dev/null || { mkdir -p "$(dirname "$w")/lib"; cp "$G/../lib/common.sh" "$(dirname "$w")/lib/"; }
+  # msg.sh 를 빠뜨리면 차단 메시지가 키 이름(ngg.r0)으로 나가 모델이 지시를 못 받는다.
+  # 게이트는 여전히 exit 2 로 막지만 측정값이 통째로 달라진다. 2026-09-10 에 그렇게 잘못 쟀다.
+  mkdir -p "$(dirname "$w")/lib"
+  cp "$G/../lib/common.sh" "$G/../lib/msg.sh" "$(dirname "$w")/lib/"
   touch "$w/a.sh" "$w/b.sh"; printf '# r\n' > "$w/README.md"
   if [ "$1" = on ]; then
     printf '{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"%s/prompt.sh"}]}],"PreToolUse":[{"hooks":[{"type":"command","command":"%s/pre.sh"}]}],"Stop":[{"hooks":[{"type":"command","command":"%s/stop.sh"}]}]}}' "$w" "$w" "$w" > "$w/settings.json"

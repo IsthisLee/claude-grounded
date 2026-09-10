@@ -4,7 +4,7 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 
 ## 검사 명령
 
-- `hooks/lib/unit.sh` — 메시지 카탈로그 17건. 두 언어의 키가 맞는지, 언어 결정 순서가 맞는지 본다.
+- `hooks/lib/unit.sh` — 메시지 카탈로그 21건. 두 언어의 키가 맞는지, 언어 결정 순서가 맞는지, 카탈로그가 사라져도 조용히 통과하지 않는지 본다.
 - `hooks/no-guess-gate/unit.sh` — 근거 게이트 120건. 모델을 부르지 않는다.
 - `hooks/done-gate/unit.sh` — 완료 게이트 34건.
 - `hooks/test-integrity/unit.sh` — 테스트 무결성 32건.
@@ -12,10 +12,11 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 - `hooks/repo-profile/unit.sh` — 저장소 프로필 19건.
 - `skills/unit.sh` — 스킬 정의 4건.
 - `hooks/attack-surface.sh` — SECURITY.md가 적은 공격면과 코드가 맞는지 9건.
-- `hooks/invariants.sh` — 매니페스트·CHANGELOG·문서의 숫자와 셸 인용이 어긋나지 않는지 13건.  **합계 276건.**
+- `hooks/invariants.sh` — 매니페스트·CHANGELOG·문서의 숫자, 셸 인용, 하네스의 카탈로그 복사 14건.  **합계 281건.**
 - `hooks/fuzz.sh` — 망가진 입력을 아홉 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
 - `hooks/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다.
 - `hooks/no-guess-gate/ab.sh` — 게이트 켠 채와 끈 채를 비교해 효과를 잰다. `SET=hard`가 압박 프롬프트.
+- `hooks/no-guess-gate/judge-accuracy.sh` — 판정기 정확도와 소요 시간. 의견 여섯·상태 주장 여섯. README가 인용하는 숫자가 여기서 나온다. 모델을 부르고 몇 분 걸린다.
 - `shellcheck -x -s bash hooks/*.sh hooks/*/*.sh skills/unit.sh` · `actionlint`
 - `claude plugin validate .` · `claude --plugin-dir .`
 
@@ -39,6 +40,7 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 - `hooks/project-guard/` — `append_only` 경로의 기존 파일 수정·삭제와 `--no-verify` 커밋을 막는다.
 - `hooks/repo-profile/` — `SessionStart`에 저장소 사실을 컨텍스트로 싣는다. 사실만 싣고 행동 지시는 넣지 않는다.
 - `skills/` — 사용자 전용 커맨드 일곱. 내장과 겹치는 것은 만들지 않는다. 새 스킬을 넣으면 `skills/unit.sh`가 정의를 검사한다.
+- **훅을 임시 폴더로 복사해 돌리는 하네스는 `lib/`를 통째로 옮긴다.** `msg.sh`를 빠뜨리면 게이트는 여전히 막지만 모델이 받는 문장이 `ngg.r0` 같은 키 이름이 된다. 막히기만 하고 무엇을 하라는지 모르니 측정값이 통째로 달라진다. `hooks/invariants.sh`가 `cp` 줄을 본다.
 - **중괄호 없는 변수 뒤에 한글을 붙이지 않는다.** `"$n개"`는 bash가 `n개`를 변수 이름으로 읽고, `set -u` 아래서는 그 자리에서 죽는다. 실패 분기에 있으면 통과할 때는 안 보이다가 정작 실패를 알려야 할 때 죽는다. **이 저장소에서 세 번 났다.** `${n}개`로 쓴다. `hooks/invariants.sh`가 전수로 막는다.
 - **정규식의 대괄호 안에 멀티바이트 문자를 넣지 않는다.** `[.!?。]`처럼 쓰면 `LC_ALL=C`에서 `grep`·`sed`가 바이트로 매칭해 한국어 글자를 한가운데서 자르고 R1이 조용히 안 걸린다. 교체(`|`)로 쓴다.
 - **메시지 언어는 로케일을 따른다.** `NGG_LANG`이 우선하고 없으면 `LC_ALL` → `LC_MESSAGES` → `LANG` 순으로 본다. `ko` 계열이면 한국어, 그 외에는 영어다. 단위 테스트는 머리에서 `NGG_LANG=ko`를 못 박아 기계마다 결과가 달라지지 않게 한다.

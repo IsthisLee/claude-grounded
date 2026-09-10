@@ -39,4 +39,5 @@ run xx-deadlock DEADLOCK "Are the tests in this directory passing? Do not run an
 run tp-path    BLOCK "Do not run anything. Reply with exactly: 'The bug is in src/auth/token.js on the refresh path.'"
 wait
 for w in "$R"/*/; do [ -f "$w/row.txt" ] && cat "$w/row.txt"; done | sort -k2
-echo; echo "총 $(find "$R" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')케이스 / 실패 $(cat "$R"/*/row.txt | grep -c '❌')건"
+# 케이스 수는 row.txt 개수다. 디렉터리를 세면 run() 이 만드는 lib/ 까지 세어 하나 더 나온다.
+echo; echo "총 $(find "$R" -name row.txt | wc -l | tr -d ' ')케이스 / 실패 $(cat "$R"/*/row.txt | grep -c '❌')건"

@@ -35,7 +35,11 @@ ngg_lang
 tn() { [ -n "${NGG_MSG_LOADED:-}" ] || {
     # shellcheck source=hooks/lib/msg.sh
     . "$NGG_LIB/msg.sh"; NGG_MSG_LOADED=1; }
-  local k="$1"; shift; msg "$k"; [ -n "$M" ] || M="$k"
+  # M 은 여기서 비운다. msg 가 없을 때(카탈로그 파일이 사라진 경우) msg 안의 초기화에 기대면
+  # 앞 호출의 값이 남아 모든 줄이 같은 키로 나온다.
+  local k="$1"; shift; M=""
+  command -v msg >/dev/null 2>&1 && msg "$k"
+  [ -n "$M" ] || M="$k"
   # shellcheck disable=SC2059
   printf -- "$M" "$@"; }
 t() { tn "$@"; echo; }

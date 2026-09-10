@@ -44,6 +44,19 @@ bad_expand=$(python3 "$R/hooks/lint-expand.py" "$R")
 if [ -z "$bad_expand" ]; then ok "변수 뒤에 한글이 바로 붙은 곳이 없다"
 else bad "변수 확장이 한글을 먹는 곳이 있다. \${var} 로 감싸라"; printf '%s\n' "$bad_expand" | sed 's/^/    /'; fi
 
+# 훅을 임시 폴더로 복사해 돌리는 하네스는 lib/ 를 통째로 옮겨야 한다. msg.sh 를 빠뜨리면
+# 게이트는 여전히 막지만 메시지가 키 이름으로 나가 측정값이 통째로 달라진다. 실제로 그렇게 잘못 쟀다.
+missing=""
+for h in "$R"/hooks/*/unit.sh "$R"/hooks/no-guess-gate/selftest.sh "$R"/hooks/no-guess-gate/ab.sh; do
+  [ -f "$h" ] || continue
+  # lib/unit.sh 는 일부러 common.sh 만 옮긴다. 카탈로그가 없을 때를 시험하는 곳이다.
+  case "$h" in */lib/unit.sh) continue;; esac
+  grep -E '^[^#]*\bcp\b.*common\.sh' "$h" >/dev/null || continue
+  grep -E '^[^#]*\bcp\b.*msg\.sh' "$h" >/dev/null || missing="$missing ${h#"$R"/}"
+done
+if [ -z "$missing" ]; then ok "훅을 복사하는 하네스가 전부 msg.sh 도 옮긴다"
+else bad "msg.sh 를 빠뜨린 하네스가 있다:$missing"; fi
+
 # 문서가 적어 둔 개수가 실제와 같은지. 숫자는 조용히 낡는다.
 n_sk=$(find "$R/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 if [ "$n_sk" = 7 ]; then ok "커맨드가 일곱이다"; else bad "커맨드가 일곱이 아니다(${n_sk}개). 문서를 고쳐라"; fi

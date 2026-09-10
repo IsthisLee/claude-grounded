@@ -146,6 +146,7 @@ for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; 
   hooks/$g/unit.sh || break; done && skills/unit.sh    # 합계 252건. 모델을 부르지 않는다
 hooks/fuzz.sh                                 # 망가진 입력 24종 × 훅 아홉 = 216회
 hooks/no-guess-gate/selftest.sh               # 실제 프롬프트 회귀 12케이스, 몇 분
+hooks/no-guess-gate/judge-accuracy.sh         # 판정기 정확도·소요 시간, 몇 분
 shellcheck -x -s bash hooks/*/*.sh skills/unit.sh
 ```
 

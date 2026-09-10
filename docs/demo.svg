@@ -28,6 +28,6 @@
   <text x="20" y="350" fill="#c9d1d9">  Confirmed by running ls — there is no package.json.</text>
 
   <line x1="14" y1="372" x2="746" y2="372" stroke="#21262d" stroke-width="1"/>
-  <text x="20" y="394" fill="#8b949e">Measured over 12 adversarial prompts: answers with zero tool calls</text>
-  <text x="20" y="414" fill="#d29922">75% <tspan fill="#8b949e">without the gate</tspan>  →  <tspan fill="#7ee787">33%</tspan> <tspan fill="#8b949e">with it. Tool calls per answer 0.2 → 1.2.</tspan></text>
+  <text x="20" y="394" fill="#8b949e">Measured over 24 adversarial prompts: answers with zero tool calls</text>
+  <text x="20" y="414" fill="#d29922">75% <tspan fill="#8b949e">without the gate</tspan>  →  <tspan fill="#7ee787">42%</tspan> <tspan fill="#8b949e">with it. Tool calls per answer 0.3 → 1.0.</tspan></text>
 </svg>

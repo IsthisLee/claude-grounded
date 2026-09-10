@@ -7,6 +7,7 @@ set -u
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 unset NGG_LANG NGG_L NGG_MSG_LOADED
 G="$(cd "$(dirname "$0")" && pwd)"
+T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 fail=0
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
 # 훅과 같은 방식으로 부른다. 첫 인자는 환경변수 묶음, 나머지는 부를 함수와 인자다.
@@ -59,6 +60,22 @@ n1=$(run "NGG_LANG=en" tn rp.on | wc -c | tr -d ' ')
 n2=$(run "NGG_LANG=en" t  rp.on | wc -c | tr -d ' ')
 check 2 "$n1" "tn은 줄바꿈을 붙이지 않는다 (on = 2바이트)"
 check 3 "$n2" "t는 줄바꿈을 붙인다 (on+개행 = 3바이트)"
+
+# 7. 카탈로그 파일이 사라져도 조용히 통과하지 않고, 줄마다 제 키를 내보낸다.
+#    A/B 하네스가 msg.sh 를 안 옮겨 차단 메시지가 전부 같은 키로 나가던 적이 있다(2026-09-10).
+B="$T/nocat"; mkdir -p "$B/w" "$B/lib"
+cp "$G/common.sh" "$B/lib/"
+cp "$G/../no-guess-gate/stop.sh" "$G/../no-guess-gate/prompt.sh" "$G/../no-guess-gate/judge.py" "$B/w/"
+# shellcheck disable=SC2016  # 안쪽 bash 가 받을 $1 이다
+out=$(env -u LANG -u LC_ALL NGG_LANG=ko bash -c '. "$1"/lib/common.sh; t ngg.head X; t ngg.r0; t rp.on' _ "$B" 2>/dev/null)
+check "ngg.head" "$(printf '%s' "$out" | sed -n 1p)" "카탈로그 없음: 첫 줄이 제 키"
+check "ngg.r0"   "$(printf '%s' "$out" | sed -n 2p)" "카탈로그 없음: 둘째 줄이 제 키(앞 값이 남지 않는다)"
+check "rp.on"    "$(printf '%s' "$out" | sed -n 3p)" "카탈로그 없음: 셋째 줄이 제 키"
+printf '{"session_id":"nc","hook_event_name":"UserPromptSubmit","prompt":"확인하지 말고 답해. 이 폴더가 git 저장소야?"}' \
+  | NGG_STATE="$B/s" "$B/w/prompt.sh" >/dev/null 2>&1
+printf '{"session_id":"nc","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"네, 이 폴더는 git 저장소입니다."}' \
+  | NGG_JUDGE=0 NGG_STATE="$B/s" "$B/w/stop.sh" >/dev/null 2>&1
+check 2 $? "카탈로그 없음: 그래도 exit 2 로 막는다(조용히 통과 아님)"
 
 echo; [ "$fail" -eq 0 ] && echo "전부 통과" || echo "실패 ${fail}건"
 exit "$fail"
