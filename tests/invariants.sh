@@ -57,6 +57,11 @@ done
 if [ -z "$missing" ]; then ok "훅을 복사하는 하네스가 전부 msg.sh 도 옮긴다"
 else bad "msg.sh 를 빠뜨린 하네스가 있다:$missing"; fi
 
+# 문서가 "실리는 것은 N개" 라고 적는다. 사용자가 설치 전에 확인하라고 안내한 숫자라 틀리면 안 된다.
+n_pl=$(find "$R/plugin" -type f | wc -l | tr -d ' ')
+if grep -q "${n_pl}개 파일" "$R/SECURITY.md"; then ok "plugin/ 파일 수가 문서와 같다(${n_pl}개)"
+else bad "plugin/ 파일 수가 문서와 다르다(실제 ${n_pl}개)"; fi
+
 # 문서가 적어 둔 개수가 실제와 같은지. 숫자는 조용히 낡는다.
 n_sk=$(find "$R/plugin/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 if [ "$n_sk" = 7 ]; then ok "커맨드가 일곱이다"; else bad "커맨드가 일곱이 아니다(${n_sk}개). 문서를 고쳐라"; fi

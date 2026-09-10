@@ -15,6 +15,29 @@
 
 `events.log`가 남기는 것은 프롬프트 일부와 답의 처음 80자다. 민감한 내용을 다루는 저장소라면 `${CLAUDE_PLUGIN_DATA}/state/`를 주기적으로 지우거나 게이트를 그 저장소에서 끄면 된다(`claude plugin disable grounded@claude-grounded --scope project`).
 
+## 설치할 것을 직접 확인하는 법
+
+이 플러그인은 당신의 권한으로 셸을 실행한다. 그러니 무엇을 받는지 스스로 확인할 수 있어야 한다.
+
+**릴리스 태그는 서명돼 있다.** 받아서 검증할 수 있다.
+
+```bash
+git clone https://github.com/IsthisLee/claude-grounded
+cd claude-grounded
+git tag -v v1.3.1        # Good "git" signature 가 나와야 한다
+```
+
+**실리는 것은 `plugin/` 뿐이다.** 23개 파일이고 그중 도는 것은 훅 열과 스킬 일곱이다. 테스트·문서·CI는 설치본에 들어가지 않는다.
+
+```bash
+find plugin -type f | wc -l          # 23
+cat plugin/hooks/hooks.json          # 어느 이벤트에 무엇이 걸리는지 전부
+```
+
+**`main` 브랜치는 강제 푸시와 삭제를 막아 두었다.** 당신이 어제 읽은 코드가 오늘 조용히 바뀌지 않는다.
+
+**공격면이 코드와 맞는지는 검사로 확인한다.** `tests/attack-surface.sh` 가 이 문서의 약속을 매번 대조한다. 네트워크 명령 없음, 모델 호출은 `judge.py` 하나, 판정기 격리 플래그 셋, 프로필이 `.env` 값을 안 읽음, 시스템 경로에 안 씀, 훅 전부 타임아웃.
+
 ## 우리가 이미 막은 것
 
 **판정기 프롬프트 주입.** 판정기는 Claude의 답을 모델에게 넘긴다. 답 안에 판정 JSON을 심어 두면 판정으로 읽혀 게이트가 풀릴 수 있었다. 답 텍스트를 데이터 블록으로 감싸고, 중괄호와 판정 키워드를 중화하고, 응답의 마지막 JSON만 읽도록 고쳤다. 회귀 테스트가 `unit.sh` 12군에 있다. 기록은 `docs/VERIFICATION.md` V4f.
