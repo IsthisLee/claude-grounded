@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
-# 매니페스트 둘과 CHANGELOG 가 서로 어긋나지 않는지 본다.
-# 버전이 세 곳에 적히면 하나만 올리고 끝내기 쉽다. 실제로 1.1.0 을 손으로 올렸다.
+# 저장소가 스스로 지켜야 하는 불변식. 매니페스트·CHANGELOG·문서의 숫자, 그리고 셸 인용.
+# 전부 조용히 어긋나는 것들이라 사람이 눈으로 볼 수 없다.
 set -u
 export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 R="$(cd "$(dirname "$0")/.." && pwd)"
@@ -36,6 +36,23 @@ if [ -n "$(j "$M" plugins.0.tags)" ]; then ok "marketplace 에 tags 가 있다(C
 src=$(j "$M" plugins.0.source)
 if [ -d "$R/$src" ]; then ok "source 경로가 실재한다($src)"; else bad "source 경로가 없다($src)"; fi
 if [ -f "$R/.claude-plugin/plugin.json" ]; then ok "strict=true 가 요구하는 plugin.json 이 있다"; else bad "plugin.json 이 없다"; fi
+
+# 중괄호 없는 변수 뒤에 한글이 바로 붙으면 bash 가 그것까지 변수 이름으로 읽는다.
+# set -u 아래서는 unbound variable 로 그 자리에서 죽는다. 실패 분기에 있으면 통과할 때는
+# 안 보이다가 정작 실패를 알려야 할 때 죽는다. 이 저장소에서 세 번 났다.
+bad_expand=$(python3 "$R/hooks/lint-expand.py" "$R")
+if [ -z "$bad_expand" ]; then ok "변수 뒤에 한글이 바로 붙은 곳이 없다"
+else bad "변수 확장이 한글을 먹는 곳이 있다. \${var} 로 감싸라"; printf '%s\n' "$bad_expand" | sed 's/^/    /'; fi
+
+# 문서가 적어 둔 개수가 실제와 같은지. 숫자는 조용히 낡는다.
+n_sk=$(find "$R/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
+if [ "$n_sk" = 7 ]; then ok "커맨드가 일곱이다"; else bad "커맨드가 일곱이 아니다(${n_sk}개). 문서를 고쳐라"; fi
+n_gate=$(find "$R/hooks" -mindepth 1 -maxdepth 1 -type d ! -name lib | wc -l | tr -d ' ')
+if [ "$n_gate" = 5 ]; then ok "훅 모듈이 다섯이다(게이트 넷 + 프로필)"; else bad "훅 모듈이 다섯이 아니다(${n_gate}개)"; fi
+n_in=$(python3 "$R/hooks/fuzz-inputs.py" | wc -l | tr -d ' ')
+n_hook=$(grep -oE '[a-z-]+/[a-z]+\.sh' "$R/hooks/fuzz.sh" | sort -u | wc -l | tr -d ' ')
+want=$(( (n_in + 1) * n_hook ))
+if grep -q "${want}회" "$R/docs/gates.ko.md"; then ok "퍼징 횟수가 문서와 같다(${want}회)"; else bad "퍼징 횟수가 문서와 다르다(실제 ${want}회)"; fi
 
 echo
 if [ "$fail" -eq 0 ]; then echo "전부 통과"; else echo "실패 ${fail}건"; fi

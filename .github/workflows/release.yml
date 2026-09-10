@@ -32,7 +32,7 @@ jobs:
           grep -q "^## \[$tag\]" CHANGELOG.md || { echo "::error::CHANGELOG.md 에 [$tag] 항목이 없다"; exit 1; }
 
       - name: 매니페스트 정합
-        run: hooks/manifest.sh
+        run: hooks/invariants.sh
 
       - name: 전체 검사
         run: |
@@ -41,7 +41,7 @@ jobs:
           done
           skills/unit.sh
           hooks/attack-surface.sh
-          hooks/manifest.sh
+          hooks/invariants.sh
           hooks/fuzz.sh
 
       - name: 릴리스 노트를 CHANGELOG 에서 뽑는다

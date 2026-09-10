@@ -27,7 +27,7 @@ jobs:
       - name: 문법 검사
         run: |
           bash -n hooks/*.sh hooks/*/*.sh skills/unit.sh
-          python3 -m py_compile hooks/no-guess-gate/judge.py
+          python3 -m py_compile hooks/no-guess-gate/judge.py hooks/fuzz-inputs.py hooks/lint-expand.py
       - name: actionlint (워크플로 문법·보안)
         if: runner.os == 'Linux'
         run: |
@@ -64,7 +64,7 @@ jobs:
         run: hooks/attack-surface.sh
 
       - name: 매니페스트 정합 (버전·이름·CHANGELOG)
-        run: hooks/manifest.sh
+        run: hooks/invariants.sh
 
       - name: 견고성 퍼징 (모델 호출 없음)
         run: hooks/fuzz.sh
