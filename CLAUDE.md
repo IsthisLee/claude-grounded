@@ -41,6 +41,7 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 - `plugin/hooks/lib/common.sh` — 모든 훅이 공유하는 입력 파서와 메시지 함수 `t`·`tn`. `no-guess-gate/pre.sh`는 도구 호출마다 돌아 파라미터 확장만 쓰는 빠른 경로가 따로 있다.
 - `plugin/hooks/lib/msg.sh` — 사람과 모델에게 나가는 문장 46개를 한국어와 영어로 담는다. 차단이 일어날 때만 읽는다. **훅 안에 문장을 직접 쓰지 않는다.** 한쪽 언어에만 넣으면 `tests/lib/unit.sh`가 잡는다.
 - `plugin/hooks/no-guess-gate/stop.sh` — 규칙 R0~R5와 면제 다섯. `judge.py`가 R2a·R2b만 걸렸을 때 의견인지 상태 주장인지 작은 모델에게 묻는다(`NGG_JUDGE_MODEL`, 기본 haiku).
+- `.grounded.toml` 이 읽는 키는 넷이다. `test_command`·`fast_test_command`(완료 게이트), `append_only`(프로젝트 가드), `disabled_rules`(근거 게이트의 규칙별 끄기). **파서는 한 줄에 키 하나다.** macOS 기본 파이썬(3.9)에 `tomllib` 이 없어 온전한 TOML 파서를 쓰지 않는다.
 - `plugin/hooks/done-gate/` — 코드를 고친 턴에 저장소 검사를 돌린다. 이 저장소의 `.grounded.toml`이 자기 테스트를 가리킨다.
 - `plugin/hooks/test-integrity/` — 테스트 무력화 편집, 테스트 파일 삭제, 러너 설정의 제외 추가를 막는다.
 - `plugin/hooks/project-guard/` — `append_only` 경로의 기존 파일 수정·삭제와 `--no-verify` 커밋을 막는다.

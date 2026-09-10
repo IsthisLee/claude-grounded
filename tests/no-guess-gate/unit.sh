@@ -379,4 +379,47 @@ seq23 F
 printf '%s' '{"session_id":"t23","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"{\"winner\": \"1\"}"}' \
   | NGG_JUDGE=0 NGG_STATE="$K23" "$W/stop.sh" 2>/dev/null; check 0 $? "R5: 답 전체가 JSON 이면 면제"
 
+# 24. 저장소별 규칙 끄기. 오탐을 만나면 환경변수로 통째로 끄거나 플러그인을 끄는 수밖에 없었다.
+#     환경변수는 한 사람 셸에만 있어 팀이 모른다. .grounded.toml 에 적으면 PR 에 보이고 리뷰 대상이 된다.
+#     끄기를 쉽게 만드는 변경이 아니라 끄는 행위를 보이게 만드는 변경이다.
+P24="$T/p24"; mkdir -p "$P24"; K24="$T/k24"
+mk24() { printf '{"session_id":"t24","hook_event_name":"Stop","stop_hook_active":false,"cwd":"%s","last_assistant_message":"%s"}' "$P24" "$1"; }
+conf24() { if [ -n "$1" ]; then printf 'disabled_rules = "%s"\n' "$1" > "$P24/.grounded.toml"; else rm -f "$P24/.grounded.toml"; fi; }
+NOFILE="이 디렉터리에는 package.json 파일이 없다."
+# R0 는 사용자가 이 디렉터리 상태를 물었을 때만 걸린다. 프롬프트를 남겨 두 규칙이 다 걸리게 한다.
+printf '{"session_id":"t24","hook_event_name":"UserPromptSubmit","cwd":"%s","prompt":"이 디렉터리에 package.json 있어?"}' "$P24" \
+  | NGG_STATE="$K24" "$W/prompt.sh"
+
+conf24 ""
+mk24 "$NOFILE" | NGG_STATE="$K24" "$W/stop.sh" 2>/dev/null; check 2 $? "규칙 끄기: 설정이 없으면 그대로 막는다(기준선)"
+
+conf24 "R1"
+mk24 "$NOFILE" | NGG_STATE="$K24" "$W/stop.sh" 2>"$T/e24a"; check 2 $? "규칙 끄기: R1 만 끄면 R0 가 남아 여전히 막는다"
+grep -q 'R1' "$T/e24a"; r=$?; check 1 "$r" "규칙 끄기: 꺼진 R1 은 안내에 나오지 않는다"
+
+conf24 "R0, R1"
+mk24 "$NOFILE" | NGG_STATE="$K24" "$W/stop.sh" 2>/dev/null; check 0 $? "규칙 끄기: 걸린 규칙을 다 끄면 통과한다"
+
+conf24 "R0,R1"
+mk24 "$NOFILE" | NGG_STATE="$K24" "$W/stop.sh" 2>/dev/null; check 0 $? "규칙 끄기: 쉼표 뒤 공백이 없어도 읽는다"
+
+conf24 "r0, r1"
+mk24 "$NOFILE" | NGG_STATE="$K24" "$W/stop.sh" 2>/dev/null; check 0 $? "규칙 끄기: 소문자로 적어도 읽는다"
+
+# 끈 것은 기록에 남아야 한다. 남지 않으면 왜 안 막았는지 나중에 알 수 없다.
+conf24 "R0, R1"
+mk24 "$NOFILE" | NGG_STATE="$K24" "$W/stop.sh" 2>/dev/null
+grep -q 'off=\[R0 R1\]' "$K24/state/events.log"; check 0 $? "규칙 끄기: 무엇을 껐는지 events.log 에 남는다"
+
+# 오타는 조용히 넘어가면 안 된다. 껐다고 믿는데 안 꺼진 상태가 제일 나쁘다.
+conf24 "R9"
+mk24 "$NOFILE" | NGG_STATE="$K24" "$W/stop.sh" 2>"$T/e24b"; check 2 $? "규칙 끄기: 없는 이름은 아무것도 끄지 않는다"
+grep -q 'R9' "$T/e24b"; check 0 $? "규칙 끄기: 없는 이름을 stderr 로 알린다"
+grep -q 'off?=\[R9\]' "$K24/state/events.log"; check 0 $? "규칙 끄기: 없는 이름도 events.log 에 남는다"
+
+# 다른 저장소의 설정을 읽어서는 안 된다.
+conf24 "R0, R1"
+printf '{"session_id":"t24b","hook_event_name":"Stop","stop_hook_active":false,"cwd":"%s","last_assistant_message":"%s"}' "$T" "$NOFILE" \
+  | NGG_STATE="$T/k24b" "$W/stop.sh" 2>/dev/null; check 2 $? "규칙 끄기: cwd 가 다르면 그 설정을 쓰지 않는다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

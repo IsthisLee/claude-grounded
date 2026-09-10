@@ -36,6 +36,27 @@ The regex floor is free and the model is consulted rarely. Moving to a prompt ho
 
 If it fails or times out, the block stands. Each verdict is logged to `${CLAUDE_PLUGIN_DATA}/state/events.log` as `judge=released|kept|failed` with the elapsed seconds.
 
+## Disabling one rule
+
+Regex doesn't read intent, and in some repos one rule fires far more often than it should. Turning the whole gate off to escape it takes the other six down with it.
+
+Name the rule in `.grounded.toml` and only that one drops out.
+
+```toml
+# R2b fires on every design discussion in this repo
+disabled_rules = "R2b"
+```
+
+Comma-separate several; case doesn't matter. The names are `R0`, `R1`, `R2a`, `R2b`, `R3`, `R4`, `R5`.
+
+**Putting it in a file rather than an env var is the whole point.** `NGG_JUDGE=0` in someone's shell is invisible to the rest of the team. `.grounded.toml` is committed, so it shows up in the pull request and the reason lives in the same commit. This does not make switching a rule off easier; it makes switching one off **visible**.
+
+The fact is recorded in three places.
+
+- `off=[R2b]` in `events.log`
+- The repo profile loads `Disabled rules: R2b` into context every session
+- Naming a rule that doesn't exist is reported on stderr when the gate blocks. Believing a rule is off when it isn't is the worst state to be in
+
 ## Completion gate: the check must pass
 
 A turn that changed code files does not end until your project's check actually runs. This is the mechanism the official docs prescribe:

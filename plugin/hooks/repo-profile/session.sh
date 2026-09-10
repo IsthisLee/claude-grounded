@@ -54,6 +54,10 @@ if [ -z "$cmd" ] && [ -f pyproject.toml ]; then cmd="py -m pytest -q"; src="pypr
 
 appendonly=""
 [ -f .grounded.toml ] && appendonly=$(sed -n 's/^[[:space:]]*append_only[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' .grounded.toml | head -1)
+# 끈 규칙은 세션마다 보여야 한다. 설정 파일에만 있으면 아무도 안 읽고, 그러면 환경변수로
+# 끄던 시절과 다를 것이 없다.
+disabled=""
+[ -f .grounded.toml ] && disabled=$(sed -n 's/^[[:space:]]*disabled_rules[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' .grounded.toml | head -1)
 
 {
   tn rp.head "$name"
@@ -64,6 +68,7 @@ appendonly=""
   if [ -n "$cmd" ]; then t rp.cmd "$cmd" "$src"
   else t rp.nocmd; fi
   [ -n "$appendonly" ] && t rp.appendonly "$appendonly"
+  [ -n "$disabled" ] && t rp.disabled "$disabled"
   if [ -n "$cmd" ]; then g1=$(tn rp.on); else g1=$(tn rp.wait); fi
   if [ -n "$appendonly" ]; then g2=$(tn rp.on); else g2=$(tn rp.noconf); fi
   t rp.gates "$g1" "$g2"

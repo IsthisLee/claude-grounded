@@ -123,6 +123,7 @@ Hit a false positive? [Open an issue](../../issues/new?template=false-positive.m
 | Off in this repo | `claude plugin disable grounded@claude-grounded --scope project` |
 | Off for me only | Same, with `--scope local` |
 | Semantic judge only | `NGG_JUDGE=0` |
+| One rule only | `disabled_rules = "R2b"` in `.grounded.toml` |
 | Every hook, not just this plugin | `"disableAllHooks": true` in settings |
 | Raise the 8-block cap | `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` |
 | Remove entirely | `claude plugin uninstall grounded@claude-grounded` |

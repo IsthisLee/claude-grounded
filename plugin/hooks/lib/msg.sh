@@ -12,6 +12,7 @@ msg_ko() { case "$1" in
   err.python3)   M="no-guess-gate: python3로 훅 입력을 읽지 못했다. 이 턴은 판정하지 않았다. python3 설치와 PATH를 확인하라." ;;
 
   ngg.head)      M="근거 없는 결론 게이트 [%s]. 턴을 끝낼 수 없다." ;;
+  ngg.offbad)    M="  (.grounded.toml 의 disabled_rules 에 없는 규칙 이름이 있다: %s. 아무것도 끄지 않았다.)" ;;
   ngg.r0)        M="- R0: 사용자가 이 디렉터리/파일/코드의 상태를 물었는데 도구를 한 번도 실행하지 않았다. 지금 Read/Grep/Glob/Bash로 확인하라." ;;
   ngg.r1)        M="- R1: 도구 실행 없이 특정 경로/파일의 상태를 단정했다. 지금 실제로 확인하라." ;;
   ngg.r2a)       M="- R2a: 도구를 한 번도 쓰지 않고 '확인이 필요하다'류의 유보 표현으로 끝냈다. 지금 확인하라. 정말 확인할 수 없는 상황이면 왜 불가능한지 답에 적어라. 모른다고 말하는 것은 허용되지만, 확인할 수 있는데 미루는 것은 안 된다." ;;
@@ -71,12 +72,14 @@ msg_ko() { case "$1" in
   rp.on)         M="켜짐" ;;
   rp.wait)       M="검사 명령 없어 대기" ;;
   rp.noconf)     M="설정 없어 --no-verify만 차단" ;;
+  rp.disabled)   M="끈 규칙: %s  (.grounded.toml 의 disabled_rules)" ;;
 esac ; }
 
 msg_en() { case "$1" in
   err.python3)   M="no-guess-gate: could not read the hook input with python3. This turn was not judged. Check that python3 is installed and on PATH." ;;
 
   ngg.head)      M="Evidence gate [%s]. This turn cannot end." ;;
+  ngg.offbad)    M="  (disabled_rules in .grounded.toml names an unknown rule: %s. Nothing was disabled.)" ;;
   ngg.r0)        M="- R0: the user asked about the state of this directory/file/code and you ran no tool at all. Check it now with Read/Grep/Glob/Bash." ;;
   ngg.r1)        M="- R1: you asserted the state of a specific path or file without running a tool. Go check it now." ;;
   ngg.r2a)       M="- R2a: you ended on a hedge like 'this needs to be verified' without running a single tool. Verify it now. If verification is genuinely impossible, say in your answer why. Saying you don't know is allowed; deferring what you could have checked is not." ;;
@@ -136,4 +139,5 @@ msg_en() { case "$1" in
   rp.on)         M="on" ;;
   rp.wait)       M="idle, no check command" ;;
   rp.noconf)     M="unconfigured, blocks only --no-verify" ;;
+  rp.disabled)   M="Disabled rules: %s  (disabled_rules in .grounded.toml)" ;;
 esac ; }

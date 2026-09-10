@@ -121,6 +121,7 @@ Claude가 이런 메시지를 받는다.
 | 이 저장소에서만 끄기 | `claude plugin disable grounded@claude-grounded --scope project` |
 | 나만 끄기 | 같은 명령에 `--scope local` |
 | 의미 판정만 끄기 | `NGG_JUDGE=0` |
+| 규칙 하나만 끄기 | `.grounded.toml`에 `disabled_rules = "R2b"` |
 | 훅 전부 끄기(이 플러그인만이 아니라) | 설정에 `"disableAllHooks": true` |
 | 8회 상한을 올리기 | 환경변수 `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` |
 | 완전히 지우기 | `claude plugin uninstall grounded@claude-grounded` |

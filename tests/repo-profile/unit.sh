@@ -78,4 +78,14 @@ out=$(NGG_LANG=ko run "$P3"); printf '%s' "$out" | grep -q 'grounded 프로필';
 out=$(NGG_LANG=en run "$P3"); printf '%s' "$out" | grep -q 'grounded profile'; check 0 $? "en: 영어 머리글"
 out=$(NGG_LANG=en run "$P3"); nohangul "$out"; check 0 $? "en: 한글이 섞이지 않는다"
 
+# 규칙을 끈 저장소는 세션마다 그 사실이 보여야 한다. 설정 파일에만 있으면 아무도 안 읽는다.
+PD="$T/pd"; mkdir -p "$PD"
+printf 'test_command = "true"\ndisabled_rules = "R2b"\n' > "$PD/.grounded.toml"
+out=$(run "$PD"); printf '%s' "$out" | grep -q 'R2b'; check 0 $? "끈 규칙을 프로필에 싣는다"
+out=$(NGG_LANG=en run "$PD"); nohangul "$out"; check 0 $? "en: 끈 규칙 줄에도 한글이 없다"
+
+PE="$T/pe"; mkdir -p "$PE"
+printf 'test_command = "true"\n' > "$PE/.grounded.toml"
+out=$(run "$PE"); printf '%s' "$out" | grep -q 'disabled_rules'; r=$?; check 1 "$r" "끈 규칙이 없으면 그 줄을 넣지 않는다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

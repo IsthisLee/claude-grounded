@@ -9,8 +9,9 @@ last="$LAST"; prompt=$(cat "$s/prompt" 2>/dev/null); f="$s/tools"
 ntools=$({ wc -l < "$f"; } 2>/dev/null | tr -d ' '); ntools=${ntools:-0}
 nbash=$(grep -c '^Bash$' "$f" 2>/dev/null); nbash=${nbash:-0}
 nask=$(grep -c '^AskUserQuestion$' "$f" 2>/dev/null); nask=${nask:-0}
+off=""; offbad=""
 log() { local lf; lf="$(state_root "$d")/state/events.log"
-  echo "$HOOK_EVENT_NAME${AGENT_ID:+/agent} active=$STOP_HOOK_ACTIVE tools=$ntools bash=$nbash ctx=$1${judge_log:+ $judge_log} viol=[$2] last=$(printf '%s' "$last" | head -c 80 | LC_ALL=C tr '\n' ' ')" >> "$lf"
+  echo "$HOOK_EVENT_NAME${AGENT_ID:+/agent} active=$STOP_HOOK_ACTIVE tools=$ntools bash=$nbash ctx=$1${judge_log:+ $judge_log}${off:+ off=[$off]}${offbad:+ off?=[$offbad]} viol=[$2] last=$(printf '%s' "$last" | head -c 80 | LC_ALL=C tr '\n' ' ')" >> "$lf"
   if [ "$(wc -l < "$lf" 2>/dev/null || echo 0)" -gt 2200 ]; then tail -n 2000 "$lf" > "$lf.tmp" 2>/dev/null && mv "$lf.tmp" "$lf"; fi; }
 if [ "$nask" -gt 0 ]; then log - "(exempt:ask-tool)"; touch "$s/turn_closed"; exit 0; fi
 ASKRE='(\?[[:space:]]*$|which (one|takes priority|do you)|should I|do you want|would you like|please (confirm|clarify|tell me)|어느 쪽|어떻게 할까|할까요\?|원하시|확인해 주|알려 주|선택해 주)'
@@ -58,6 +59,33 @@ lastb=$(tail -c 1 "$s/bashseq" 2>/dev/null || true)
 [ "$ctx" -eq 1 ] && [ "$prose" -eq 1 ] && printf '%s' "$resid" | grep -qiE "$R2b" && ! printf '%s' "$last" | grep -qiE "$NG2" && v="$v R2b"
 [ "$nbash" -eq 0 ] && printf '%s' "$last" | grep -qiE "$R3" && ! printf '%s' "$last" | grep -qiE "$NEG" && v="$v R3"
 v="${v# }"
+
+# 저장소별로 규칙을 끈다. 지금까지는 환경변수로 통째로 끄는 길뿐이었는데, 그것은 한 사람
+# 셸에만 있어 팀이 모른다. .grounded.toml 에 적으면 PR 에 보이고 무엇을 껐는지 로그에 남는다.
+# 끄기를 쉽게 만드는 것이 아니라 끄는 행위를 보이게 만드는 것이 목적이다.
+off=""; offbad=""
+ngg_conf="${CWD:-$PWD}/.grounded.toml"
+# 걸린 것이 없으면 설정을 읽지 않는다. 이 훅은 턴마다 돌아 상시 비용이 된다.
+if [ -n "$v" ] && [ -f "$ngg_conf" ]; then
+  dr=$(sed -n 's/^[[:space:]]*disabled_rules[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$ngg_conf" | head -1)
+  for tok in $(printf '%s' "$dr" | tr ',' ' '); do
+    case "$(printf '%s' "$tok" | LC_ALL=C tr '[:upper:]' '[:lower:]')" in
+      r0) R=R0;; r1) R=R1;; r2a) R=R2a;; r2b) R=R2b;; r3) R=R3;; r4) R=R4;; r5) R=R5;;
+      *) offbad="$offbad $tok"; continue;;
+    esac
+    off="$off $R"
+  done
+  off="${off# }"; offbad="${offbad# }"
+fi
+if [ -n "$off" ] && [ -n "$v" ]; then
+  keep=""; dropped=""
+  for r in $v; do
+    skip=0
+    for o in $off; do [ "$r" = "$o" ] && skip=1; done
+    if [ "$skip" -eq 1 ]; then dropped="$dropped $r"; else keep="$keep $r"; fi
+  done
+  v="${keep# }"; off="${dropped# }"
+fi
 # 수준 2. 정규식이 R2a·R2b만 잡았으면 모델에게 의견인지 상태 주장인지 묻는다. 풀어 줄 수만 있고 새로 막지 못한다.
 # R0·R1·R3·R4(도구를 안 돌린 사실, 단정, 검증 주장)는 판정 대상이 아니다. 실패·시간초과면 막은 채로 둔다(fail closed).
 JUDGE_DEFAULT=1; judge_note=""; judged=""; judge_log=""
@@ -78,6 +106,7 @@ log "$ctx" "$tag"; if [ -z "$v" ]; then rm -f "$s/blocked_at"; touch "$s/turn_cl
 echo "$ntools" > "$s/blocked_at"
 {
   t ngg.head "$v"
+  [ -n "$offbad" ] && t ngg.offbad "$offbad"
   case " $v " in *" R0 "*) t ngg.r0;; esac
   case " $v " in *" R1 "*) t ngg.r1;; esac
   case " $v " in *" R2a "*) t ngg.r2a;; esac
