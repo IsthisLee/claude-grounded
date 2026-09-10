@@ -161,6 +161,9 @@ symdiag() { echo "    root=$1"
   echo "    awkhit=$(awk -v r="$1/" 'index($0, r)==1' "$SS/state/sy/changed" 2>&1 | wc -l)"
   echo "    code=$(awk -v r="$1/" 'index($0, r)==1' "$SS/state/sy/changed" 2>/dev/null | grep -cE '[.]js$')"
   echo "    od=$(od -c "$SS/state/sy/changed" 2>/dev/null | tr '\n' ' ' | cut -c1-200)"
+  local J; J=$(python3 -c 'import json,sys;print(json.dumps({"session_id":"sy","hook_event_name":"Stop","stop_hook_active":False,"cwd":sys.argv[1]},ensure_ascii=False))' "$1")
+  echo "    jsonod=$(printf '%s' "$J" | od -c | tail -2 | tr '\n' ' ')"
+  echo "    hookview=$( ( IN="$J"; . "$T/lib/common.sh"; read_in; printf 'SID=[%s] CWD=[%s]' "$SESSION_ID" "$CWD" ) | od -c | tr '\n' ' ' | cut -c1-400)"
   echo "    stderr=$(tr '\n' ' ' < "$T/symerr" 2>/dev/null | cut -c1-400)"; }
 b=$fail; symrun "$PS/src/a.js" "$PS"; check 2 $? "심링크: 둘 다 실경로면 막는다(기준선)"
 [ "$fail" -ne "$b" ] && symdiag "$PS"
