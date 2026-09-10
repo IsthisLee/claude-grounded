@@ -41,14 +41,14 @@ if [ -f "$conf" ]; then
   fi
 fi
 if [ -z "$cmd" ] && [ -f "$root/package.json" ]; then
-  if python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if (d.get("scripts") or {}).get("test") else 1)' "$root/package.json" 2>/dev/null; then
+  if py -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if (d.get("scripts") or {}).get("test") else 1)' "$root/package.json" 2>/dev/null; then
     cmd="npm test --silent"; src="package.json scripts.test"
   fi
 fi
 if [ -z "$cmd" ] && [ -f "$root/Makefile" ] && grep -qE '^test:' "$root/Makefile"; then
   cmd="make test"; src="Makefile test 타깃"
 fi
-if [ -z "$cmd" ] && [ -f "$root/pyproject.toml" ]; then cmd="python3 -m pytest -q"; src="pyproject.toml"; fi
+if [ -z "$cmd" ] && [ -f "$root/pyproject.toml" ]; then cmd="py -m pytest -q"; src="pyproject.toml"; fi
 if [ -z "$cmd" ]; then
   note "$(tn done.nocmd "$code")"
   exit 0

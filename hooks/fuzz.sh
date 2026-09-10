@@ -8,6 +8,8 @@
 #
 # 사용: ./fuzz.sh
 set -u
+# Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
+export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_DONE NGG_GUARD NGG_TESTGUARD NGG_PROFILE
 G="$(cd "$(dirname "$0")" && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT

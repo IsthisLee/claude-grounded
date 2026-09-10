@@ -3,6 +3,8 @@
 # 게이트 단위 테스트. claude를 호출하지 않는다. 사용: ./unit.sh
 # 검증: (1) NGG_STATE 지정 시 상태가 그 아래에 생김 (2) 도구 0회 + 파일 부재 단정 → exit 2 (3) 도구 1회 후 exit 0 (4) NGG_STATE 없거나 빈 문자열이면 스크립트 폴더로 폴백
 set -u
+# Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
+export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 # 테스트는 주변 환경에 기대지 않는다. 게이트가 자식에게 물려주는 변수가 남아 있으면
 # 폴백 검사 같은 것이 조용히 뒤집힌다(2026-09-10 도그푸딩에서 실측).
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_JUDGE_CMD NGG_JUDGE_TIMEOUT NGG_DONE DONE_TIMEOUT

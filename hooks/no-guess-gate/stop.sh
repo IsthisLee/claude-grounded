@@ -35,10 +35,10 @@ cannot=0; printf '%s' "$last" | grep -qiE "$CANNOT" && cannot=1
 # shellcheck disable=SC2016,SC1112  # 파이썬 코드는 확장하지 않는다. 곡선 따옴표는 인용 부호를 찾기 위한 것으로 의도적이다
 STRIPQ='import sys,re; t=sys.stdin.read(); sys.stdout.write(re.sub(r"\"[^\"\n]{1,80}\"|“[^”\n]{1,80}”|‘[^’\n]{1,80}’|`[^`\n]{1,80}`|「[^」\n]{1,80}」|\([^()\s]{1,40}\)", " ", t))'
 # shellcheck disable=SC2019,SC2018  # LC_ALL=C에서 ASCII만 낮춘다. 한글은 그대로 두는 것이 의도다
-xform() { python3 -c "$STRIPQ" | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sed -E "s/$EVALHEDGE//g"; }
+xform() { py -c "$STRIPQ" | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sed -E "s/$EVALHEDGE//g"; }
 resid=$(printf '%s' "$last" | xform)
-# JSON 면제. 답 전체가 JSON 값이면 산문 주장 규칙의 대상이 아니다(판정·비교 출력). python3 검증에 실패하면 면제하지 않는다.
-jsononly=0; printf '%s' "$last" | sed -E '1s/^[[:space:]]*```(json)?[[:space:]]*//; $s/[[:space:]]*```[[:space:]]*$//' | python3 -c 'import sys,json
+# JSON 면제. 답 전체가 JSON 값이면 산문 주장 규칙의 대상이 아니다(판정·비교 출력). py 검증에 실패하면 면제하지 않는다.
+jsononly=0; printf '%s' "$last" | sed -E '1s/^[[:space:]]*```(json)?[[:space:]]*//; $s/[[:space:]]*```[[:space:]]*$//' | py -c 'import sys,json
 t=sys.stdin.read().strip()
 sys.exit(0 if t[:1] in "{[" and isinstance(json.loads(t),(dict,list)) else 1)' 2>/dev/null && jsononly=1
 prose=1; { [ "$cannot" -eq 1 ] || [ "$jsononly" -eq 1 ]; } && prose=0
@@ -61,7 +61,7 @@ if [ -n "$v" ] && [ "${NGG_JUDGE:-$JUDGE_DEFAULT}" != "0" ] && ! printf '%s' "$v
   # 걸린 문장만 뽑아 보낸다. 판정 대상이 분명해지고 입력이 짧아진다.
   flagged=$(printf '%s\n' "$last" | sed -E 's/(\.|!|\?|。)([[:space:]]|$)/\1\n/g' | while IFS= read -r sent; do [ -n "$sent" ] && printf '%s' "$sent" | xform | grep -qiE "$R2a|$R2b" && printf '%s\n' "$sent"; done)
   jt0=$(date +%s)
-  why=$(python3 -c 'import json,sys; print(json.dumps(dict(prompt=sys.argv[1],rules=sys.argv[2],tools=sys.argv[3],bash=sys.argv[4],last=sys.argv[5],flagged=sys.argv[6]),ensure_ascii=False))' "$prompt" "$v" "$ntools" "$nbash" "$last" "$flagged" | "$d/judge.py" 2>/dev/null); jr=$?
+  why=$(py -c 'import json,sys; print(json.dumps(dict(prompt=sys.argv[1],rules=sys.argv[2],tools=sys.argv[3],bash=sys.argv[4],last=sys.argv[5],flagged=sys.argv[6]),ensure_ascii=False))' "$prompt" "$v" "$ntools" "$nbash" "$last" "$flagged" | PYTHONUTF8=1 PYTHONIOENCODING=utf-8 "$d/judge.py" 2>/dev/null); jr=$?
   jel=$(( $(date +%s) - jt0 ))
   case "$jr" in
     0) judged="(exempt:judge $v)"; judge_log="judge=released ${jel}s"; v="";;

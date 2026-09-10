@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: MIT
 # 프로젝트 가드 단위 테스트. 모델을 부르지 않는다.
 set -u
+# Windows 의 파이썬은 기본 인코딩이 UTF-8 이 아니다. 테스트는 우리 것이라 환경에 건다.
+export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_GUARD
 # 메시지 언어를 못 박는다. 로케일에 따라 문장이 바뀌면 이 아래 문자열 단언이 기계마다 달라진다.
 export NGG_LANG=ko

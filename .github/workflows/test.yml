@@ -47,6 +47,9 @@ jobs:
           hooks/repo-profile/unit.sh
           skills/unit.sh
 
+      - name: 공격면 점검 (SECURITY.md 가 적은 것과 코드가 맞는지)
+        run: hooks/attack-surface.sh
+
       - name: 견고성 퍼징 (모델 호출 없음)
         run: hooks/fuzz.sh
 
