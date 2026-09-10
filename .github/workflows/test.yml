@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    name: unit (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: 문법 검사
+        run: |
+          bash -n hooks/no-guess-gate/prompt.sh hooks/no-guess-gate/pre.sh hooks/no-guess-gate/stop.sh hooks/no-guess-gate/selftest.sh hooks/no-guess-gate/unit.sh
+          python3 -m py_compile hooks/no-guess-gate/judge.py
+      - name: 결정적 단위 테스트 (모델 호출 없음)
+        run: hooks/no-guess-gate/unit.sh
