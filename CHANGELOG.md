@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-10
+
 ### 추가
 - **Windows를 CI에서 실제로 검사한다.** `windows-latest`를 매트릭스에 넣었다. README가 세 곳에서 Windows를 주장했는데 한 번도 돌려 본 적이 없었고, 넣어 보니 13건이 깨졌다.
 - `hooks/attack-surface.sh`. `SECURITY.md`가 글로 약속한 것을 검사로 바꾼다. 네트워크 명령 없음, 모델 호출은 `judge.py` 하나, 판정기 격리 플래그 셋, 프로필이 `.env` 값을 안 읽음, 시스템 경로에 안 씀, 훅 열 개 전부 타임아웃.
