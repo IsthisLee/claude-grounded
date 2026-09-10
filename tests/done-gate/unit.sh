@@ -150,8 +150,10 @@ printf 'module.exports=1;\n' > "$PS/src/a.js"
 LN="$T/symlink"; ln -sfn "$PS" "$LN"
 SS="$T/symstate"
 symrun() { rm -rf "$SS"; mkdir -p "$SS/state/sy"; printf '%s\n' "$1" > "$SS/state/sy/changed"
-  python3 -c 'import json,sys;print(json.dumps({"session_id":"sy","hook_event_name":"Stop","stop_hook_active":False,"cwd":sys.argv[1]},ensure_ascii=False))' "$2" \
-    | NGG_STATE="$SS" "$W/stop.sh" >/dev/null 2>"$T/symerr"; }
+  # 입력 JSON 은 printf 로 만든다. Git Bash 에서 네이티브 파이썬에 POSIX 경로를
+  # 인자로 넘기면 MSYS 가 C:/Users/... 로 바꿔 버려, cwd 만 Windows 경로가 되고
+  # changed 는 POSIX 경로로 남아 접두가 안 맞는다. CI 에서 이 케이스만 빨갰던 이유다.
+  printf '%s' "$(stop sy "$2")" | NGG_STATE="$SS" "$W/stop.sh" >/dev/null 2>"$T/symerr"; }
 # 실패하면 무엇을 보고 그렇게 판단했는지 남긴다. 이 케이스가 CI 에서만 빨갰고
 # 로그에 결과만 있어 원인을 못 봤다.
 symdiag() { echo "    root=$1"
@@ -161,7 +163,7 @@ symdiag() { echo "    root=$1"
   echo "    awkhit=$(awk -v r="$1/" 'index($0, r)==1' "$SS/state/sy/changed" 2>&1 | wc -l)"
   echo "    code=$(awk -v r="$1/" 'index($0, r)==1' "$SS/state/sy/changed" 2>/dev/null | grep -cE '[.]js$')"
   echo "    od=$(od -c "$SS/state/sy/changed" 2>/dev/null | tr '\n' ' ' | cut -c1-200)"
-  local J; J=$(python3 -c 'import json,sys;print(json.dumps({"session_id":"sy","hook_event_name":"Stop","stop_hook_active":False,"cwd":sys.argv[1]},ensure_ascii=False))' "$1")
+  local J; J=$(stop sy "$1")
   echo "    jsonod=$(printf '%s' "$J" | od -c | tail -2 | tr '\n' ' ')"
   # IN 은 common.sh 의 read_in 이 읽는다. shellcheck 는 파일이 갈려 있어 쓰임을 못 본다.
   # shellcheck disable=SC2034,SC1091
