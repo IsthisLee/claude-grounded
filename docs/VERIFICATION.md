@@ -925,3 +925,54 @@ pre-commit: 개인 식별 정보가 있다: hooks/no-guess-gate/ab-runs/off-1-15
 
 `.gitignore`에 `selftest-runs/`는 있었는데 새로 만든 `ab-runs/`가 빠져 있었다. 무시 목록에 넣고 지웠다. 실측 산출물이 저장소에 새는 것을 막는 장치가 실제로 동작함을 확인한 셈이다.
 
+
+## V14 플랫폼 호환성, 공급망, 업계 기준 대조
+
+배경: "세계 최고 기준"에서 아직 안 한 것을 넷으로 나눴다. 실사용자 피드백과 제3자 감사는 외부 주체가 있어야 한다. **플랫폼 호환성과 공급망은 지금 잴 수 있다.**
+
+### 1. 낡은 툴체인 — 실측하지 않고 있었다
+
+새 맥의 기본 셸은 **bash 3.2**(2007년)이고 시스템 파이썬은 **3.9.6**이다. 지금까지 전부 Homebrew의 bash 5와 python 3.13으로만 돌렸다. `#!/usr/bin/env bash`라 사용자 PATH에 달렸으므로, 맥을 새로 산 사람은 3.2로 돈다.
+
+처음 시도한 시험은 **틀렸다.** `/bin/bash unit.sh`로 하니스만 3.2로 돌렸을 뿐, 훅은 셰방을 타고 PATH의 bash 5를 썼다. PATH 앞에 심링크를 놓아 다시 쟀다.
+
+```
+                                    bash      python3
+기본                                 5.x       3.13.7    7/7 통과
+새 맥 기본                           3.2.57    3.9.6     7/7 통과
+
+그 환경에서 훅 직접 실행:
+  prompt.sh OK
+  근거 없는 결론 게이트 [R0 R1]. 턴을 끝낼 수 없다.   ← 판정도 정상
+```
+
+회귀를 막기 위해 CI에 `macos-13`을 더하고, macOS 러너에서 `/bin/bash` + `/usr/bin/python3`로 전 스위트를 다시 도는 단계를 넣었다.
+
+### 2. 공급망
+
+```
+actions/checkout   v4 → 11d5960a326750d5838078e36cf38b85af677262 (SHA 고정)
+런타임 의존성       0개 (bash, python3 표준 라이브러리만)
+비밀 스캔          실제 자격증명 0건. 걸린 셋은 전부 테스트용 가짜다
+                  (repo-profile/unit.sh의 API_KEY=super-secret-value-123 는
+                   ".env 값을 출력하지 않는다"를 검사하는 재료다)
+파일 권한          실행 대상 전부 755
+```
+
+### 3. OpenSSF Best Practices (passing) 자가 점검
+
+원문 기준으로 34개 MUST를 훑었다.
+
+```
+충족 24 · 공개 후 성립 9
+```
+
+공개 후 성립하는 것은 `sites_https`, `discussion`, `repo_public`, `version_unique`, `report_responses`, `report_archive`, `vulnerability_report_response`, `delivery_mitm`, 그리고 배지 등록 자체다. 저장소를 GitHub에 올리고 `1.0.0`을 붙이면 대부분 자동으로 채워진다.
+
+지금 충족한 것 중 실질적인 것들. `test_policy`·`tests_are_added`는 CONTRIBUTING의 "테스트 먼저 쓰고 RED 확인"과 V4~V13의 기록으로, `warnings`는 shellcheck 무결점을 CI가 강제하는 것으로, `static_analysis_fixed`는 SC2155·SC2319 등 8건을 고쳐 현재 0건인 것으로, `no_leaked_credentials`는 위 스캔으로 충족한다.
+
+### 4. 내가 할 수 없는 것
+
+**실사용자 피드백과 제3자 보안 감사는 이 세션에서 만들 수 없다.** 사람이 써 봐야 나오고, 외부 검토자가 봐야 나온다. 지어내지 않는다.
+
+대신 그것을 받을 준비는 갖췄다. 오탐·미탐 이슈 템플릿이 `events.log` 줄을 요구하고, `SECURITY.md`가 비공개 신고 경로와 14일 응답 약속을 적었고, 판정기 결과가 로그에 남아 사용자가 직접 셀 수 있다.

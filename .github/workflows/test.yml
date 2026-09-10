@@ -14,9 +14,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, macos-13]
+        # macos-13은 낡은 툴체인 조합을 대표한다. 훅은 새 맥의 기본 bash 3.2와
+        # 시스템 python 3.9에서도 돌아야 한다. 파이프라인이 그것을 강제한다.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
       - name: 문법 검사
         run: |
           bash -n hooks/no-guess-gate/prompt.sh hooks/no-guess-gate/pre.sh hooks/no-guess-gate/stop.sh hooks/no-guess-gate/selftest.sh hooks/no-guess-gate/unit.sh
@@ -40,3 +42,15 @@ jobs:
 
       - name: 견고성 퍼징 (모델 호출 없음)
         run: hooks/fuzz.sh
+
+      - name: 낡은 툴체인 (bash 3.2 + 시스템 python3, macOS만)
+        if: runner.os == 'macOS'
+        run: |
+          SH=$(mktemp -d)
+          ln -s /bin/bash "$SH/bash"
+          ln -s /usr/bin/python3 "$SH/python3"
+          "$SH/bash" --version | head -1
+          "$SH/python3" -V
+          for f in hooks/*/unit.sh skills/unit.sh; do
+            PATH="$SH:$PATH" "$f"
+          done
