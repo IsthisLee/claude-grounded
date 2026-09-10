@@ -19,7 +19,7 @@ jobs:
         # 애플이 GPLv3 때문에 bash 3.2를 계속 싣기 때문에 macos-latest로 충분하다.
         # macos-13을 따로 두었다가 뺐다. 큐에서 안 돌아 커버리지처럼 보이기만 했다.
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: 문법 검사
         run: |
           bash -n hooks/no-guess-gate/prompt.sh hooks/no-guess-gate/pre.sh hooks/no-guess-gate/stop.sh hooks/no-guess-gate/selftest.sh hooks/no-guess-gate/unit.sh
