@@ -14,9 +14,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-13]
-        # macos-13은 낡은 툴체인 조합을 대표한다. 훅은 새 맥의 기본 bash 3.2와
-        # 시스템 python 3.9에서도 돌아야 한다. 파이프라인이 그것을 강제한다.
+        os: [ubuntu-latest, macos-latest]
+        # 낡은 툴체인(bash 3.2 + 시스템 python3)은 아래 별도 단계가 macOS 러너에서 검사한다.
+        # 애플이 GPLv3 때문에 bash 3.2를 계속 싣기 때문에 macos-latest로 충분하다.
+        # macos-13을 따로 두었다가 뺐다. 큐에서 안 돌아 커버리지처럼 보이기만 했다.
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
       - name: 문법 검사
