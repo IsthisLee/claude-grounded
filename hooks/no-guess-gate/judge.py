@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 # 의미 판정기(수준 2). stop.sh가 R2a·R2b만 걸렸을 때 부른다.
 # stdin: JSON {prompt, rules, tools, bash, last}. stdout: 한 줄 사유. exit 0 풀어 줌 / 1 유지 / 2 실패·시간초과.
-# 판정 명령은 NGG_JUDGE_CMD(기본 claude -p haiku), 제한 시간은 NGG_JUDGE_TIMEOUT 초(기본 20).
+# 판정 모델은 NGG_JUDGE_MODEL(기본 haiku), 명령 전체를 바꾸려면 NGG_JUDGE_CMD,
+# 제한 시간은 NGG_JUDGE_TIMEOUT 초(기본 40). NGG_JUDGE_DRYRUN=1이면 만들어진 명령만 찍고 끝난다.
 # 중첩 세션에서 이 게이트가 다시 돌지 않도록 자식에 NGG_INNER=1을 준다.
 import json, os, re, subprocess, sys
 
-DEFAULT_CMD = ('claude -p --model haiku --output-format json --max-turns 1 '
-               '--no-session-persistence --disable-slash-commands --setting-sources ""')
+DEFAULT_MODEL = "haiku"  # 가장 싸고 빠른 축. 판정은 분류 한 번이라 큰 모델이 필요 없다.
+
+
+def default_cmd(model: str) -> str:
+    """격리한 판정 세션. 설정·스킬·세션 저장을 끊어야 분류기처럼 답한다(V4d 실측)."""
+    return (f'claude -p --model {model} --output-format json --max-turns 1 '
+            '--no-session-persistence --disable-slash-commands --setting-sources ""')
 RUBRIC = (
     "You are a strict classifier for a coding-assistant evidence gate.\n"
     "The assistant's reply below was flagged by rule(s) {rules} for hedged or deferred wording.\n"
@@ -26,11 +32,16 @@ def neutralize(t: str) -> str:
 
 
 def main():
+    if os.environ.get("NGG_JUDGE_DRYRUN"):
+        print(os.environ.get("NGG_JUDGE_CMD")
+              or default_cmd(os.environ.get("NGG_JUDGE_MODEL") or DEFAULT_MODEL))
+        return 0
     try:
         d = json.load(sys.stdin)
     except Exception:
         print("bad input"); return 2
-    cmd = os.environ.get("NGG_JUDGE_CMD") or DEFAULT_CMD
+    # NGG_JUDGE_CMD가 있으면 그것이 이긴다. 모델을 끼워 넣지 않는다.
+    cmd = os.environ.get("NGG_JUDGE_CMD") or default_cmd(os.environ.get("NGG_JUDGE_MODEL") or DEFAULT_MODEL)
     try:
         timeout = float(os.environ.get("NGG_JUDGE_TIMEOUT", "40"))
     except ValueError:

@@ -770,3 +770,21 @@ ctx=1 judge=released 8s viol=[(R2b 판정 면제)]
 **남는 위험은 시간이다.** 중앙값 7.8초, 최대 12.0초다. 제한 시간이 40초라 여유는 있지만, 오늘 실사용에서 `judge=failed`(timeout)가 한 번 났다. 원인은 판정 대상 문장이 아니라 CLI 기동 지연으로 보이며, 이제 로그에 `judge=failed`와 초가 남으므로 빈도를 셀 수 있다. 자주 나면 제한 시간을 올리거나 판정을 끄면 된다(`NGG_JUDGE=0`).
 
 **설계상 안전하다.** 판정기는 풀어 줄 수만 있고 새로 막지 못한다. 실패·시간초과는 막은 채로 둔다. 즉 판정기가 고장 나면 게이트는 규칙만으로 도는 상태로 돌아가지, 열리지 않는다.
+
+## V11 판정 모델 선택
+
+배경: "haiku로 고정되어 있는 건가"라는 지적. 그랬다. `judge.py`의 `DEFAULT_CMD`에 `--model haiku`가 박혀 있었고, 바꾸려면 `NGG_JUDGE_CMD`로 명령 전체를 갈아 끼우는 수밖에 없었다.
+
+공식 `/goal`은 평가 모델을 `ANTHROPIC_DEFAULT_HAIKU_MODEL`로 바꿀 수 있게 해 둔다. 같은 자유를 주는 게 맞다.
+
+`unit.sh` 19군 4건을 먼저 쓰고 고쳤다. `NGG_JUDGE_DRYRUN=1`을 두어 실제 호출 없이 만들어진 명령만 찍게 했고, 그것으로 검사한다.
+
+```
+기본:      claude -p --model haiku --output-format json --max-turns 1 --no-sessio…
+sonnet:    claude -p --model sonnet --output-format json --max-turns 1 --no-sessi…
+전체 교체:  my-classifier
+```
+
+`NGG_JUDGE_CMD`를 주면 그것이 이기고 모델을 끼워 넣지 않는다(테스트로 고정). haiku를 기본으로 둔 이유는 판정이 **분류 한 번**이라 큰 모델이 필요 없기 때문이다. 실측 정확도가 12/12였다(V10).
+
+근거 게이트 103건.

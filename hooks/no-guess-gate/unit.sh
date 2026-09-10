@@ -282,4 +282,14 @@ grep -qE 'judge=[a-z]+ [0-9]+s' "$K18/state/events.log"; check 0 $? "로그: 판
 mk18 "$M18" | NGG_JUDGE=0 NGG_STATE="$K18" "$W/stop.sh" 2>/dev/null
 tail -1 "$K18/state/events.log" | grep -q 'judge='; r=$?; check 1 "$r" "로그: 끄면 judge 항목 없음"
 
+# 19. 판정 모델은 고를 수 있어야 한다. haiku가 기본이되 박혀 있으면 안 된다.
+#     공식 /goal도 평가 모델을 ANTHROPIC_DEFAULT_HAIKU_MODEL로 바꿀 수 있게 해 둔다.
+K19="$T/model"; P19='{"session_id":"t19","hook_event_name":"UserPromptSubmit","prompt":"검토"}'
+printf '%s' "$P19" | NGG_STATE="$K19" "$W/prompt.sh"
+grep -q 'model haiku' <(NGG_JUDGE_DRYRUN=1 "$W/judge.py" </dev/null 2>/dev/null); check 0 $? "기본 판정 모델은 haiku"
+grep -q 'model sonnet' <(NGG_JUDGE_MODEL=sonnet NGG_JUDGE_DRYRUN=1 "$W/judge.py" </dev/null 2>/dev/null); check 0 $? "NGG_JUDGE_MODEL로 바꿀 수 있다"
+out=$(NGG_JUDGE_CMD="echo FIXED" NGG_JUDGE_MODEL=sonnet NGG_JUDGE_DRYRUN=1 "$W/judge.py" </dev/null 2>/dev/null)
+printf '%s' "$out" | grep -q '^echo FIXED$'; check 0 $? "NGG_JUDGE_CMD가 있으면 그것이 이긴다"
+printf '%s' "$out" | grep -q 'sonnet'; r=$?; check 1 "$r" "NGG_JUDGE_CMD를 줬으면 모델을 끼워 넣지 않는다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"
