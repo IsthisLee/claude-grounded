@@ -5,7 +5,7 @@
 # 판정 모델은 NGG_JUDGE_MODEL(기본 haiku), 명령 전체를 바꾸려면 NGG_JUDGE_CMD,
 # 제한 시간은 NGG_JUDGE_TIMEOUT 초(기본 40). NGG_JUDGE_DRYRUN=1이면 만들어진 명령만 찍고 끝난다.
 # 중첩 세션에서 이 게이트가 다시 돌지 않도록 자식에 NGG_INNER=1을 준다.
-import json, os, re, subprocess, sys
+import json, os, re, shutil, subprocess, sys
 
 DEFAULT_MODEL = "haiku"  # 가장 싸고 빠른 축. 판정은 분류 한 번이라 큰 모델이 필요 없다.
 
@@ -53,7 +53,12 @@ def main():
                            last=neutralize(str(d.get("last", ""))[:1500]))
     env = dict(os.environ, NGG_INNER="1", CLAUDE_CODE_DISABLE_AUTO_MEMORY="1")
     try:
-        r = subprocess.run(cmd, shell=True, input=prompt, capture_output=True, text=True, timeout=timeout, env=env)
+        # 셸은 bash 로 맞춘다. 훅 배선이 shell: bash 이고 판정 명령도 그 문법으로 적힌다.
+        # Windows 에서 shell=True 는 COMSPEC(cmd.exe)을 쓰므로 executable 로 덮는다. POSIX 는 None 이라 그대로 /bin/sh 다.
+        # encoding 을 안 주면 Windows 파이썬이 레거시 코드페이지로 읽어 한국어 답이 깨진다.
+        shell_exe = shutil.which("bash") if os.name == "nt" else None
+        r = subprocess.run(cmd, shell=True, executable=shell_exe, input=prompt, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace", timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
         print("timeout"); return 2
     out = r.stdout
