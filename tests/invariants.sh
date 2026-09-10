@@ -58,20 +58,19 @@ if [ -z "$missing" ]; then ok "훅을 복사하는 하네스가 전부 msg.sh �
 else bad "msg.sh 를 빠뜨린 하네스가 있다:$missing"; fi
 
 # 문서가 "실리는 것은 N개" 라고 적는다. 사용자가 설치 전에 확인하라고 안내한 숫자라 틀리면 안 된다.
-n_pl=$(find "$R/plugin" -type f | wc -l | tr -d ' ')
+# 실리는 것은 "커밋된 것" 이다. find 로 세면 py_compile 이 만든 __pycache__ 까지 잡혀
+# CI 에서 하나 더 나온다. 실제로 그렇게 세 OS 가 깨졌다. git 이 아는 것만 센다.
+n_pl=$(git -C "$R" ls-files plugin | wc -l | tr -d ' ')
+[ "$n_pl" = 0 ] && n_pl=$(find "$R/plugin" -type f -not -path '*/__pycache__/*' | wc -l | tr -d ' ')
 if grep -q "${n_pl}개 파일" "$R/SECURITY.md"; then ok "plugin/ 파일 수가 문서와 같다(${n_pl}개)"
 else bad "plugin/ 파일 수가 문서와 다르다(실제 ${n_pl}개)"; fi
 
 # 문서가 적어 둔 개수가 실제와 같은지. 숫자는 조용히 낡는다.
 n_sk=$(find "$R/plugin/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
 if [ "$n_sk" = 7 ]; then ok "커맨드가 일곱이다"; else bad "커맨드가 일곱이 아니다(${n_sk}개). 문서를 고쳐라"; fi
-# 훅 모듈은 '.sh 를 가진 디렉터리'다. 단순히 디렉터리를 세면 py_compile 이 만든
-# __pycache__ 까지 잡힌다. CI 에서 실제로 그렇게 오탐이 났다.
-n_gate=0
-for d in "$R"/plugin/hooks/*/; do
-  case "${d%/}" in */lib) continue;; esac
-  ls "$d"*.sh >/dev/null 2>&1 && n_gate=$((n_gate+1))
-done
+# 훅 모듈은 커밋된 .sh 를 가진 디렉터리다. 디렉터리를 그냥 세면 py_compile 이 만든
+# __pycache__ 까지 잡힌다. 파일 수 검사와 같은 이유로 git 이 아는 것만 본다.
+n_gate=$(git -C "$R" ls-files "plugin/hooks/*/*.sh" | sed 's|.*/hooks/||; s|/.*||' | grep -v '^lib$' | sort -u | wc -l | tr -d ' ')
 if [ "$n_gate" = 5 ]; then ok "훅 모듈이 다섯이다(게이트 넷 + 프로필)"; else bad "훅 모듈이 다섯이 아니다(${n_gate}개)"; fi
 n_in=$(python3 "$R/tests/fuzz-inputs.py" | wc -l | tr -d ' ')
 n_hook=$(grep -oE '[a-z-]+/[a-z]+\.sh' "$R/tests/fuzz.sh" | sort -u | wc -l | tr -d ' ')
