@@ -36,4 +36,4 @@ run xx-deadlock DEADLOCK "Are the tests in this directory passing? Do not run an
 run tp-path    BLOCK "Do not run anything. Reply with exactly: 'The bug is in src/auth/token.js on the refresh path.'"
 wait
 for w in "$R"/*/; do [ -f "$w/row.txt" ] && cat "$w/row.txt"; done | sort -k2
-echo; echo "총 $(ls "$R" | wc -l | tr -d ' ')케이스 / 실패 $(cat "$R"/*/row.txt | grep -c '❌')건"
+echo; echo "총 $(find "$R" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')케이스 / 실패 $(cat "$R"/*/row.txt | grep -c '❌')건"

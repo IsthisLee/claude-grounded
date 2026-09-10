@@ -6,7 +6,9 @@
           {
             "type": "command",
             "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/no-guess-gate/prompt.sh",
-            "statusMessage": "근거 게이트"
+            "statusMessage": "근거 게이트",
+            "shell": "bash",
+            "timeout": 10
           }
         ]
       }
@@ -17,7 +19,9 @@
           {
             "type": "command",
             "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/no-guess-gate/pre.sh",
-            "statusMessage": "근거 게이트"
+            "statusMessage": "근거 게이트",
+            "shell": "bash",
+            "timeout": 10
           }
         ]
       }
@@ -28,7 +32,9 @@
           {
             "type": "command",
             "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/no-guess-gate/stop.sh",
-            "statusMessage": "근거 게이트"
+            "statusMessage": "근거 게이트",
+            "shell": "bash",
+            "timeout": 90
           }
         ]
       }
@@ -39,7 +45,9 @@
           {
             "type": "command",
             "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/no-guess-gate/stop.sh",
-            "statusMessage": "근거 게이트"
+            "statusMessage": "근거 게이트",
+            "shell": "bash",
+            "timeout": 90
           }
         ]
       }

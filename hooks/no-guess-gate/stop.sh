@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
+# shellcheck source-path=SCRIPTDIR
 # Stop / SubagentStop: 근거 없는 결론 게이트 v4. 위반 시 exit 2로 턴 종료 차단.
 [ -n "${NGG_INNER:-}" ] && { cat >/dev/null; exit 0; }  # 판정기가 띄운 중첩 세션에서는 돌지 않는다
 d="$(cd "$(dirname "$0")" && pwd)"; . "$d/_common.sh"; read_in; s=$(state_dir "$d")
+# shellcheck disable=SC2153  # LAST/PROMPT 등은 _common.sh의 read_in이 eval로 정의한다
 last="$LAST"; prompt=$(cat "$s/prompt" 2>/dev/null); f="$s/tools"
 ntools=$({ wc -l < "$f"; } 2>/dev/null | tr -d ' '); ntools=${ntools:-0}
 nbash=$(grep -c '^Bash$' "$f" 2>/dev/null); nbash=${nbash:-0}
 nask=$(grep -c '^AskUserQuestion$' "$f" 2>/dev/null); nask=${nask:-0}
-log() { local lf="$(state_root "$d")/state/events.log"
+log() { local lf; lf="$(state_root "$d")/state/events.log"
   echo "$HOOK_EVENT_NAME${AGENT_ID:+/agent} active=$STOP_HOOK_ACTIVE tools=$ntools bash=$nbash ctx=$1 viol=[$2] last=$(printf '%s' "$last" | head -c 80 | LC_ALL=C tr '\n' ' ')" >> "$lf"
   if [ "$(wc -l < "$lf" 2>/dev/null || echo 0)" -gt 2200 ]; then tail -n 2000 "$lf" > "$lf.tmp" 2>/dev/null && mv "$lf.tmp" "$lf"; fi; }
 if [ "$nask" -gt 0 ]; then log - "(질문 면제)"; touch "$s/turn_closed"; exit 0; fi
@@ -27,7 +29,9 @@ CANNOT='(확인할 수 없|검증할 수 없|실행할 수 없|접근할 수 없
 EVALHEDGE='((더 |훨씬 |좀 더 )?(나아|낫|좋아|괜찮아|적절해|맞아|타당해|자연스러워|충분해|깔끔해|안전해|편해|쉬워|무난해|합리적으로|바람직해|유리해|나쁘지 않아) ?보(인다|임|입니다|여요|이네요|이는데|이지만)|(seems?|looks?|appears?|feels?) (like )?(a |the )?(good|better|best|fine|reasonable|appropriate|sensible|cleaner|simpler|safer|right|ok|okay|nice|worth|solid|clean|natural|clearer|preferable))'
 cannot=0; printf '%s' "$last" | grep -qiE "$CANNOT" && cannot=1
 # 인용은 사용이 아니다. 따옴표·백틱 안(80자 이내)과 공백 없는 괄호 목록("(보인다/보입니다)")은 R2a·R2b 판정 전에 지운다. R1은 원문을 본다.
+# shellcheck disable=SC2016,SC1112  # 파이썬 코드는 확장하지 않는다. 곡선 따옴표는 인용 부호를 찾기 위한 것으로 의도적이다
 STRIPQ='import sys,re; t=sys.stdin.read(); sys.stdout.write(re.sub(r"\"[^\"\n]{1,80}\"|“[^”\n]{1,80}”|‘[^’\n]{1,80}’|`[^`\n]{1,80}`|「[^」\n]{1,80}」|\([^()\s]{1,40}\)", " ", t))'
+# shellcheck disable=SC2019,SC2018  # LC_ALL=C에서 ASCII만 낮춘다. 한글은 그대로 두는 것이 의도다
 xform() { python3 -c "$STRIPQ" | LC_ALL=C tr 'A-Z' 'a-z' | LC_ALL=C sed -E "s/$EVALHEDGE//g"; }
 resid=$(printf '%s' "$last" | xform)
 # JSON 면제. 답 전체가 JSON 값이면 산문 주장 규칙의 대상이 아니다(판정·비교 출력). python3 검증에 실패하면 면제하지 않는다.

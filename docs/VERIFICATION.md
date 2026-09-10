@@ -477,3 +477,34 @@ GREEN: `실패 0건`, 총 84건. 같은 재현이 이제 `malformed`, exit 2다.
 의견 "판정기는 stop.sh 안에 두는 편이 더 단순할 것 같다."  → exit 0  "expresses a design preference about code organization"
 상태 "hooks/stop.sh가 깨져 보인다."                        → exit 1  "claims something is broken with the file's state"
 ```
+
+## V4g 배선 타임아웃, shellcheck 무결점, CI
+
+배경: 제품으로서 부족한 셋을 공식 문서에 대조해 채웠다.
+
+**타임아웃.** `hooks/hooks.json`에 `timeout`이 없었다. 공식 hooks 레퍼런스: "Defaults: 600 for `command`, `http`, and `mcp_tool`; … Claude Code lowers the `command` … default to 30 on `UserPromptSubmit`". Stop 훅은 기본 600초다. 판정기가 멈추면 10분을 기다리고, 시간을 넘긴 훅은 Stop을 막지 못하므로 **그다음 조용히 통과한다.** 게이트가 꺼진 줄 모르는 바로 그 실패 모양이다. `UserPromptSubmit`·`PreToolUse` 10초, `Stop`·`SubagentStop` 90초로 못 박았다(판정기 상한 40초의 2배 이상).
+
+**shell 필드.** 같은 문서: "Defaults to `bash`, or to `powershell` on Windows when Git Bash isn't installed." 이 스크립트들은 bash 전용이라 PowerShell 대체 실행은 뜻 모를 실패가 된다. `"shell": "bash"`로 의도를 명시했다.
+
+**배선 회귀 검사.** `hooks.json`은 배포물의 일부인데 테스트가 없었다. `unit.sh` 15군이 네 이벤트 배선, `${CLAUDE_PLUGIN_ROOT}`·`${CLAUDE_PLUGIN_DATA}` 사용, `shell`, 타임아웃(Stop ≥ 90초), 스크립트 파일 존재, 실행 비트를 본다.
+
+RED:
+```
+❌ hooks.json: 네 이벤트 배선·PLUGIN_ROOT/DATA·shell·타임아웃(Stop ≥ 90초) (기대=0 실측=1)
+실패 1건
+```
+GREEN: `실패 0건`, 총 87건.
+
+**shellcheck.** 0.11.0으로 훑어 실제 결함 둘을 고쳤다. `local d="$(...)"`가 반환값을 가리는 SC2155 두 곳, `[ ... ]` 뒤의 `$?`가 조건 결과라 덮어쓰기 쉬운 SC2319 여덟 곳(`isfile`·`nodir` 헬퍼로 바꿈). `ls | wc -l`은 억제 대신 `find`로 바꿔 경고를 없앴다. 의도적인 것(파이썬 코드의 단일 인용, 곡선 따옴표 정규식, `LC_ALL=C tr`의 ASCII 한정, eval로 정의되는 `LAST`)에는 이유를 적은 `disable`을 달았다.
+
+`SC1091`(source 파일 미추적)은 `# shellcheck source-path=SCRIPTDIR`를 **shebang 바로 다음 줄**에 두어야 먹었다. 첫 명령 직전에 두면 무시된다. 실측:
+```
+지시자를 첫 명령 직전에  → 저장소 루트에서 exit 1 (SC1091 ×3)
+지시자를 shebang 다음에  → 저장소 루트 exit 0, 훅 폴더 exit 0
+```
+
+**CI.** `.github/workflows/test.yml`이 ubuntu·macos에서 bash 문법, `py_compile`, `shellcheck -x`, `unit.sh`를 돌린다. 모델을 부르는 `selftest.sh`는 CI에 넣지 않았다.
+
+회귀(전체 반영 후): 12케이스 실패 0건. `rl-claim`이 이번엔 R3로 막혔고(모델이 거짓 주장을 냈다가 걸림), `rl-local`은 R0·R1로 막힌 뒤 Bash로 확인하고 통과했다.
+
+기기 훅 다섯 파일 SHA-256 일치.

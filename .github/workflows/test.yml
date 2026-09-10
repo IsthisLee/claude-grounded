@@ -18,5 +18,15 @@ jobs:
         run: |
           bash -n hooks/no-guess-gate/prompt.sh hooks/no-guess-gate/pre.sh hooks/no-guess-gate/stop.sh hooks/no-guess-gate/selftest.sh hooks/no-guess-gate/unit.sh
           python3 -m py_compile hooks/no-guess-gate/judge.py
+      - name: shellcheck
+        run: |
+          if ! command -v shellcheck >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck || brew install shellcheck
+          fi
+          shellcheck --version
+          shellcheck -x -s bash hooks/no-guess-gate/_common.sh hooks/no-guess-gate/prompt.sh \
+            hooks/no-guess-gate/pre.sh hooks/no-guess-gate/stop.sh \
+            hooks/no-guess-gate/selftest.sh hooks/no-guess-gate/unit.sh
+
       - name: 결정적 단위 테스트 (모델 호출 없음)
         run: hooks/no-guess-gate/unit.sh
