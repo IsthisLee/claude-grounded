@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### 추가
+- **저장소 프로필**: `SessionStart`에서 패키지 매니저·스택·검사 명령·append-only 경로·게이트 상태를 스무 줄 안팎으로 컨텍스트에 싣는다. 모델을 부르지 않고 비밀 파일 값은 읽지 않는다. `NGG_PROFILE=0`으로 끈다.
 - **테스트 무결성 게이트**: 테스트 파일에 무력화 표기(`.skip`, `.only`, `xit`, `@pytest.mark.skip`, `#[ignore]`, `t.Skip` 등)가 늘거나 단언이 줄면 그 편집을 막는다. 테스트 파일 삭제 명령도 막는다. 기댓값 수정과 단언 추가는 통과한다. `NGG_TESTGUARD=0`으로 끈다.
 - **프로젝트 가드**: `.grounded.toml`의 `append_only` 경로에서 기존 파일의 수정·삭제를 막는다. 새 파일 추가는 허용한다. `git commit --no-verify`는 설정과 무관하게 막는다. `NGG_GUARD=0`으로 끈다.
 - **완료 게이트**: 코드 파일을 고친 턴은 저장소의 검사가 통과해야 끝난다. 검사 명령은 `.grounded.toml` → `package.json` → `Makefile` → `pyproject.toml` 순으로 찾는다. 못 찾으면 알리고 막지 않고, 시간을 넘겨도 알리고 막지 않는다. `NGG_DONE=0`으로 끈다.

@@ -605,3 +605,36 @@ shellcheck -x   hooks/lib/common.sh hooks/*/*.sh  exit 0
 plugin validate 통과
 도그푸딩         네 스위트를 .grounded.toml에 걸고 완료 게이트로 실행 → 통과
 ```
+
+## V7 저장소 프로필 (로드맵 4단계)
+
+배경: 게이트는 무엇을 막을지 알아야 하고 Claude는 이 저장소에서 무엇을 돌려야 하는지 알아야 한다. 공식 hooks 레퍼런스가 이 이벤트의 stdout을 컨텍스트로 넣는다고 밝힌다.
+
+> "The exceptions are `UserPromptSubmit`, `UserPromptExpansion`, `SessionStart`, and `PostModelSwitch`, where Claude Code adds plain-text stdout as context that Claude can see and act on."
+
+설계 원칙 둘. **사실만 싣고 행동 지시는 넣지 않는다**(강제는 게이트의 일이다). **모델을 부르지 않고 파일만 읽으며 비밀 파일의 값은 읽지 않는다.**
+
+실행: `hooks/repo-profile/unit.sh` (16건을 먼저 작성)
+
+RED: `실패 13건`
+GREEN: `실패 0건`, 16건. 검사한 것은 빈 폴더에서 죽지 않는지, 락파일로 패키지 매니저를 가리는지, `package.json`·`go.mod`·`pyproject.toml`에서 스택을 가리는지, 검사 명령을 완료 게이트와 같은 순서로 찾는지, 명령이 없으면 그 사실을 알리는지, `.env` 값을 출력하지 않는지, 공식 상한 10,000자를 넘지 않는지, `NGG_PROFILE=0`으로 꺼지는지다.
+
+이 저장소에서의 실제 출력:
+```
+[grounded 프로필] claude-grounded  (브랜치 main)
+검사 명령: for g in no-guess-gate done-gate test-integrity project-guard repo-profile; do hooks/$g/unit.sh || exit 1; done   (출처: .grounded.toml)
+게이트: 근거(항상) · 완료(켜짐) · 테스트 무결성(항상) · 프로젝트 가드(설정 없어 --no-verify만 차단)
+```
+마지막 줄이 **어느 게이트가 놀고 있는지** 알려 준다. 설정을 빼먹으면 게이트가 조용히 아무것도 안 하는 상태가 되는데, 그게 이 프로젝트가 가장 경계하는 실패 모양이라 프로필이 매 세션 드러낸다.
+
+### 전체
+
+```
+근거 게이트      89건    완료 게이트      19건
+테스트 무결성    23건    프로젝트 가드    14건
+저장소 프로필    16건    합계            161건   전부 exit 0
+shellcheck -x   hooks/lib/common.sh hooks/*/*.sh   exit 0
+plugin validate 통과 (경고는 version 미지정 하나, 첫 배포 때 1.0.0을 붙인다)
+도그푸딩         다섯 스위트를 .grounded.toml에 걸고 완료 게이트로 실행 → 통과
+배선            SessionStart · UserPromptSubmit · PreToolUse ×3 · PostToolUse · Stop ×2 · SubagentStop
+```

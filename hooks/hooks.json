@@ -100,6 +100,19 @@
         ],
         "matcher": "Edit|Write"
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/repo-profile/session.sh",
+            "shell": "bash",
+            "timeout": 15,
+            "statusMessage": "저장소 프로필"
+          }
+        ]
+      }
     ]
   }
 }

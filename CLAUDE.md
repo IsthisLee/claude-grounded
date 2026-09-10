@@ -8,6 +8,7 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 - `hooks/done-gate/unit.sh` — 완료 게이트 19건.
 - `hooks/test-integrity/unit.sh` — 테스트 무결성 23건.
 - `hooks/project-guard/unit.sh` — 프로젝트 가드 14건.
+- `hooks/repo-profile/unit.sh` — 저장소 프로필 16건.
 - `hooks/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다. 사용자 설정과 격리된 세션이다.
 - `claude plugin validate .` — 매니페스트와 훅 배선 검사.
 - `claude --plugin-dir .` — 설치본 대신 이 폴더를 그 세션에 로드한다.
@@ -29,5 +30,6 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 - `hooks/done-gate/` — 코드를 고친 턴에 저장소 검사를 돌린다. 이 저장소의 `.grounded.toml`이 자기 테스트를 가리킨다.
 - `hooks/test-integrity/` — 테스트 무력화 편집과 테스트 파일 삭제를 막는다.
 - `hooks/project-guard/` — `append_only` 경로의 기존 파일 수정·삭제와 `--no-verify` 커밋을 막는다.
+- `hooks/repo-profile/` — `SessionStart`에 저장소 사실을 컨텍스트로 싣는다. 사실만 싣고 행동 지시는 넣지 않는다.
 - **테스트는 주변 환경에 기대지 않는다.** `unit.sh`가 머리에서 `NGG_*`를 `unset`한다. 게이트가 자식에게 물려주는 변수 때문에 폴백 검사가 조용히 뒤집힌 적이 있다.
 - 요구 사항: bash, python3. macOS와 Linux. Windows는 Git Bash가 있을 때만.

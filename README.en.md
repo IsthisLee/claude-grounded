@@ -18,7 +18,7 @@ claude-grounded removes that tenth one. It turns what the Claude Code docs *reco
 
 You never asked for any of it, and it happens every time. **The point is that you get to forget.**
 
-> **All four gates ship: evidence, completion, test integrity, project guard.** This document describes only what is real.
+> **All four gates plus the repo profile ship.** This document describes only what is real.
 
 ---
 
@@ -115,6 +115,22 @@ append_only = "supabase/migrations, db/migrate"
 
 With no configuration it blocks nothing — except `git commit --no-verify`, which is blocked regardless. An escape hatch is for a human to use, not a path for the agent to route around the gate. Disable with `NGG_GUARD=0`.
 
+## Repo profile: facts, loaded every session
+
+The gates need to know what to enforce, and Claude needs to know what to run here. At session start a `SessionStart` hook puts about twenty lines of fact into the context.
+
+```
+[grounded 프로필] claude-grounded  (branch main)
+패키지 매니저: pnpm
+스택: next, react, typescript, vitest
+검사 명령: pnpm test   (source: package.json scripts.test → vitest run)
+게이트: 근거(always) · 완료(on) · 테스트 무결성(always) · 프로젝트 가드(on)
+```
+
+The docs are explicit that this event's stdout becomes context: "The exceptions are `UserPromptSubmit`, `UserPromptExpansion`, `SessionStart`, and `PostModelSwitch`, where Claude Code adds plain-text stdout as context that Claude can see and act on."
+
+**It carries facts, never instructions** — enforcement is the gates' job. It calls no model, only reads files, and never reads values out of secret files like `.env`. The last line shows which gate is idle, so a missing setting is visible immediately. Disable with `NGG_PROFILE=0`.
+
 ## When it blocks
 
 Claude receives this:
@@ -176,6 +192,7 @@ hooks/no-guess-gate/unit.sh                   # evidence gate: 89 tests, no mode
 hooks/done-gate/unit.sh                       # completion gate: 19 tests
 hooks/test-integrity/unit.sh                  # test integrity: 23 tests
 hooks/project-guard/unit.sh                   # project guard: 14 tests
+hooks/repo-profile/unit.sh                    # repo profile: 16 tests
 hooks/no-guess-gate/selftest.sh               # 12-case regression against real prompts, minutes
 shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
 ```
@@ -189,7 +206,7 @@ Every verification records the exact command and its raw output in [`docs/VERIFI
 | 1 | Evidence gate | **Shipped** |
 | 2 | Completion gate | **Shipped** |
 | 3 | Test-integrity gate, project guard | **Shipped** |
-| 4 | Repo profile (loads stack and check commands into every session) | Designed |
+| 4 | Repo profile | **Shipped** |
 | 5+ | Workflow commands | Under review |
 
 ## Related

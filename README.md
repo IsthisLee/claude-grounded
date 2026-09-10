@@ -18,7 +18,7 @@ claude-grounded는 그 한 번을 없앤다. Claude Code 공식 문서가 권하
 
 한 번도 부탁하지 않았는데 매번 그렇게 된다. **잊어도 된다는 것이 요점이다.**
 
-> **게이트 넷이 모두 배포된다.** 근거·완료·테스트 무결성·프로젝트 가드. 이 문서는 있는 것만 적는다.
+> **게이트 넷과 저장소 프로필이 모두 배포된다.** 이 문서는 있는 것만 적는다.
 
 ---
 
@@ -125,6 +125,23 @@ append_only = "supabase/migrations, db/migrate"
 
 설정이 없으면 아무것도 막지 않는다. 다만 `git commit --no-verify`는 설정과 무관하게 막는다. 비상 통로는 사람이 직접 쓰는 것이지 에이전트가 게이트를 우회하는 길이 아니다. 끄려면 `NGG_GUARD=0`이다.
 
+## 저장소 프로필: 세션마다 사실을 실어 준다
+
+게이트는 무엇을 막을지 알아야 하고, Claude는 이 저장소에서 무엇을 돌려야 하는지 알아야 한다. 세션이 시작될 때 `SessionStart` 훅이 스무 줄 안팎의 사실을 컨텍스트에 넣는다.
+
+```
+[grounded 프로필] claude-grounded  (브랜치 main)
+패키지 매니저: pnpm
+스택: next, react, typescript, vitest
+검사 명령: pnpm test   (출처: package.json scripts.test → vitest run)
+append-only 경로: supabase/migrations
+게이트: 근거(항상) · 완료(켜짐) · 테스트 무결성(항상) · 프로젝트 가드(켜짐)
+```
+
+공식 문서가 이 이벤트의 stdout을 컨텍스트로 넣는다고 밝힌다. "The exceptions are `UserPromptSubmit`, `UserPromptExpansion`, `SessionStart`, and `PostModelSwitch`, where Claude Code adds plain-text stdout as context that Claude can see and act on."
+
+**싣는 것은 사실뿐이고 행동 지시는 넣지 않는다.** 그건 게이트의 일이다. 모델을 부르지 않고 파일만 읽으며, `.env` 같은 비밀 파일의 값은 읽지 않는다. 마지막 줄이 어느 게이트가 놀고 있는지 알려 주므로 설정을 빼먹으면 바로 보인다. 끄려면 `NGG_PROFILE=0`이다.
+
 ## 막히면 어떻게 되나
 
 Claude가 이런 메시지를 받는다.
@@ -189,6 +206,7 @@ hooks/no-guess-gate/unit.sh                   # 근거 게이트 89건. 모델�
 hooks/done-gate/unit.sh                       # 완료 게이트 19건
 hooks/test-integrity/unit.sh                  # 테스트 무결성 23건
 hooks/project-guard/unit.sh                   # 프로젝트 가드 14건
+hooks/repo-profile/unit.sh                    # 저장소 프로필 16건
 hooks/no-guess-gate/selftest.sh               # 실제 프롬프트 회귀 12케이스, 몇 분
 shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
 ```
@@ -202,7 +220,7 @@ shellcheck -x -s bash hooks/lib/common.sh hooks/*/*.sh
 | 1 | 근거 게이트 | **배포됨** |
 | 2 | 완료 게이트 | **배포됨** |
 | 3 | 테스트 무결성 게이트, 프로젝트 가드 | **배포됨** |
-| 4 | 저장소 프로필(세션마다 스택·검사 명령을 자동으로 실어 줌) | 설계 완료 |
+| 4 | 저장소 프로필 | **배포됨** |
 | 5 이후 | 작업 흐름 커맨드 | 검토 중 |
 
 ## 비슷한 도구

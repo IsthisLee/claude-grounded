@@ -214,6 +214,7 @@ want = {
     "PostToolUse":      [("done-gate", "post.sh")],
     "Stop":             [("no-guess-gate", "stop.sh"), ("done-gate", "stop.sh")],
     "SubagentStop":     [("no-guess-gate", "stop.sh")],
+    "SessionStart":     [("repo-profile", "session.sh")],
 }
 hooks = d.get("hooks", {})
 assert set(hooks) == set(want), f"이벤트 불일치: {sorted(hooks)}"
@@ -237,9 +238,9 @@ assert pm == ["Edit|Write"], f"PostToolUse matcher={pm}"
 tm = [g.get("matcher") for g in hooks["PreToolUse"]]
 assert tm == [None, "Edit|Write|Bash", "Edit|Write|Bash"], f"PreToolUse matcher={tm}"
 PY
-check 0 $? "hooks.json: 다섯 이벤트에 두 게이트 배선·PLUGIN_ROOT/DATA·shell·타임아웃·matcher"
-for f in "$G/prompt.sh" "$G/pre.sh" "$G/stop.sh" "$G/judge.py" "$G/../done-gate/post.sh" "$G/../done-gate/stop.sh" "$G/../test-integrity/pre.sh" "$G/../project-guard/pre.sh"; do [ -x "$f" ] || { echo "❌ $(basename "$f") 실행 비트 없음"; fail=$((fail+1)); }; done
-check 0 0 "훅 스크립트 여덟 실행 비트"
+check 0 $? "hooks.json: 여섯 이벤트에 다섯 모듈 배선·PLUGIN_ROOT/DATA·shell·타임아웃·matcher"
+for f in "$G/prompt.sh" "$G/pre.sh" "$G/stop.sh" "$G/judge.py" "$G/../done-gate/post.sh" "$G/../done-gate/stop.sh" "$G/../test-integrity/pre.sh" "$G/../project-guard/pre.sh" "$G/../repo-profile/session.sh"; do [ -x "$f" ] || { echo "❌ $(basename "$f") 실행 비트 없음"; fail=$((fail+1)); }; done
+check 0 0 "훅 스크립트 아홉 실행 비트"
 
 # 16. 턴 경계는 두 게이트가 공유한다. 턴이 닫힌 뒤 첫 프롬프트에서 changed도 비운다.
 K16="$T/turn"; P16='{"session_id":"t16","hook_event_name":"UserPromptSubmit","prompt":"고쳐줘"}'
