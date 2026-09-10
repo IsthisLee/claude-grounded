@@ -1,23 +1,27 @@
 ---
 name: status
-description: 게이트가 켜져 있는지, 설정이 무엇인지, 최근에 무엇에 막혔는지 보여 준다.
+description: Show which gates are live, what this repo has configured, and what has been blocked lately. Everything measured, nothing assumed.
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, Bash
 ---
 
-# 상태
+# Status
 
-claude-grounded가 지금 이 저장소에서 무엇을 하고 있는지 보고한다. **전부 실측하라.** 이 커맨드가 추측으로 답하면 그 자체로 모순이다.
+Report what claude-grounded is actually doing in this repo. **Measure all of it.** A command that answers this one by guessing contradicts itself.
 
-## 확인할 것
+**Reply in whatever language I am writing to you in.**
 
-1. **설치와 배선.** `claude plugin list`로 설치 여부를, `hooks/hooks.json`으로 어느 이벤트에 무엇이 걸렸는지 확인한다.
-2. **저장소 설정.** `.grounded.toml`이 있으면 `test_command`와 `append_only`를 읽어 보여 준다. 없으면 없다고 적고 그래서 어느 게이트가 놀고 있는지 말한다.
-3. **끄기 스위치.** 환경변수 `NGG_JUDGE`, `NGG_DONE`, `NGG_TESTGUARD`, `NGG_GUARD`, `NGG_PROFILE` 중 꺼진 것이 있는지 확인한다.
-4. **최근 판정.** 상태 폴더의 `events.log` 마지막 20줄을 읽어 요약한다. 위치는 `${CLAUDE_PLUGIN_DATA}/state/events.log`이고, 없으면 없다고 말한다.
+## What to check
 
-## 보고 형식
+1. **Installed and wired.** `claude plugin list` for the install, `hooks/hooks.json` for which event runs what.
+2. **Repo configuration.** If `.grounded.toml` exists, read and show `test_command`, `fast_test_command`, `append_only`, and `disabled_rules`. If it does not exist, say so and name which gates are therefore idle.
+3. **Off switches.** Check whether any of `NGG_JUDGE`, `NGG_DONE`, `NGG_TESTGUARD`, `NGG_GUARD`, `NGG_PROFILE` is turned off in the environment.
+4. **Recent verdicts.** Read the last 20 lines of `events.log` in the state folder and summarize. It lives at `${CLAUDE_PLUGIN_DATA}/state/events.log`. If it is not there, say so.
 
-표 하나로 낸다. 게이트별로 **켜짐 / 설정 없어 대기 / 꺼짐** 중 무엇인지, 그 근거가 무엇인지.
+## How to report
 
-막힌 기록이 있으면 규칙별 횟수를 세어 함께 보여 준다. 오탐이 잦은 규칙이 보이면 그 사실을 짚고 이슈로 알릴 수 있다고 알려라.
+One table. Per gate: **on / idle for lack of config / off**, and the evidence for that.
+
+If there are blocks on record, count them by rule and show that too. Call out any rule that looks like it is producing false positives, and mention two things they can do about it: disable that one rule with `disabled_rules` in `.grounded.toml`, or open an issue so the rule itself gets fixed.
+
+If `events.log` shows `off=[...]`, say which rules this repo has disabled and since when, based on the log — not on the config file alone.

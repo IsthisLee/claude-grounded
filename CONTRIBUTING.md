@@ -1,15 +1,17 @@
 # 기여 안내
 
+한국어 · **[English](CONTRIBUTING.en.md)**
+
 이 저장소의 규칙은 하나로 요약된다. **주장에는 근거를 붙인다.** 플러그인이 Claude에게 요구하는 것과 같은 기준을 기여자에게도 적용한다.
 
 참여하는 모든 사람은 [행동 강령](CODE_OF_CONDUCT.md)을 따른다.
 
 ## 개발 환경
 
-필요한 것은 `bash`, `python3`, 그리고 Claude Code다. macOS와 Linux에서 돌아간다. Windows는 Git Bash가 있을 때만이다.
+필요한 것은 `bash`, `python3`, 그리고 Claude Code다. macOS와 Linux, 그리고 Git Bash가 있는 Windows에서 돌아간다.
 
 ```bash
-git clone <이 저장소>
+git clone https://github.com/IsthisLee/claude-grounded
 cd claude-grounded
 git config core.hooksPath .githooks   # 개인 정보 커밋을 막는 훅
 claude --plugin-dir .                 # 설치본 대신 이 폴더를 그 세션에 로드
@@ -20,19 +22,27 @@ claude --plugin-dir .                 # 설치본 대신 이 폴더를 그 세�
 바꾸기 전과 후에 돌린다.
 
 ```bash
-tests/no-guess-gate/unit.sh                 # 결정적 단위 테스트. 모델을 부르지 않는다. 9초
-tests/no-guess-gate/selftest.sh             # 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분
-shellcheck -x -s bash hooks/no-guess-gate/*.sh
-python3 -m py_compile hooks/no-guess-gate/judge.py
-claude plugin validate .
+for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do tests/$g/unit.sh; done
+tests/skills-unit.sh && tests/attack-surface.sh && tests/invariants.sh
+tests/fuzz.sh                                  # 망가진 입력을 열 훅에 던진다
+shellcheck -x -s bash plugin/hooks/*/*.sh tests/*.sh tests/*/*.sh
+python3 -m py_compile plugin/hooks/no-guess-gate/judge.py
+claude plugin validate . --strict
 ```
 
-CI는 문법 검사, `shellcheck -x`, 단위 테스트를 ubuntu와 macos에서 돌린다. 모델을 부르는 회귀는 CI에 넣지 않으니 훅 판정 로직을 건드렸으면 **직접 돌리고 결과를 PR에 붙인다.**
+모델을 부르는 둘은 몇 분 걸려 CI에 넣지 않았다.
+
+```bash
+tests/no-guess-gate/selftest.sh         # 실제 프롬프트 회귀 12케이스
+tests/no-guess-gate/judge-accuracy.sh   # 판정기 정확도와 소요 시간
+```
+
+CI는 문법 검사, `shellcheck -x`, actionlint, 단위 스위트를 ubuntu·macos·windows 셋에서 돌린다. 훅 판정 로직을 건드렸으면 **모델을 부르는 쪽은 직접 돌리고 결과를 PR에 붙인다.**
 
 ## 게이트 규칙을 고칠 때
 
-1. **테스트를 먼저 쓴다.** `unit.sh`에 케이스를 넣고 RED를 눈으로 본다. 실패하지 않는 테스트는 아무것도 지키지 못한다.
-2. 구현하고 `unit.sh` 전건 통과를 확인한다.
+1. **테스트를 먼저 쓴다.** 해당 `unit.sh`에 케이스를 넣고 RED를 눈으로 본다. 실패하지 않는 테스트는 아무것도 지키지 못한다.
+2. 구현하고 전건 통과를 확인한다.
 3. 판정 로직을 건드렸으면 `selftest.sh`도 돌린다.
 4. `docs/VERIFICATION.md`에 **실행한 명령과 출력 원문**을 남긴다. "확인했다"는 말만으로는 기록하지 않는다.
 

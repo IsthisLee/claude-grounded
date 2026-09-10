@@ -1,47 +1,50 @@
 ---
 name: init
-description: 이 저장소에 claude-grounded를 맞춘다. 검사 명령을 찾아 .grounded.toml에 적고, append-only 경로와 비밀 파일 차단을 제안한다.
+description: Fit claude-grounded to this repo. Finds the check command, writes .grounded.toml, and proposes append-only paths and secret-file denies.
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, Bash, Write, Edit, AskUserQuestion
 ---
 
-# 저장소에 맞추기
+# Fit it to this repo
 
-이 저장소에서 게이트가 실제로 일하도록 설정한다. **파일을 덮어쓰기 전에 반드시 diff를 보여 주고 승인받으라.**
+Set things up so the gates actually do work here. **Show a diff and get approval before overwriting any file.**
 
-## 1. 지금 상태를 잰다
+**Reply in whatever language I am writing to you in,** and write config comments in that language.
 
-`SessionStart` 프로필이 이미 실어 준 것이 있으면 그것부터 읽어라. 없으면 직접 확인한다. 패키지 매니저(락파일), 스택, 기존 `.grounded.toml`, `.claude/settings.json`의 permissions.
+## 1. Measure where we are
 
-## 2. 검사 명령을 확정한다
+If the `SessionStart` profile already loaded facts, start from those. Otherwise check for yourself: package manager (lockfile), stack, any existing `.grounded.toml`, and the permissions in `.claude/settings.json`.
 
-완료 게이트는 이 순서로 찾는다. `.grounded.toml` → `package.json`의 `scripts.test` → `Makefile`의 `test` → `pyproject.toml`.
+## 2. Settle the check command
 
-자동 탐지 결과를 **실제로 한 번 돌려 보고** 그 출력을 보여 준 뒤 맞는지 물어라. 돌려 보지 않고 적지 마라. 느리면(수 분) 빠른 부분집합을 함께 제안하라. 공식 best practices의 CLAUDE.md 예시가 그렇게 권한다. "Prefer running single tests, and not the whole test suite, for performance."
+The completion gate looks in this order: `.grounded.toml` → `scripts.test` in `package.json` → a `test` target in `Makefile` → `pyproject.toml`.
+
+**Actually run whatever you auto-detect**, show the output, and ask whether it is right. Do not write it down without running it. If it is slow (minutes), propose a fast subset alongside it — the CLAUDE.md example in the official best practices recommends exactly that. "Prefer running single tests, and not the whole test suite, for performance."
 
 ```toml
 # .grounded.toml
 test_command = "pnpm test"
+fast_test_command = "pnpm test -- --changed"
 ```
 
-## 3. 기준선을 기록한다
+## 3. Record the baseline
 
-지금 실패하는 테스트가 있으면 그 목록을 보여 주라. 이미 깨져 있는 것 때문에 앞으로 모든 턴이 막히면 사람들은 게이트를 꺼 버린다. 고치고 시작할지, 그 상태로 둘지 물어라.
+If tests are failing right now, list them. When every turn gets blocked by something that was already broken, people switch the gate off. Ask whether to fix them first or start from here.
 
-Willison의 권고와 같다. "Any time I start a new session with an agent against an existing project I'll start by prompting a variant of the following: First run the tests."
+This is Willison's advice too. "Any time I start a new session with an agent against an existing project I'll start by prompting a variant of the following: First run the tests."
 
-## 4. append-only 경로를 제안한다
+## 4. Propose append-only paths
 
-마이그레이션처럼 지난 기록을 고치면 안 되는 폴더를 찾아 제안하라. `supabase/migrations`, `prisma/migrations`, `db/migrate` 같은 것이 있으면 짚어라. 없으면 넘어가라. 없는데 만들지 마라.
+Find folders whose history must not be rewritten — migrations and the like. Point at `supabase/migrations`, `prisma/migrations`, `db/migrate` if they exist. If there are none, move on. Do not invent one.
 
 ```toml
 append_only = "supabase/migrations, db/migrate"
 ```
 
-## 5. 비밀 파일 차단을 제안한다
+## 5. Propose blocking secret files
 
-`.claude/settings.json`에 `Read` deny 규칙을 넣자고 제안하라. 공식 permissions 문서: "A `Read` deny rule also blocks the Edit and Write tools on the same path, including creating a new file there. NotebookEdit isn't covered." NotebookEdit을 쓰는 저장소면 `Edit` deny도 같이 넣어야 한다고 알려라.
+Suggest a `Read` deny rule in `.claude/settings.json`. From the official permissions docs: "A `Read` deny rule also blocks the Edit and Write tools on the same path, including creating a new file there. NotebookEdit isn't covered." If this repo uses NotebookEdit, tell them an `Edit` deny is needed as well.
 
-## 6. 마무리
+## 6. Wrap up
 
-무엇을 바꿨는지, 어느 게이트가 이제 켜졌는지, 아직 놀고 있는 게이트가 무엇인지 표로 보고하라. 다음 세션의 프로필이 같은 내용을 보여 줄 것이다.
+Report as a table: what you changed, which gates are now live, and which are still idle and why. The next session's profile will show the same thing.

@@ -1,30 +1,32 @@
 ---
 name: handoff
-description: 다음 세션이 읽을 인수인계 문서를 쓴다. 사실과 다음 할 일만 적는다.
+description: Write the handoff note the next session will read. Facts and next steps only, with the commands that produced them.
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, Bash, Write
 ---
 
-# 인수인계
+# Handoff
 
-지금까지 한 일을 다음 세션이 이어받을 수 있게 문서로 남긴다.
+Write down what has happened so far so the next session can pick it up.
 
-컨텍스트는 세션을 넘어가지 않는다. 공식 문서가 새 세션에서 실행하라고 권하는 이유이자, 이 문서가 필요한 이유다.
+**Reply in whatever language I am writing to you in,** and write the note in that language.
 
-## 적을 것
+Context does not survive a session boundary. That is why the official docs tell you to execute in a fresh session, and it is why this note has to exist.
 
-1. **무엇을 하려던 일인가.** 한 문단.
-2. **지금 어디까지 됐나.** 커밋 해시와 브랜치를 적어라. `git log --oneline -5`와 `git status`를 실제로 돌려 그 출력을 근거로 삼아라.
-3. **검증한 것과 그 출력.** 어떤 명령을 돌려 무엇을 확인했는지. 확인하지 않은 것은 확인하지 않았다고 적어라.
-4. **다음에 할 일.** 순서대로. 각 항목이 왜 필요한지 한 줄씩.
-5. **막혀 있는 것.** 모르는 것, 결정을 기다리는 것, 시도했다 실패한 접근과 그 이유.
+## What to write
 
-## 적지 말 것
+1. **What we were trying to do.** One paragraph.
+2. **Where it stands.** Give the commit hash and branch. Actually run `git log --oneline -5` and `git status` and base this on that output.
+3. **What has been verified, and the output.** Which command you ran and what it showed. Say plainly what has *not* been verified.
+4. **What comes next.** In order, one line each on why it is needed.
+5. **What is blocked.** Open questions, decisions being waited on, approaches that were tried and failed, and why.
 
-- 추측. 확인하지 않은 상태를 사실처럼 적지 마라.
-- 코드베이스를 읽으면 알 수 있는 것. 파일 목록이나 구조 설명은 낭비다.
-- 규칙. 규칙은 `CLAUDE.md`가 정본이다. 여기 섞지 말고 포인터만 남겨라.
+## What not to write
 
-## 주의
+- Guesses. Do not state an unverified condition as fact.
+- Anything a reader could learn by opening the codebase. File listings and structure tours are waste.
+- Rules. `CLAUDE.md` is the single source for those. Leave a pointer, not a copy.
 
-인수인계 문서는 **작성 시점의 스냅샷**이다. 다음 세션이 이 문서를 읽을 때 그 안의 사실을 다시 확인해야 한다는 것을 문서 첫 줄에 적어 두라.
+## One caution
+
+A handoff note is **a snapshot of the moment it was written.** Put a line at the very top telling the next session to re-check the facts in it before relying on them.

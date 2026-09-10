@@ -1,5 +1,7 @@
 # 보안 정책
 
+한국어 · **[English](SECURITY.en.md)**
+
 ## 이 플러그인의 공격면
 
 훅은 **당신의 권한으로 셸 명령을 실행한다.** 이 플러그인을 설치한다는 것은 그 코드를 신뢰한다는 뜻이므로, 무엇을 하는지 적어 둔다.
@@ -24,7 +26,7 @@
 ```bash
 git clone https://github.com/IsthisLee/claude-grounded
 cd claude-grounded
-git tag -v v1.3.1        # Good "git" signature 가 나와야 한다
+git tag -v v1.4.1        # Good "git" signature 가 나와야 한다
 ```
 
 **실리는 것은 `plugin/` 뿐이다.** 24개 파일이고 그중 도는 것은 훅 열과 스킬 일곱이다. 테스트·문서·CI는 설치본에 들어가지 않는다.

@@ -34,7 +34,7 @@ Two lines inside a Claude Code session.
 /plugin install grounded@claude-grounded
 ```
 
-You receive 24 files under `plugin/`, and release tags are signed. [SECURITY.md](SECURITY.md#설치할-것을-직접-확인하는-법) shows how to check.
+You receive 24 files under `plugin/`, and release tags are signed. [SECURITY.en.md](SECURITY.en.md#checking-for-yourself-what-you-are-installing) shows how to check.
 
 **Your `settings.json` and `CLAUDE.md` are not touched.** After installing, everything looks the same. The gate only shows up when it fires.
 
@@ -136,7 +136,7 @@ State lives in `~/.claude/plugins/data/grounded-inline/` and is safe to delete. 
 |---|---|
 | [Gates and commands in detail](docs/gates.en.md) | What each gate blocks, the seven commands, how to disable, which doc grounds it |
 | [Verification log](docs/VERIFICATION.md) | Every claim with the exact command and its raw output, V1 through V16 |
-| [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) · [Changelog](CHANGELOG.md) | |
+| [Contributing](CONTRIBUTING.en.md) · [Security](SECURITY.en.md) · [Changelog](CHANGELOG.md) | |
 
 Grounded in [Reduce hallucinations](https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations), [Best practices](https://code.claude.com/docs/en/best-practices), [Hooks](https://code.claude.com/docs/en/hooks), Kent Beck's [Augmented Coding](https://newsletter.kentbeck.com/p/augmented-coding-beyond-the-vibes), and Simon Willison's [Agentic Engineering Patterns](https://simonwillison.net/guides/agentic-engineering-patterns/). Every rule cites the sentence it came from, in [the detail doc](docs/gates.en.md).
 

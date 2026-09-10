@@ -51,4 +51,23 @@ for n in spec tdd ship auto; do
 done
 check 0 0 "핵심 넷은 공식·검증 문서를 원문으로 인용한다"
 
+# 스킬은 설치본에 그대로 실려 모든 사용자가 받는다. 한국어로 쓰면 영어권 사용자가
+# 커맨드 목록부터 못 읽고, 모델도 한국어 지시를 받아 영어권 사용자에게 한국어로 답한다.
+# 게이트 문장은 msg.sh 가 로케일로 가르지만 SKILL.md 는 갈릴 수 없다. 그래서 영어로 쓰고
+# "사용자의 언어로 답하라"를 본문에 박는다. 한국어 사용자는 그대로 한국어 답을 받는다.
+python3 - "$G" <<'SKILLLANG'
+import os, re, sys
+root = sys.argv[1]
+for name in sorted(os.listdir(root)):
+    p = os.path.join(root, name, "SKILL.md")
+    if not os.path.isfile(p):
+        continue
+    t = open(p, encoding="utf-8").read()
+    ko = re.findall(r"[가-힣]", t)
+    assert not ko, f"{name}: 한글 {len(ko)}자. 설치본 스킬은 영어로 쓴다"
+    assert re.search(r"language I am writing to you in", t), \
+        f"{name}: 사용자의 언어로 답하라는 줄이 없다"
+SKILLLANG
+check 0 $? "스킬 일곱: 영어로 쓰고 사용자 언어로 답하라고 지시한다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"
