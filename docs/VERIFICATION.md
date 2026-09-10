@@ -1480,3 +1480,34 @@ test_cases.json 에서 케이스 삭제 → exit=0
 ### 검증
 
 단위 296건, 퍼징 240회 실패 0, `shellcheck`·`bash -n` exit 0, `claude plugin validate` 통과.
+
+## V22 안 쓰는 훅 이벤트를 재고, 미탐을 문서에 적다
+
+배경: 공식 이벤트 33개 중 목적에 맞는 후보를 골라 **실제로 발화하는지** 하나씩 쟀다. 문서에 있다고 쓰지 않는다.
+
+| 이벤트 | exit 2 효과 | 우리 주제와의 관계 | 2.1.267 에서 발화 |
+|---|---|---|---|
+| `PostToolUseFailure` | 비차단 | 실패한 명령을 성공이라 주장하는 것 | **1회** → R5 로 채택 |
+| `PostToolBatch` | 비차단 | 도구 결과 누적 | 1회 |
+| `PostToolUse` | 비차단 | (이미 씀) | 그 실행에서는 0회 |
+| `TaskCompleted` | 완료 표시를 막는다 | '거짓 완료' 의 정본 | **0회** |
+| `PermissionDenied` | 비차단 | '불가 면제' 를 증거로 | **0회** |
+
+`TaskCompleted` 는 todo 를 만들고 완료로 표시하는 프롬프트로, `PermissionDenied` 는 `permissions.deny` 를 걸고 그 명령을 요청하는 프롬프트로 각각 시험했다. 둘 다 발화하지 않았다. 발화하지 않는 이벤트 위에 규칙을 짓지 않는다.
+
+### 게이트에서 가장 약한 곳을 쟀다
+
+불가 면제가 텍스트만 본다. 도구를 한 번도 안 쓰고도 한 줄이면 풀린다.
+
+```
+"확인할 수 없다."              → exit=0
+"도구 실행이 안 된다."           → exit=0
+"cannot verify"          → exit=0
+상태 파일: changed prompt tools turn_closed   ← 실제 거부 여부는 기록하지 않는다
+```
+
+`PermissionDenied` 가 발화하면 증거로 쓸 수 있었지만 발화하지 않는다. 조이는 쪽도 택하지 않았다. 공식 Reduce hallucinations 가 "Allow Claude to say I don't know" 를 권하고, 사용자가 말로 도구를 금지한 경우와 구분할 방법이 없기 때문이다. **대신 README 에 '알려진 미탐' 절을 새로 두어 이 한계를 적었다.** 오탐만 적고 미탐을 숨기면 그 자체가 근거 없는 주장이다.
+
+### 검증
+
+단위 296건, 퍼징 240회 실패 0, 세 OS 초록.

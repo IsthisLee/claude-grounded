@@ -99,7 +99,16 @@ The rules are regex, so they don't read intent. Across 760 real turns, 130 were 
 | Saying "tools don't work in this session" still got blocked | The impossibility exemption is now shared by R0, R2a, R2b, R4 |
 | A/B verdict JSON `{"winner": …}` | A whole-JSON answer is exempt from the prose rules |
 
-One known gap: R2a's English patterns only match active voice like `should verify`, so `should be verified` slips through.
+### Known misses
+
+What it does not catch, written down. Publishing the false positives and hiding the misses would itself be an ungrounded claim.
+
+| Miss | Why it stays |
+|---|---|
+| One line of "I can't verify this" clears R0, R2a, R2b and R4 | The official docs say to give Claude permission to admit uncertainty. There is no way to know whether tools were actually blocked, so tightening this blocks honest answers |
+| Hardcoding test inputs in the source to make tests pass | Indistinguishable from a legitimate constant. EvilGenie reports a 1.4% false positive rate for the holdout approach |
+| Implementations that only work for small inputs | Not something a regex can judge |
+| R2a's English patterns only match active voice like `should verify`, so `should be verified` slips through | Widening to passive voice raises false positives |
 
 Hit a false positive? [Open an issue](../../issues/new?template=false-positive.md). The relevant line from `${CLAUDE_PLUGIN_DATA}/state/events.log` is enough.
 
