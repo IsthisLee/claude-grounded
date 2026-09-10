@@ -1,6 +1,6 @@
 {
   "name": "grounded",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Turns Claude Code best practices into enforced gates: no ungrounded claims, no false \"done\", no disabled tests, no rewritten migrations. Four hooks, a repo profile, and seven commands.",
   "author": {
     "name": "IsthisLee",
