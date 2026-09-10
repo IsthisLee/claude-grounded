@@ -45,4 +45,14 @@ edit "$P" Edit "$P/db/migrate/001.rb" | "$W/pre.sh" 2>/dev/null; check 2 $? "둘
 # 8. 끄기
 edit "$P" Edit "$P/supabase/migrations/0001_init.sql" | NGG_GUARD=0 "$W/pre.sh" 2>/dev/null; check 0 $? "NGG_GUARD=0 → 통과"
 
+# 9. 건너뛸 훅이 없는 저장소에서는 --no-verify를 막지 않는다.
+#    설치만 했는데 남의 저장소의 git 동작이 바뀌면 과하다.
+P8="$T/plain"; mkdir -p "$P8"
+bash_ "$P8" "git commit --no-verify -m x" | "$W/pre.sh" 2>/dev/null; check 0 $? "설정도 커밋 훅도 없음 → --no-verify 통과"
+bash_ "$P" "git commit --no-verify -m x" | "$W/pre.sh" 2>/dev/null; check 2 $? ".grounded.toml 있으면 → 차단"
+P9="$T/husky"; mkdir -p "$P9/.husky"; printf '#!/bin/sh\nnpm test\n' > "$P9/.husky/pre-commit"
+bash_ "$P9" "git commit --no-verify -m x" | "$W/pre.sh" 2>/dev/null; check 2 $? ".husky/pre-commit 있으면 → 차단"
+P10="$T/githook"; mkdir -p "$P10/.git/hooks"; printf '#!/bin/sh\n' > "$P10/.git/hooks/pre-commit"; chmod +x "$P10/.git/hooks/pre-commit"
+bash_ "$P10" "git commit --no-verify -m x" | "$W/pre.sh" 2>/dev/null; check 2 $? ".git/hooks/pre-commit 있으면 → 차단"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

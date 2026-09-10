@@ -9,6 +9,9 @@
 #   1. 모르는 것으로 막지 않는다. 검사 명령을 못 찾으면 알리고 통과시킨다.
 #   2. 조용히 실패하지 않는다. 시간초과나 실행 불가도 stderr로 알린다.
 #   3. 코드가 아닌 변경(문서 등)은 대상이 아니다.
+#   4. 턴마다 전체 스위트를 돌리지 않는다. 공식 CLAUDE.md 예시가 그렇게 권한다.
+#      "Prefer running single tests, and not the whole test suite, for performance."
+#      fast_test_command이 있으면 턴 끝에는 그것만 쓰고, 전체는 pre.sh가 커밋 직전에 돌린다.
 #
 # 끄기: NGG_DONE=0 · 제한 시간: DONE_TIMEOUT 초(기본 180)
 d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in; s=$(state_dir "$d")
@@ -29,8 +32,12 @@ note() { printf '완료 게이트: %s\n' "$1" >&2; }
 cmd=""; src=""
 conf="$root/.grounded.toml"
 if [ -f "$conf" ]; then
-  cmd=$(sed -n 's/^[[:space:]]*test_command[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$conf" | head -1)
-  [ -n "$cmd" ] && src=".grounded.toml"
+  cmd=$(sed -n 's/^[[:space:]]*fast_test_command[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$conf" | head -1)
+  [ -n "$cmd" ] && src=".grounded.toml fast_test_command"
+  if [ -z "$cmd" ]; then
+    cmd=$(sed -n 's/^[[:space:]]*test_command[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$conf" | head -1)
+    [ -n "$cmd" ] && src=".grounded.toml test_command"
+  fi
 fi
 if [ -z "$cmd" ] && [ -f "$root/package.json" ]; then
   if python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if (d.get("scripts") or {}).get("test") else 1)' "$root/package.json" 2>/dev/null; then
@@ -46,7 +53,7 @@ if [ -z "$cmd" ]; then
   exit 0
 fi
 
-out="$s/done-out"; to="${DONE_TIMEOUT:-180}"
+out="$s/done-out"; to="${DONE_TIMEOUT:-180}"; slow="${DONE_SLOW:-30}"; t0=$(date +%s)
 ( cd "$root" && eval "$cmd" ) > "$out" 2>&1 &
 pid=$!; i=0
 while kill -0 "$pid" 2>/dev/null; do
@@ -54,7 +61,14 @@ while kill -0 "$pid" 2>/dev/null; do
   sleep 0.1
 done
 wait "$pid"; rc=$?
-if [ "$rc" -eq 0 ]; then : > "$ch"; exit 0; fi
+if [ "$rc" -eq 0 ]; then
+  : > "$ch"
+  el=$(( $(date +%s) - t0 ))
+  if [ "$el" -ge "$slow" ] && ! printf '%s' "$src" | grep -q fast_test_command; then
+    note "검사에 ${el}초 걸렸다. 턴마다 이만큼 기다리면 게이트를 꺼 버리게 된다. .grounded.toml에 fast_test_command로 빠른 검사를 따로 적으면 턴 끝에는 그것만 돌리고 전체는 커밋 직전에 한 번 돌린다."
+  fi
+  exit 0
+fi
 
 {
   echo "완료 게이트: 검사가 실패했다(exit $rc). 턴을 끝낼 수 없다."

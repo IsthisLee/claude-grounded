@@ -6,7 +6,7 @@ set -u
 unset NGG_STATE NGG_INNER NGG_JUDGE NGG_JUDGE_CMD NGG_JUDGE_TIMEOUT NGG_DONE DONE_TIMEOUT
 G="$(cd "$(dirname "$0")" && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$T/lib/"; cp "$G"/post.sh "$G"/stop.sh "$W"/
+W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$T/lib/"; cp "$G"/post.sh "$G"/stop.sh "$G"/pre.sh "$W"/
 fail=0
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
 isfile() { [ -f "$1" ]; }
@@ -85,5 +85,36 @@ P9=$(newproj p9); S9="$T/s9"
 printf 'test_command = "exit 1"\n' > "$P9/.grounded.toml"
 printf '%s' "$(post t9 "$P9" "$T/elsewhere/x.ts")" | NGG_STATE="$S9" "$W/post.sh"
 printf '%s' "$(stop t9 "$P9")" | NGG_STATE="$S9" "$W/stop.sh" 2>/dev/null; check 0 $? "cwd 밖 파일만 변경 → 검사 안 함"
+
+# 13. 턴마다 전체 스위트를 돌리면 사람들이 게이트를 끈다.
+#     공식 CLAUDE.md 예시: "Prefer running single tests, and not the whole test suite, for performance."
+#     fast_test_command이 있으면 턴 끝에는 그것만 쓰고, 전체는 커밋 직전에 한 번 돌린다.
+PA=$(newproj pa); SA="$T/sa"
+printf 'fast_test_command = "echo FAST; true"\ntest_command = "echo FULL; true"\n' > "$PA/.grounded.toml"
+printf '%s' "$(post ta "$PA" "$PA/src/a.ts")" | NGG_STATE="$SA" "$W/post.sh"
+printf '%s' "$(stop ta "$PA")" | NGG_STATE="$SA" "$W/stop.sh" 2>/dev/null; check 0 $? "빠른 검사 통과 → exit 0"
+grep -q FAST "$SA/state/ta/done-out"; check 0 $? "턴 끝에는 fast_test_command를 돌린다"
+grep -q FULL "$SA/state/ta/done-out"; r=$?; check 1 "$r" "턴 끝에 전체 검사는 돌리지 않는다"
+
+PB=$(newproj pb); SB="$T/sb"
+printf 'fast_test_command = "true"\ntest_command = "echo FULLFAIL >&2; exit 1"\n' > "$PB/.grounded.toml"
+printf '%s' "$(post tb "$PB" "$PB/src/a.ts")" | NGG_STATE="$SB" "$W/post.sh"
+printf '%s' "$(stop tb "$PB")" | NGG_STATE="$SB" "$W/stop.sh" 2>/dev/null; check 0 $? "빠른 검사만 보므로 턴은 끝난다"
+commit() { printf '{"session_id":"%s","hook_event_name":"PreToolUse","cwd":"%s","tool_name":"Bash","tool_input":{"command":"%s"}}' "$1" "$2" "$3"; }
+printf '%s' "$(commit tb "$PB" "git commit -m x")" | NGG_STATE="$SB" "$W/pre.sh" 2>"$T/e13"; check 2 $? "커밋 직전 전체 검사 실패 → exit 2"
+grep -q FULLFAIL "$T/e13"; check 0 $? "stderr에 전체 검사 출력"
+printf '%s' "$(commit tb "$PB" "git status")" | NGG_STATE="$SB" "$W/pre.sh" 2>/dev/null; check 0 $? "커밋이 아닌 명령 → 통과"
+
+# 분리하지 않았으면 커밋 때 두 번 돌리지 않는다
+PC=$(newproj pc); SC="$T/sc"
+printf 'test_command = "echo ONCE >&2; exit 1"\n' > "$PC/.grounded.toml"
+printf '%s' "$(commit tc "$PC" "git commit -m x")" | NGG_STATE="$SC" "$W/pre.sh" 2>/dev/null; check 0 $? "fast 분리 없으면 커밋 때 중복 검사 안 함"
+
+# 14. 느린 검사는 분리하라고 알린다
+PD=$(newproj pd); SD="$T/sd"
+printf 'test_command = "sleep 2"\n' > "$PD/.grounded.toml"
+printf '%s' "$(post td "$PD" "$PD/src/a.ts")" | NGG_STATE="$SD" "$W/post.sh"
+printf '%s' "$(stop td "$PD")" | DONE_SLOW=1 NGG_STATE="$SD" "$W/stop.sh" 2>"$T/e14"; check 0 $? "느려도 통과는 통과"
+grep -q 'fast_test_command' "$T/e14"; check 0 $? "느리면 fast_test_command 분리를 권한다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

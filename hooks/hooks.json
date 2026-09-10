@@ -48,6 +48,18 @@
             "statusMessage": "프로젝트 가드"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "NGG_STATE=\"${CLAUDE_PLUGIN_DATA}\" \"${CLAUDE_PLUGIN_ROOT}\"/hooks/done-gate/pre.sh",
+            "shell": "bash",
+            "timeout": 660,
+            "statusMessage": "완료 게이트"
+          }
+        ]
       }
     ],
     "Stop": [

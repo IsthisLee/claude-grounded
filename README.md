@@ -90,8 +90,11 @@ Claude가 답을 마치려는 순간 `Stop` 훅이 규칙 여섯 개를 본다. 
 
 ```toml
 # .grounded.toml
-test_command = "npm test"
+fast_test_command = "npm test -- --changed"   # 턴 끝에는 이것만
+test_command      = "npm test"                # 커밋 직전에 이것
 ```
+
+**턴마다 전체 스위트를 돌리지 않는다.** 공식 CLAUDE.md 예시가 그렇게 권한다. "Prefer running single tests, and not the whole test suite, for performance." `fast_test_command`을 적으면 턴 끝에는 그것만 돌리고 전체는 `git commit` 직전에 한 번 돌린다. 나누지 않으면 `test_command` 하나로 둘 다 한다. 검사가 30초를 넘으면 나누라고 알려 준다.
 
 설계 원칙 셋이다. **모르는 것으로 막지 않는다** — 검사 명령을 못 찾으면 알리고 통과시킨다. **조용히 실패하지 않는다** — 시간을 넘기면 그 사실을 알리고 막지 않는다. **코드가 아닌 변경은 대상이 아니다** — 문서만 고친 턴은 검사하지 않고, 저장소 밖 파일도 세지 않는다.
 
@@ -123,7 +126,7 @@ Kent Beck이 에이전트의 부정행위로 지목한 것을 그대로 막는�
 append_only = "supabase/migrations, db/migrate"
 ```
 
-설정이 없으면 아무것도 막지 않는다. 다만 `git commit --no-verify`는 설정과 무관하게 막는다. 비상 통로는 사람이 직접 쓰는 것이지 에이전트가 게이트를 우회하는 길이 아니다. 끄려면 `NGG_GUARD=0`이다.
+설정이 없으면 아무것도 막지 않는다. `git commit --no-verify`는 **건너뛸 커밋 훅이 실제로 있을 때만** 막는다(`.grounded.toml`, `.husky/pre-commit`, `.git/hooks/pre-commit`, `core.hooksPath` 중 하나). 설치만 했는데 남의 저장소의 git 동작이 바뀌면 과하기 때문이다. 끄려면 `NGG_GUARD=0`이다.
 
 ## 저장소 프로필: 세션마다 사실을 실어 준다
 

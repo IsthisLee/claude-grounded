@@ -13,6 +13,8 @@ W="$T/scripts"; mkdir -p "$W" "$T/lib"; cp "$G"/../lib/common.sh "$T/lib/"; cp "
 fail=0
 # [ ... ] 뒤의 $?는 조건의 결과라 덮어쓰기 쉽다(SC2319). 파일 검사는 함수로 감싸 명령 결과로 만든다.
 isfile() { [ -f "$1" ]; }
+lt() { [ "$1" -lt "$2" ]; }
+empty() { [ ! -s "$1" ]; }
 nodir()  { [ ! -d "$1" ]; }
 check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 실측=$2)"; fail=$((fail+1)); fi; }
 P='{"session_id":"t1","hook_event_name":"UserPromptSubmit","prompt":"이 디렉터리에 package.json 있어?"}'
@@ -101,7 +103,7 @@ printf '%s' "$P" | PATH="$B:$PATH" NGG_STATE="$Q" "$W/prompt.sh" 2>/dev/null; ch
 # 8. 상태 파일이 없어도 stderr에 잡음을 내지 않는다. exit 2일 때는 stderr가 그대로 차단 메시지로 보인다.
 N8="$T/fresh"
 printf '%s' '{"session_id":"t8","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"2입니다."}' | NGG_STATE="$N8" "$W/stop.sh" 2>"$T/e8"; check 0 $? "tools 파일 없이 Stop → exit 0"
-[ ! -s "$T/e8" ]; r=$?; check 0 "$r" "stderr 비어 있음 (리디렉션 오류 잡음 없음)"
+empty "$T/e8"; check 0 $? "stderr 비어 있음 (리디렉션 오류 잡음 없음)"
 
 # 9. R2b: 의견에 붙은 유보(나아·적절해 보인다)는 사실 주장이 아니다. 상태 유보(깨져 보인다)만 잡고, 문체(보인다/보입니다)에 무관하게 같게 판정한다.
 K9="$T/r2b"; P9='{"session_id":"t9","hook_event_name":"UserPromptSubmit","prompt":"훅을 어디에 둘지 설계 검토해줘"}'
@@ -210,7 +212,7 @@ import json, os, re, sys
 d = json.load(open(sys.argv[1])); root = os.path.dirname(os.path.abspath(sys.argv[2]))
 want = {
     "UserPromptSubmit": [("no-guess-gate", "prompt.sh")],
-    "PreToolUse":       [("no-guess-gate", "pre.sh"), ("test-integrity", "pre.sh"), ("project-guard", "pre.sh")],
+    "PreToolUse":       [("no-guess-gate", "pre.sh"), ("test-integrity", "pre.sh"), ("project-guard", "pre.sh"), ("done-gate", "pre.sh")],
     "PostToolUse":      [("done-gate", "post.sh")],
     "Stop":             [("no-guess-gate", "stop.sh"), ("done-gate", "stop.sh")],
     "SubagentStop":     [("no-guess-gate", "stop.sh")],
@@ -236,11 +238,11 @@ for ev, expected in want.items():
 pm = [g.get("matcher") for g in hooks["PostToolUse"]]
 assert pm == ["Edit|Write"], f"PostToolUse matcher={pm}"
 tm = [g.get("matcher") for g in hooks["PreToolUse"]]
-assert tm == [None, "Edit|Write|Bash", "Edit|Write|Bash"], f"PreToolUse matcher={tm}"
+assert tm == [None, "Edit|Write|Bash", "Edit|Write|Bash", "Bash"], f"PreToolUse matcher={tm}"
 PY
 check 0 $? "hooks.json: 여섯 이벤트에 다섯 모듈 배선·PLUGIN_ROOT/DATA·shell·타임아웃·matcher"
-for f in "$G/prompt.sh" "$G/pre.sh" "$G/stop.sh" "$G/judge.py" "$G/../done-gate/post.sh" "$G/../done-gate/stop.sh" "$G/../test-integrity/pre.sh" "$G/../project-guard/pre.sh" "$G/../repo-profile/session.sh"; do [ -x "$f" ] || { echo "❌ $(basename "$f") 실행 비트 없음"; fail=$((fail+1)); }; done
-check 0 0 "훅 스크립트 아홉 실행 비트"
+for f in "$G/prompt.sh" "$G/pre.sh" "$G/stop.sh" "$G/judge.py" "$G/../done-gate/post.sh" "$G/../done-gate/stop.sh" "$G/../test-integrity/pre.sh" "$G/../project-guard/pre.sh" "$G/../repo-profile/session.sh" "$G/../done-gate/pre.sh"; do [ -x "$f" ] || { echo "❌ $(basename "$f") 실행 비트 없음"; fail=$((fail+1)); }; done
+check 0 0 "훅 스크립트 열 실행 비트"
 
 # 16. 턴 경계는 두 게이트가 공유한다. 턴이 닫힌 뒤 첫 프롬프트에서 changed도 비운다.
 K16="$T/turn"; P16='{"session_id":"t16","hook_event_name":"UserPromptSubmit","prompt":"고쳐줘"}'
@@ -251,5 +253,15 @@ grep -q x "$K16/state/t16/changed"; check 0 $? "턴 중간 프롬프트: changed
 printf '{"session_id":"t16","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"했습니다."}' | NGG_STATE="$K16" "$W/stop.sh" 2>/dev/null
 printf '%s' "$P16" | NGG_STATE="$K16" "$W/prompt.sh"
 nodir "$K16/state/t16/nonexistent"; [ -s "$K16/state/t16/changed" ] && { echo "❌ 턴 닫힌 뒤 첫 프롬프트: changed 초기화"; fail=$((fail+1)); } || echo "✅ 턴 닫힌 뒤 첫 프롬프트: changed 초기화"
+
+# 17. 차단 메시지는 "이미 나간 답은 화면에 남는다"를 알려야 한다.
+#     이 안내가 없어서 Claude가 답을 통째로 다시 써 사용자가 같은 글을 두 번 읽었다(실측 14건).
+K17="$T/dup"; P17='{"session_id":"t17","hook_event_name":"UserPromptSubmit","prompt":"이 디렉터리에 package.json 있어?"}'
+printf '%s' "$P17" | NGG_STATE="$K17" "$W/prompt.sh"
+printf '{"session_id":"t17","hook_event_name":"Stop","stop_hook_active":false,"last_assistant_message":"package.json 파일이 없다."}' | NGG_STATE="$K17" "$W/stop.sh" 2>"$T/e17"
+grep -q '화면' "$T/e17"; check 0 $? "차단 메시지: 앞 답이 화면에 남는다고 알림"
+grep -qE '다시 쓰지|반복하지|되풀이' "$T/e17"; check 0 $? "차단 메시지: 통째로 다시 쓰지 말라고 지시"
+grep -qE '달라진|바뀐|정정' "$T/e17"; check 0 $? "차단 메시지: 달라진 것만 쓰라고 지시"
+lines=$(grep -c . "$T/e17"); lt "$lines" 12; check 0 $? "차단 메시지 ${lines}줄 < 12 (길면 안 읽는다)"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

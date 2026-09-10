@@ -81,8 +81,11 @@ The check command is resolved in this order:
 
 ```toml
 # .grounded.toml
-test_command = "npm test"
+fast_test_command = "npm test -- --changed"   # per turn
+test_command      = "npm test"                # before a commit
 ```
+
+**It does not run your whole suite every turn.** The official CLAUDE.md example says as much: "Prefer running single tests, and not the whole test suite, for performance." With `fast_test_command` set, turns run only that and the full suite runs once before `git commit`. Without the split, `test_command` does both. If a check takes over 30 seconds, the gate suggests splitting it.
 
 Three principles. **Never block on what it doesn't know** — if no check command is found, it says so and lets the turn end. **Never fail silently** — a timeout is reported, not swallowed. **Non-code changes are out of scope** — a docs-only turn runs nothing, and files outside the repo don't count.
 
@@ -113,7 +116,7 @@ This guard is more precise: **new files are allowed; only edits and deletions of
 append_only = "supabase/migrations, db/migrate"
 ```
 
-With no configuration it blocks nothing — except `git commit --no-verify`, which is blocked regardless. An escape hatch is for a human to use, not a path for the agent to route around the gate. Disable with `NGG_GUARD=0`.
+With no configuration it blocks nothing. `git commit --no-verify` is blocked **only when there are commit hooks to bypass** (`.grounded.toml`, `.husky/pre-commit`, `.git/hooks/pre-commit`, or `core.hooksPath`). Installing a plugin should not change git's behaviour in repos you never configured. Disable with `NGG_GUARD=0`.
 
 ## Repo profile: facts, loaded every session
 

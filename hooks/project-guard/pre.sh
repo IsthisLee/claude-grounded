@@ -16,9 +16,18 @@ root="${CWD:-$PWD}"; conf="$root/.grounded.toml"
 
 block() { { echo "프로젝트 가드: $1"; echo "$2"; } >&2; exit 2; }
 
-# 검사를 건너뛰는 커밋은 설정과 무관하게 막는다. 비상 통로는 사람이 직접 쓰는 것이지
+# 검사를 건너뛰는 커밋을 막는다. 다만 **건너뛸 훅이 실제로 있을 때만** 막는다.
+# 설치만 했는데 남의 저장소의 git 동작이 바뀌면 과하다. 비상 통로는 사람이 직접 쓰는 것이지
 # 에이전트가 게이트를 우회하는 길이 아니다.
-if [ "$TOOL_NAME" = "Bash" ] && printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+commit\b[^|;&]*(--no-verify|[[:space:]]-n\b)'; then
+has_hooks() {
+  [ -f "$conf" ] && return 0
+  [ -f "$root/.husky/pre-commit" ] && return 0
+  [ -x "$root/.git/hooks/pre-commit" ] && return 0
+  hp=$(git -C "$root" config --get core.hooksPath 2>/dev/null || true)
+  [ -n "$hp" ] && [ -e "$root/$hp/pre-commit" ] && return 0
+  return 1
+}
+if [ "$TOOL_NAME" = "Bash" ] && has_hooks && printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+commit\b[^|;&]*(--no-verify|[[:space:]]-n\b)'; then
   block "git commit --no-verify로 커밋 훅을 건너뛰려 했다." "- 명령: $COMMAND
 - 검사를 건너뛰지 말고 통과시켜라. 정말 비상이면 사람이 직접 실행한다."
 fi
