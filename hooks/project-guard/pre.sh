@@ -15,6 +15,17 @@ d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
 root="${CWD:-$PWD}"; conf="$root/.grounded.toml"
 
 block() { { echo "프로젝트 가드: $1"; echo "$2"; } >&2; exit 2; }
+# 명령에서 파일 인자를 뽑는다. 따옴표로 감싼 경로(공백이 든 파일명은 반드시 그렇다)를 살린다.
+# 따옴표 안의 공백은 구분자가 아니므로 셸과 같은 방식으로 쪼갠다.
+cmd_paths() {
+  printf '%s' "$1" | python3 -c 'import shlex,sys
+t=sys.stdin.read()
+try: toks=shlex.split(t, posix=True)
+except ValueError: toks=t.split()
+for x in toks:
+    if x and not x.startswith("-"): print(x)' 2>/dev/null || printf '%s' "$1" | tr " " "\n"
+}
+
 
 # 검사를 건너뛰는 커밋을 막는다. 다만 **건너뛸 훅이 실제로 있을 때만** 막는다.
 # 설치만 했는데 남의 저장소의 git 동작이 바뀌면 과하다. 비상 통로는 사람이 직접 쓰는 것이지
@@ -58,14 +69,17 @@ case "$TOOL_NAME" in
 - 고쳐야 할 내용이 있으면 지난 파일을 바꾸지 말고 새 파일을 더해라." ;;
   Bash)
     printf '%s' "$COMMAND" | grep -qE '(^|[;&|]|\s)(rm|git[[:space:]]+rm|mv)\b' || exit 0
-    for tok in $COMMAND; do
-      case "$tok" in -*) continue;; esac
+    while IFS= read -r tok; do
+      [ -n "$tok" ] || continue
       case "$tok" in /*) f="$tok";; *) f="$root/$tok";; esac
       if guarded "$f" && [ -f "$f" ]; then
         block "이 경로는 추가만 가능하다(append-only). 삭제나 이동을 막는다." "- 명령: $COMMAND
 - 대상: $tok
 - 설정: append_only = \"$paths\"  (.grounded.toml)"
       fi
-    done ;;
+    done <<EOF
+$(cmd_paths "$COMMAND")
+EOF
+    ;;
 esac
 exit 0

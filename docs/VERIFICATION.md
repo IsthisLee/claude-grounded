@@ -788,3 +788,61 @@ sonnet:    claude -p --model sonnet --output-format json --max-turns 1 --no-sess
 `NGG_JUDGE_CMD`를 주면 그것이 이기고 모델을 끼워 넣지 않는다(테스트로 고정). haiku를 기본으로 둔 이유는 판정이 **분류 한 번**이라 큰 모델이 필요 없기 때문이다. 실측 정확도가 12/12였다(V10).
 
 근거 게이트 103건.
+
+## V12 실사용 QA: 상시 비용, 경로 처리, 동시성, 거대 입력
+
+배경: "실사용에 문제와 불편함이 없는지" 점검. 기능이 아니라 **매일 치르는 비용과 깨지는 입력**을 봤다.
+
+### 1. 상시 비용 (모든 사용자가 매 턴 지불)
+
+처음 잰 값이다.
+```
+SessionStart repo-profile   59.7ms      PreToolUse no-guess-gate    45.9ms
+UserPrompt   prompt.sh      69.6ms      PreToolUse test-integrity   44.1ms
+Stop         no-guess-gate 153.1ms      PreToolUse project-guard    41.2ms
+Stop         done-gate      56.0ms      PostToolUse done-gate/post  46.2ms
+```
+`PreToolUse`는 **도구 호출마다** 낸다. 도구 20회 턴이면 훅에만 수 초다. 병목은 전부 `python3` 기동이었다.
+
+가장 뜨거운 경로인 `no-guess-gate/pre.sh`는 필요한 값이 `session_id`·`agent_id`·`tool_name` 셋뿐이라 파라미터 확장만으로 뽑도록 고쳤다. 프로세스를 하나도 띄우지 않는다. 안전 조건은 입력이 4KB 미만이고 `"tool_name"`이 정확히 한 번 나오고 값이 식별자 꼴일 때다. 하나라도 어긋나면 `python3` 경로로 넘어가 같은 결과를 낸다.
+
+**동작을 먼저 테스트로 고정하고(20군 8건, 기존 구현으로 통과) 고친 뒤 같은 테스트로 확인했다.**
+
+```
+Read 한 번당        45.9ms → 18.7ms
+도구  5회 턴 총합              373ms
+도구 20회 턴 총합              654ms
+도구 50회 턴 총합            1,215ms
+4KB 초과(폴백)                45.0ms   ← 느린 경로도 정상
+```
+
+`Edit`은 아직 158ms다(pre + 무결성 + 가드 + post). 이 셋은 `old_string`·`new_string`·`content` 같은 이스케이프된 긴 값을 읽어야 해서 같은 최적화를 적용하면 위험하다. 남겨 둔다.
+
+### 2. 깨지는 입력 — 실제 결함 하나
+
+| 시험 | 결과 |
+|---|---|
+| 공백 든 저장소 경로 | 통과 |
+| **따옴표로 감싼 테스트 파일 삭제** `rm "src/my test.test.ts"` | **막지 못했다** |
+| 줄바꿈이 든 파일명 + skip 추가 | 막음 |
+| git이 아닌 폴더 | 프로필·가드 모두 정상 |
+| 20개 세션 동시 실행 | 세션 폴더 20개, 충돌 없음 |
+| `events.log` 상한 | 2,400줄 → 2,000줄로 잘림 |
+
+`for tok in $COMMAND`가 따옴표를 모르고 공백에서 쪼개, `"src/my test.test.ts"`가 `"src/my`와 `test.test.ts"`가 되어 확장자 앵커가 깨졌다. **공백이 든 파일명은 반드시 따옴표가 붙으므로 실제로 만나는 경로다.** 두 가드 모두 `shlex.split`으로 셸과 같게 쪼개도록 고쳤다(각 4건·3건 테스트).
+
+### 3. 거대 입력
+
+```
+146KB 답  → 0.30초, 판정 정상
+1,461KB 답 → 1.48초, 판정 정상 (긴 설명 끝에 숨긴 "src/auth.ts 파일이 없다"를 R1로 잡음)
+```
+
+첫 측정에서 "argument list too long"이 났는데 플러그인이 아니라 **내 시험 하니스가 1MB를 argv로 넘긴 탓**이었다. 파이프로 고쳐 다시 쟀다.
+
+### 전체
+
+```
+근거 110 · 완료 29 · 무결성 27 · 가드 21 · 프로필 16 · 스킬 4 = 207건, 전부 exit 0
+shellcheck -x exit 0 · plugin validate 통과
+```

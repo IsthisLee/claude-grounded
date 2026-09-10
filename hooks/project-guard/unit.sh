@@ -55,4 +55,10 @@ bash_ "$P9" "git commit --no-verify -m x" | "$W/pre.sh" 2>/dev/null; check 2 $? 
 P10="$T/githook"; mkdir -p "$P10/.git/hooks"; printf '#!/bin/sh\n' > "$P10/.git/hooks/pre-commit"; chmod +x "$P10/.git/hooks/pre-commit"
 bash_ "$P10" "git commit --no-verify -m x" | "$W/pre.sh" 2>/dev/null; check 2 $? ".git/hooks/pre-commit 있으면 → 차단"
 
+# 10. 따옴표로 감싼 경로도 잡아야 한다.
+mkdir -p "$P/supabase/migrations"; printf 'x\n' > "$P/supabase/migrations/0002 new.sql"
+bash_ "$P" 'rm "supabase/migrations/0002 new.sql"' | "$W/pre.sh" 2>/dev/null; check 2 $? "따옴표+공백 마이그레이션 rm → exit 2"
+bash_ "$P" "rm 'supabase/migrations/0001_init.sql'" | "$W/pre.sh" 2>/dev/null; check 2 $? "홑따옴표 마이그레이션 rm → exit 2"
+bash_ "$P" 'rm "src/my app.ts"' | "$W/pre.sh" 2>/dev/null; check 0 $? "따옴표라도 지정 밖이면 통과"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

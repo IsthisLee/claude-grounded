@@ -18,6 +18,17 @@ DISABLE='(\.skip\(|\.only\(|\bxit\(|\bxdescribe\(|\bxtest\(|@pytest\.mark\.(skip
 ASSERT='(expect\(|assert[A-Za-z_(]|\bassert\b|should\.|\.toBe\(|\.toEqual\(|\.toHaveBeenCalled|require\.(NoError|Equal)|XCTAssert)'
 
 is_test() { printf '%s' "$1" | grep -qE "$TESTPATH"; }
+# 명령에서 파일 인자를 뽑는다. 따옴표로 감싼 경로(공백이 든 파일명은 반드시 그렇다)를 살린다.
+# 따옴표 안의 공백은 구분자가 아니므로 셸과 같은 방식으로 쪼갠다.
+cmd_paths() {
+  printf '%s' "$1" | python3 -c 'import shlex,sys
+t=sys.stdin.read()
+try: toks=shlex.split(t, posix=True)
+except ValueError: toks=t.split()
+for x in toks:
+    if x and not x.startswith("-"): print(x)' 2>/dev/null || printf '%s' "$1" | tr " " "\n"
+}
+
 count() { printf '%s' "$2" | grep -oE "$1" | grep -c . || true; }
 
 block() { { echo "테스트 무결성 게이트: $1"; echo "$2"; echo "테스트가 아니라 코드를 고쳐라. 요구가 바뀌어 테스트가 틀린 것이면, 무엇이 바뀌어 그 테스트가 이제 틀렸는지 밝히고 확인받아라."; } >&2; exit 2; }
@@ -26,10 +37,13 @@ case "$TOOL_NAME" in
   Bash)
     # 테스트 파일 삭제를 막는다. 인자만 보고 판단한다.
     printf '%s' "$COMMAND" | grep -qE '(^|[;&|]|\s)(rm|git[[:space:]]+rm)\b' || exit 0
-    for tok in $COMMAND; do
-      case "$tok" in -*) continue;; esac
-      is_test "$tok" && block "테스트 파일 삭제 명령이다." "- 명령: $COMMAND"
-    done
+    while IFS= read -r tok; do
+      [ -n "$tok" ] || continue
+      is_test "$tok" && block "테스트 파일 삭제 명령이다." "- 명령: $COMMAND
+- 대상: $tok"
+    done <<EOF
+$(cmd_paths "$COMMAND")
+EOF
     exit 0 ;;
   Edit|Write) is_test "$FILE_PATH" || exit 0 ;;
   *) exit 0 ;;

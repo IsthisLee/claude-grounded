@@ -50,4 +50,10 @@ write "$P" "$P/src/new.test.ts" 'it("a", () => { expect(x).toBe(1); })' | "$W/pr
 # 8. 끄기
 edit "$P" "$P/src/a.test.ts" "it('w', () => {})" "it.skip('w', () => {})" | NGG_TESTGUARD=0 "$W/pre.sh" 2>/dev/null; check 0 $? "NGG_TESTGUARD=0 → 통과"
 
+# 9. 따옴표로 감싼 경로도 잡아야 한다. 공백이 든 파일명은 반드시 따옴표가 붙는다.
+bash_ "$P" 'rm "src/my test.test.ts"' | "$W/pre.sh" 2>/dev/null; check 2 $? "따옴표+공백 테스트 파일 rm → exit 2"
+bash_ "$P" "rm 'tests/a b_test.go'" | "$W/pre.sh" 2>/dev/null; check 2 $? "홑따옴표 테스트 파일 rm → exit 2"
+bash_ "$P" 'git rm "src/x.spec.ts"' | "$W/pre.sh" 2>/dev/null; check 2 $? "따옴표 git rm → exit 2"
+bash_ "$P" 'rm "build/my out.js"' | "$W/pre.sh" 2>/dev/null; check 0 $? "따옴표라도 테스트가 아니면 통과"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

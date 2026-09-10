@@ -292,4 +292,21 @@ out=$(NGG_JUDGE_CMD="echo FIXED" NGG_JUDGE_MODEL=sonnet NGG_JUDGE_DRYRUN=1 "$W/j
 printf '%s' "$out" | grep -q '^echo FIXED$'; check 0 $? "NGG_JUDGE_CMD가 있으면 그것이 이긴다"
 printf '%s' "$out" | grep -q 'sonnet'; r=$?; check 1 "$r" "NGG_JUDGE_CMD를 줬으면 모델을 끼워 넣지 않는다"
 
+# 20. pre.sh는 도구 호출마다 돈다. python3 기동이 상시 비용의 대부분이라 빠른 경로를 둔다.
+#     빠른 경로와 느린 경로의 결과가 같아야 하고, 이상한 입력이면 느린 경로로 넘어가야 한다.
+K20="$T/fast"
+mkpre() { printf '{"session_id":"t20","hook_event_name":"PreToolUse","tool_name":"%s"%s}' "$1" "${2:-}"; }
+printf '%s' "$(mkpre Read)" | NGG_STATE="$K20" "$W/pre.sh"; check 0 $? "빠른 경로: 평범한 입력 exit 0"
+grep -qx 'Read' "$K20/state/t20/tools"; check 0 $? "빠른 경로: 도구 이름 기록"
+printf '%s' "$(mkpre Bash)" | NGG_STATE="$K20" "$W/pre.sh"
+printf '%s' "$(mkpre 'mcp__x__y')" | NGG_STATE="$K20" "$W/pre.sh"
+check 3 "$(grep -c . "$K20/state/t20/tools")" "빠른 경로: 세 줄 누적(mcp 이름 포함)"
+# 서브에이전트는 agent_id 하위 폴더에 쌓인다
+printf '{"session_id":"t20","agent_id":"ag1","hook_event_name":"PreToolUse","tool_name":"Grep"}' | NGG_STATE="$K20" "$W/pre.sh"
+isfile "$K20/state/t20/agent-ag1/tools"; check 0 $? "빠른 경로: agent_id 하위 폴더"
+# 빠른 경로가 못 읽는 입력은 느린 경로로 넘어가 같은 결과를 낸다
+printf '{"session_id":"t20","hook_event_name":"PreToolUse","tool_input":{"file_path":"a\\"b"},"tool_name":"Edit"}' | NGG_STATE="$K20" "$W/pre.sh"; check 0 $? "폴백: 이스케이프 섞인 입력도 exit 0"
+grep -qx 'Edit' "$K20/state/t20/tools"; check 0 $? "폴백: 결과가 같다"
+printf 'not json at all' | NGG_STATE="$K20" "$W/pre.sh" 2>/dev/null; check 1 $? "폴백: JSON이 아니면 exit 1(조용히 통과하지 않음)"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

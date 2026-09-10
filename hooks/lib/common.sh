@@ -1,5 +1,6 @@
 # shellcheck shell=bash
-read_in() { IN=$(cat); local parsed
+# IN이 이미 채워져 있으면 그것을 쓴다. 빠른 경로가 stdin을 먼저 읽고 폴백할 때 필요하다.
+read_in() { [ -n "${IN:-}" ] || IN=$(cat); local parsed
   parsed=$(printf '%s' "$IN" | python3 -c '
 import sys,json,shlex
 d=json.load(sys.stdin)
