@@ -7,16 +7,17 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 - `tests/lib/unit.sh` — 메시지 카탈로그 21건. 두 언어의 키가 맞는지, 언어 결정 순서가 맞는지, 카탈로그가 사라져도 조용히 통과하지 않는지 본다.
 - `tests/no-guess-gate/unit.sh` — 근거 게이트 130건. 모델을 부르지 않는다.
 - `tests/done-gate/unit.sh` — 완료 게이트 34건.
-- `tests/test-integrity/unit.sh` — 테스트 무결성 44건.
+- `tests/test-integrity/unit.sh` — 테스트 무결성 50건.
 - `tests/project-guard/unit.sh` — 프로젝트 가드 26건.
 - `tests/repo-profile/unit.sh` — 저장소 프로필 19건.
 - `tests/skills-unit.sh` — 스킬 정의 4건.
 - `tests/attack-surface.sh` — SECURITY.md가 적은 공격면과 코드가 맞는지 9건.
-- `tests/invariants.sh` — 매니페스트·CHANGELOG·문서의 숫자, 셸 인용, 하네스의 카탈로그 복사 14건.  **합계 301건.**
+- `tests/invariants.sh` — 매니페스트·CHANGELOG·문서의 숫자, 셸 인용, 하네스의 카탈로그 복사 14건.  **합계 307건.**
 - `tests/fuzz.sh` — 망가진 입력을 열 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
 - `tests/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다.
 - `tests/no-guess-gate/ab.sh` — 게이트 켠 채와 끈 채를 비교해 효과를 잰다. `SET=hard`가 압박 프롬프트.
 - `tests/no-guess-gate/judge-accuracy.sh` — 판정기 정확도와 소요 시간. 의견 여섯·상태 주장 여섯. README가 인용하는 숫자가 여기서 나온다. 모델을 부르고 몇 분 걸린다.
+- `tests/acceptance.sh` — 새 사용자 관점. 빈 프로젝트를 만들어 플러그인을 걸고 게이트와 스킬을 실제로 돌린다. 모델을 부르고 몇 분 걸린다. **단위 테스트가 못 보는 것, 곧 설치한 사람이 겪는 것을 본다.**
 - `shellcheck -x -s bash plugin/hooks/*/*.sh tests/*.sh tests/*/*.sh` · `actionlint`
 - `claude plugin validate .` · `claude --plugin-dir .`
 

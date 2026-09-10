@@ -18,13 +18,25 @@ root="${CWD:-$PWD}"; conf="$root/.grounded.toml"
 block() { { t pg.prefix "$1"; echo "$2"; } >&2; exit 2; }
 # 명령에서 파일 인자를 뽑는다. 따옴표로 감싼 경로(공백이 든 파일명은 반드시 그렇다)를 살린다.
 # 따옴표 안의 공백은 구분자가 아니므로 셸과 같은 방식으로 쪼갠다.
-cmd_paths() {
-  printf '%s' "$1" | py -c 'import shlex,sys
-t=sys.stdin.read()
-try: toks=shlex.split(t, posix=True)
-except ValueError: toks=t.split()
-for x in toks:
-    if x and not x.startswith("-"): print(x)' 2>/dev/null || printf '%s' "$1" | tr " " "\n"
+# 삭제 명령의 인자만 뽑는다. 명령 어디엔가 rm 이 있고 다른 문장에 경로가 있다고 짝지으면
+# 임시 폴더를 치우는 명령이 테스트 삭제로 읽힌다. 실제로 이 저장소 작업 중 다섯 번 그랬다.
+# 셸처럼 ; && || | 개행으로 문장을 나눈 뒤, 삭제로 시작하는 문장의 인자만 본다.
+rm_targets() {
+  printf '%s' "$1" | py -c 'import re,shlex,sys
+t = sys.stdin.read()
+for stmt in re.split(r"[;&|\n]+", t):
+    try: toks = shlex.split(stmt, posix=True)
+    except ValueError: toks = stmt.split()
+    if not toks: continue
+    i = 0
+    if toks[0] == "sudo": i = 1
+    if i >= len(toks): continue
+    head = toks[i]
+    if head == "git" and i + 1 < len(toks) and toks[i+1] == "rm": i += 2
+    elif head == "rm": i += 1
+    else: continue
+    for x in toks[i:]:
+        if x and not x.startswith("-"): print(x)'
 }
 
 
@@ -74,7 +86,7 @@ case "$TOOL_NAME" in
         block "$(tn pg.appendrm)" "$(t line.cmd "$COMMAND"; t line.target "$tok"; tn pg.conf "$paths")"
       fi
     done <<EOF
-$(cmd_paths "$COMMAND")
+$(rm_targets "$COMMAND")
 EOF
     ;;
 esac

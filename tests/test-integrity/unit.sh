@@ -119,4 +119,14 @@ bash_ "$A" 'rm -rf tests/.pytest_cache' | "$W/pre.sh" 2>/dev/null; check 0 $? "�
 bash_ "$A" 'rm -f tests/a.pyc' | "$W/pre.sh" 2>/dev/null; check 0 $? "산출물: .pyc 삭제는 통과"
 bash_ "$A" 'rm tests/unit.sh' | "$W/pre.sh" 2>/dev/null; check 2 $? "산출물 아님: 진짜 테스트 파일 삭제는 여전히 막힌다"
 
+# rm 은 자기 인자하고만 짝지어야 한다.
+# 지금까지 명령 어디엔가 rm 이 있고 다른 문장에 테스트 경로가 있으면 삭제로 읽었다.
+# 이 저장소 작업 중 다섯 번 걸렸다. 사용자는 한 번이면 게이트를 끈다.
+bash_ "$P" 'rm -rf /tmp/xyz; printf x > src/a.test.ts' | "$W/pre.sh" 2>/dev/null; check 0 $? "문장 분리: 다른 문장의 테스트 경로와 짝짓지 않는다(;)"
+bash_ "$P" 'mkdir -p src && printf x > src/a.test.ts && rm -rf /tmp/xyz' | "$W/pre.sh" 2>/dev/null; check 0 $? "문장 분리: && 로 이어진 경우"
+bash_ "$P" 'cat src/a.test.ts | grep x; rm -rf /tmp/xyz' | "$W/pre.sh" 2>/dev/null; check 0 $? "문장 분리: 파이프와 세미콜론"
+bash_ "$P" 'rm -rf /tmp/xyz' | "$W/pre.sh" 2>/dev/null; check 0 $? "문장 분리: 테스트와 무관한 삭제는 통과"
+bash_ "$P" 'echo hi; rm src/a.test.ts' | "$W/pre.sh" 2>/dev/null; check 2 $? "문장 분리: 진짜 삭제는 여전히 막는다"
+bash_ "$P" 'rm -rf build && git rm src/a.test.ts' | "$W/pre.sh" 2>/dev/null; check 2 $? "문장 분리: 뒤쪽 git rm 도 잡는다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"
