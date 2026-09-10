@@ -28,20 +28,23 @@ n=$(grep -c . "$ch" 2>/dev/null || echo 0)
 # cwd 는 /var/... 를 준다. 문자열로만 보면 저장소 밖으로 읽혀 코드 파일이 0개가 되고
 # 게이트가 조용히 통과시킨다. 실제 세션에서 그렇게 새어 나갔다.
 code=$(py -c 'import os, sys, re
-raw = sys.argv[1].rstrip(os.sep) + os.sep
-try: real = os.path.realpath(sys.argv[1]).rstrip(os.sep) + os.sep
+# 훅 입력의 경로는 POSIX 형태다. os.sep 을 쓰면 Windows 에서 백슬래시가 붙어 아무것도 안 맞는다.
+def norm(x):
+    return x.replace(chr(92), "/").rstrip("/") + "/"
+raw = norm(sys.argv[1])
+try: real = norm(os.path.realpath(sys.argv[1]))
 except Exception: real = raw
 pat = re.compile(sys.argv[2])
 n = 0
 for line in sys.stdin:
     p = line.strip()
     if not p or not pat.search(p): continue
-    # 원본 그대로 맞거나, 심링크를 푼 뒤 맞으면 저장소 안이다.
+    # 원본이 맞거나 심링크를 푼 뒤 맞으면 저장소 안이다.
     # 앞만 보면 macOS 의 /private 접두에서 새고, 뒤만 보면 Windows 의 MSYS 경로에서 샌다.
-    if p.startswith(raw): n += 1; continue
-    try: rp = os.path.realpath(p)
+    if p.replace(chr(92), "/").startswith(raw): n += 1; continue
+    try: rp = norm(os.path.realpath(p))[:-1]
     except Exception: continue
-    if rp.startswith(real) or rp.rstrip(os.sep).startswith(raw.rstrip(os.sep)): n += 1
+    if rp.startswith(real) or rp.startswith(raw): n += 1
 print(n)' "$root" "$CODE_RE" < "$ch" 2>/dev/null || echo 0)
 [ -z "$code" ] && code=0
 [ "${code:-0}" -gt 0 ] || exit 0
