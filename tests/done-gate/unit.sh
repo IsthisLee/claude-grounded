@@ -151,8 +151,16 @@ LN="$T/symlink"; ln -sfn "$PS" "$LN"
 SS="$T/symstate"
 symrun() { rm -rf "$SS"; mkdir -p "$SS/state/sy"; printf '%s\n' "$1" > "$SS/state/sy/changed"
   python3 -c 'import json,sys;print(json.dumps({"session_id":"sy","hook_event_name":"Stop","stop_hook_active":False,"cwd":sys.argv[1]},ensure_ascii=False))' "$2" \
-    | NGG_STATE="$SS" "$W/stop.sh" >/dev/null 2>&1; }
-symrun "$PS/src/a.js" "$PS"; check 2 $? "심링크: 둘 다 실경로면 막는다(기준선)"
+    | NGG_STATE="$SS" "$W/stop.sh" >/dev/null 2>"$T/symerr"; }
+# 실패하면 무엇을 보고 그렇게 판단했는지 남긴다. 이 케이스가 CI 에서만 빨갰고
+# 로그에 결과만 있어 원인을 못 봤다.
+symdiag() { echo "    root=$1"
+  echo "    changed=$(cat "$SS/state/sy/changed" 2>/dev/null)"
+  echo "    pkg=$(cat "$PS/package.json" 2>/dev/null)"
+  echo "    npm=$(command -v npm || echo none)"
+  echo "    stderr=$(tr '\n' ' ' < "$T/symerr" 2>/dev/null | cut -c1-400)"; }
+b=$fail; symrun "$PS/src/a.js" "$PS"; check 2 $? "심링크: 둘 다 실경로면 막는다(기준선)"
+[ "$fail" -ne "$b" ] && symdiag "$PS"
 # Git Bash 는 권한에 따라 ln -s 가 심링크 대신 사본을 만든다. 그러면 검사할 상황 자체가 없다.
 if [ -L "$LN" ]; then
   symrun "$LN/src/a.js" "$PS"; check 2 $? "심링크: changed 만 링크 경로여도 막는다"
