@@ -156,19 +156,15 @@ symrun() { rm -rf "$SS"; mkdir -p "$SS/state/sy"; printf '%s\n' "$1" > "$SS/stat
   printf '%s' "$(stop sy "$2")" | NGG_STATE="$SS" "$W/stop.sh" >/dev/null 2>"$T/symerr"; }
 # 실패하면 무엇을 보고 그렇게 판단했는지 남긴다. 이 케이스가 CI 에서만 빨갰고
 # 로그에 결과만 있어 원인을 못 봤다.
+# 실패하면 훅이 무엇을 보고 그렇게 판단했는지 남긴다. 이 케이스가 Windows CI 에서만
+# 빨갰는데 로그에 결과만 있어 원인을 못 봤다. 훅이 파싱한 cwd 를 찍고서야 보였다.
 symdiag() { echo "    root=$1"
   echo "    changed=$(cat "$SS/state/sy/changed" 2>/dev/null)"
-  echo "    pkg=$(cat "$PS/package.json" 2>/dev/null)"
-  echo "    npm=$(command -v npm || echo none)"
-  echo "    awkhit=$(awk -v r="$1/" 'index($0, r)==1' "$SS/state/sy/changed" 2>&1 | wc -l)"
-  echo "    code=$(awk -v r="$1/" 'index($0, r)==1' "$SS/state/sy/changed" 2>/dev/null | grep -cE '[.]js$')"
-  echo "    od=$(od -c "$SS/state/sy/changed" 2>/dev/null | tr '\n' ' ' | cut -c1-200)"
+  echo "    stderr=$(tr '\n' ' ' < "$T/symerr" 2>/dev/null | cut -c1-400)"
   local J; J=$(stop sy "$1")
-  echo "    jsonod=$(printf '%s' "$J" | od -c | tail -2 | tr '\n' ' ')"
   # IN 은 common.sh 의 read_in 이 읽는다. shellcheck 는 파일이 갈려 있어 쓰임을 못 본다.
   # shellcheck disable=SC2034,SC1091
-  echo "    hookview=$( ( IN="$J"; . "$T/lib/common.sh"; read_in; printf 'SID=[%s] CWD=[%s]' "$SESSION_ID" "$CWD" ) | od -c | tr '\n' ' ' | cut -c1-400)"
-  echo "    stderr=$(tr '\n' ' ' < "$T/symerr" 2>/dev/null | cut -c1-400)"; }
+  echo "    hookview=$( ( IN="$J"; . "$T/lib/common.sh"; read_in; printf 'SID=[%s] CWD=[%s]' "$SESSION_ID" "$CWD" ) | od -c | tr '\n' ' ' | cut -c1-400)"; }
 b=$fail; symrun "$PS/src/a.js" "$PS"; check 2 $? "심링크: 둘 다 실경로면 막는다(기준선)"
 [ "$fail" -ne "$b" ] && symdiag "$PS"
 # Git Bash 는 권한에 따라 ln -s 가 심링크 대신 사본을 만든다. 그러면 검사할 상황 자체가 없다.
