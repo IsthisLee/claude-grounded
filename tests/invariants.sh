@@ -84,6 +84,34 @@ n_hook=$(grep -oE '[a-z-]+/[a-z]+\.sh' "$R/tests/fuzz.sh" | sort -u | wc -l | tr
 want=$(( (n_in + 1) * n_hook ))
 if grep -q "${want}회" "$R/docs/gates.ko.md"; then ok "퍼징 횟수가 문서와 같다(${want}회)"; else bad "퍼징 횟수가 문서와 다르다(실제 ${want}회)"; fi
 
+
+# 훅이 부르는 메시지 키와 카탈로그가 맞는지. 어긋나면 조용히 망가진다.
+# 키가 없으면 모델이 문장 대신 ngg.r0 같은 키 이름을 받는다. 막히기는 하는데
+# 무엇을 하라는지 몰라 행동이 달라진다. 이 저장소에서 실제로 났던 사고다.
+# 반대로 아무도 안 부르는 키는 두 언어를 손보는 비용만 남긴다.
+# common.sh 도 메시지를 내보내므로 제외 대상은 카탈로그 자신뿐이다.
+if python3 - "$R" <<'MSGCOVER'
+import os, re, sys
+root = sys.argv[1]
+cat_path = os.path.join(root, "plugin/hooks/lib/msg.sh")
+cat = open(cat_path, encoding="utf-8").read()
+defined = set(re.findall(r'^  ([a-z][a-z0-9.]*)\)', cat, re.M))
+used = set()
+for d, _, fs in os.walk(os.path.join(root, "plugin/hooks")):
+    for f in fs:
+        p = os.path.join(d, f)
+        if not f.endswith(".sh") or os.path.abspath(p) == os.path.abspath(cat_path):
+            continue
+        t = open(p, encoding="utf-8").read()
+        used |= set(re.findall(r'(?:^|[^A-Za-z_])tn? +([a-z][a-z0-9]*\.[a-z0-9.]*)', t, re.M))
+missing = sorted(used - defined)
+dead = sorted(defined - used)
+assert not missing, f"카탈로그에 없는 키를 부른다: {missing}"
+assert not dead, f"아무도 부르지 않는 키가 있다: {dead}"
+MSGCOVER
+then ok "메시지 키: 훅이 부르는 것과 카탈로그가 정확히 같다($(grep -cE '^  [a-z][a-z0-9.]*\)' "$R/plugin/hooks/lib/msg.sh") 줄, 두 언어)"
+else bad "메시지 키가 어긋난다"; fi
+
 echo
 if [ "$fail" -eq 0 ]; then echo "전부 통과"; else echo "실패 ${fail}건"; fi
 exit "$fail"
