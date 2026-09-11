@@ -39,9 +39,9 @@ You receive 25 files under `plugin/`, and release tags are signed. [SECURITY.en.
 
 **Your `settings.json` and `CLAUDE.md` are not touched.** After installing, everything looks the same. The gate only shows up when it fires.
 
-It adds about 326ms per turn. Per-hook numbers are in [the detail doc](docs/gates.en.md#what-it-costs).
+It adds about 256ms per turn. Per-hook numbers are in [the detail doc](docs/gates.en.md#what-it-costs).
 
-Requires `bash` and `python3`. **macOS, Linux and Windows are all exercised on every CI run.** Windows needs Git Bash.
+Requires `bash` and `python3`. **macOS, Linux and Windows run the unit tests on every CI run.** The fuzz pass, which throws broken input at every hook, runs on Linux and macOS every time and on Windows when changes land on main. Windows needs Git Bash.
 
 ## What gets blocked
 
@@ -124,6 +124,7 @@ Hit a false positive? [Open an issue](../../issues/new?template=false-positive.m
 | Off in this repo | `claude plugin disable grounded@claude-grounded --scope project` |
 | Off for me only | Same, with `--scope local` |
 | Semantic judge only | `NGG_JUDGE=0` |
+| Pick checks from a table with their sources | `/grounded:config` |
 | One rule or check only | `disabled_rules = "R2b, done.pr"` in `.grounded.toml` |
 | Get past one false positive | `grounded allow ti.skip` on its own line in your next prompt |
 | Every hook, not just this plugin | `"disableAllHooks": true` in settings |
@@ -137,14 +138,14 @@ State lives in `~/.claude/plugins/data/grounded-inline/` and is safe to delete. 
 | Document | What's in it |
 |---|---|
 | [Gates and commands in detail](docs/gates.en.md) | What each gate blocks, the eight commands, how to disable, which doc grounds it |
-| [Verification log](docs/VERIFICATION.md) | Every claim with the exact command and its raw output, V1 through V16 |
+| [Verification log](docs/VERIFICATION.md) | Every claim with the exact command and its raw output |
 | [Contributing](CONTRIBUTING.en.md) · [Security](SECURITY.en.md) · [Changelog](CHANGELOG.md) | |
 
 Grounded in [Reduce hallucinations](https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations), [Best practices](https://code.claude.com/docs/en/best-practices), [Hooks](https://code.claude.com/docs/en/hooks), Kent Beck's [Augmented Coding](https://newsletter.kentbeck.com/p/augmented-coding-beyond-the-vibes), and Simon Willison's [Agentic Engineering Patterns](https://simonwillison.net/guides/agentic-engineering-patterns/). Every rule cites the sentence it came from, in [the detail doc](docs/gates.en.md).
 
 ## Related
 
-This space has several tools, and most of them block a **tool call** (`PreToolUse`). What this one blocks is a **turn that ends without evidence** (`Stop`). They don't overlap; run them together.
+This space has several tools, and most of them block a **tool call** (`PreToolUse`). This one blocks some tool calls too — neutered tests, PRs without evidence, commits before the full check passes — but its center is a **turn that ends without evidence** (`Stop`). They block different things; run them together.
 
 | Tool | What it blocks | When |
 |---|---|---|
@@ -152,7 +153,7 @@ This space has several tools, and most of them block a **tool call** (`PreToolUs
 | [Probity](https://github.com/nizos/probity) · [TDD Guard](https://github.com/nizos/tdd-guard) | TDD violations and forbidden patterns | Before the call |
 | [failproofai](https://github.com/FailproofAI/failproofai) | Records every run and enforces rules | Around the call |
 | [Stop That Shit](https://github.com/lennney/stop-that-shit) | Unrequested hashes, checksums, scope creep (Codex/GPT) | Before the call |
-| **claude-grounded** | **Ungrounded conclusions, false "done", disabled tests** | **When the turn tries to end** |
+| **claude-grounded** | **Ungrounded conclusions, false "done", PRs without evidence, disabled tests** | **When the turn tries to end, and before the call** |
 
 Each description is taken from that project's own words.
 
