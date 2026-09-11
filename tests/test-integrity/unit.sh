@@ -161,4 +161,11 @@ grep -q 'grounded allow ti.skip' "$T/eal"; check 0 $? "허용: 막을 때 사람
 printf 'ti.rm\n' > "$AL/state/ti/allow"
 edit "$Q" "$Q/src/a.test.ts" "$SKIP_OLD" "$SKIP_NEW" | NGG_STATE="$AL" "$W/pre.sh" 2>/dev/null; check 2 $? "허용: 다른 항목의 허용으로는 통과하지 않는다"
 
+# 저장소 루트는 cwd 가 아니다. 하위 폴더에 들어가 있어도 루트의 disabled_rules 를 읽는다.
+offc ti.skip; mkdir -p "$Q/src/deep"
+edit "$Q/src/deep" "$Q/src/a.test.ts" "$SKIP_OLD" "$SKIP_NEW" | NGG_STATE="$T/tis" "$W/pre.sh" 2>/dev/null; check 0 $? "루트: 하위 폴더에서도 루트의 disabled_rules 를 읽는다"
+# 빠른 경로가 Edit 을 Bash 로 잘못 읽으면 안 된다. 본문에 Bash 라는 글자가 있어도 Edit 검사는 그대로다.
+rm -f "$Q/.grounded.toml"
+edit "$Q" "$Q/src/a.test.ts" "run('Bash')" "$SKIP_NEW run('Bash')" | "$W/pre.sh" 2>/dev/null; check 2 $? "빠른 경로: 본문에 Bash 가 있어도 Edit 은 끝까지 검사한다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

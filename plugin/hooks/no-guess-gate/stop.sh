@@ -64,7 +64,7 @@ v="${v# }"
 # 셸에만 있어 팀이 모른다. .grounded.toml 에 적으면 PR 에 보이고 무엇을 껐는지 로그에 남는다.
 # 끄기를 쉽게 만드는 것이 아니라 끄는 행위를 보이게 만드는 것이 목적이다.
 off=""; offbad=""
-ngg_conf="${CWD:-$PWD}/.grounded.toml"
+find_root; ngg_conf="$NGG_ROOT/.grounded.toml"          # cwd 가 아니라 저장소 루트다(common.sh)
 # 걸린 것이 없으면 설정을 읽지 않는다. 이 훅은 턴마다 돌아 상시 비용이 된다.
 if [ -n "$v" ] && [ -f "$ngg_conf" ]; then
   dr=$(sed -n 's/^[[:space:]]*disabled_rules[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$ngg_conf" | head -1)

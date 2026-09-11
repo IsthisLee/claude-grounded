@@ -88,4 +88,8 @@ PE="$T/pe"; mkdir -p "$PE"
 printf 'test_command = "true"\n' > "$PE/.grounded.toml"
 out=$(run "$PE"); printf '%s' "$out" | grep -q 'disabled_rules'; r=$?; check 1 "$r" "끈 규칙이 없으면 그 줄을 넣지 않는다"
 
+# 세션을 하위 폴더에서 열어도 저장소 루트의 설정을 싣는다. 훅 입력의 cwd 는 루트가 아닐 수 있다.
+mkdir -p "$PD/sub/deeper"
+out=$(run "$PD/sub/deeper"); printf '%s' "$out" | grep -q 'R2b'; check 0 $? "루트: 하위 폴더에서 열어도 루트의 설정을 싣는다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

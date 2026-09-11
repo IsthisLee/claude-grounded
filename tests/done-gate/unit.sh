@@ -306,4 +306,28 @@ printf '%s' "$(post tw "$PW" "$PW/src/a.ts")" | NGG_STATE="$SW" "$W/post.sh"
 printf '%s' "$(stop tw "$PW")" | NGG_STATE="$SW" "$W/stop.sh" 2>/dev/null; check 0 $? "허용: done.turn 을 허용하면 검사가 실패해도 턴이 한 번 끝난다"
 printf '%s' "$(stop tw "$PW")" | NGG_STATE="$SW" "$W/stop.sh" 2>/dev/null; check 2 $? "허용: 다음 턴 끝에서는 다시 막는다"
 
+# 18. 저장소 루트는 cwd 가 아니다. 훅 입력의 cwd 는 Claude 가 cd 하면 따라간다(공식 hooks 문서).
+#     cwd 에서만 .grounded.toml 을 찾으면 하위 폴더에 들어간 뒤 검사를 돌리지 않고 조용히 통과했다.
+PS=$(newproj psub); SSB="$T/ssub"; mkdir -p "$PS/src" "$PS/pkg/api"
+printf 'test_command = "echo ROOTCHECK >&2; exit 1"\n' > "$PS/.grounded.toml"
+printf '%s' "$(post r1 "$PS/pkg/api" "$PS/src/a.ts")" | NGG_STATE="$SSB" "$W/post.sh"
+printf '%s' "$(stop r1 "$PS/pkg/api")" | NGG_STATE="$SSB" "$W/stop.sh" 2>"$T/esub"; check 2 $? "루트: 하위 폴더에 있어도 저장소 설정으로 검사한다"
+grep -q ROOTCHECK "$T/esub"; check 0 $? "루트: 루트의 검사 명령을 돌린다"
+printf 'fast_test_command = "true"\ntest_command = "echo FULLROOT >&2; exit 1"\n' > "$PS/.grounded.toml"
+printf '%s' "$(commit r2 "$PS/pkg/api" "git commit -m x")" | NGG_STATE="$SSB" "$W/pre.sh" 2>/dev/null; check 2 $? "루트: 하위 폴더에서 커밋해도 전체 검사를 돌린다"
+# .git 이 있는 곳에서 멈춘다. 다른 저장소의 경계를 넘어 그 위의 설정을 빌려 쓰지 않는다.
+PN=$(newproj pnest); mkdir -p "$PN/inner/src"; git init -q "$PN/inner"
+printf 'test_command = "exit 1"\n' > "$PN/.grounded.toml"
+printf '%s' "$(post r3 "$PN/inner" "$PN/inner/src/a.ts")" | NGG_STATE="$SSB" "$W/post.sh"
+printf '%s' "$(stop r3 "$PN/inner")" | NGG_STATE="$SSB" "$W/stop.sh" 2>/dev/null; check 0 $? "루트: .git 경계를 넘어 위의 설정을 쓰지 않는다"
+# 명령 안의 상대 경로는 셸이 있는 cwd 기준이다. 루트 기준으로 풀면 다른 파일을 읽는다.
+mkdir -p "$PRC/sub"; printf '## 요약\n통과했습니다.\n' > "$PRC/sub/body-sub.md"
+prrun r4 "$PRC/sub" "gh pr create --title t --body-file body-sub.md"; check 2 $? "루트: 하위 폴더의 --body-file 은 그 폴더 기준으로 읽는다"
+
+# 19. 서브에이전트가 고친 코드도 턴 끝 검사 대상이다. post.sh 가 agent-<id> 폴더에 적어 메인 턴이 보지 못했다.
+PE=$(newproj pagent); SE="$T/sagent"
+printf 'test_command = "exit 1"\n' > "$PE/.grounded.toml"
+printf '{"session_id":"ag","hook_event_name":"PostToolUse","cwd":"%s","agent_id":"sub1","tool_name":"Edit","tool_input":{"file_path":"%s"}}' "$PE" "$PE/src/a.ts" | NGG_STATE="$SE" "$W/post.sh"
+printf '%s' "$(stop ag "$PE")" | NGG_STATE="$SE" "$W/stop.sh" 2>/dev/null; check 2 $? "서브에이전트: 서브에이전트의 편집도 메인 턴 끝에 검사한다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

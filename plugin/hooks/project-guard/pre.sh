@@ -13,7 +13,7 @@
 # 설정이 없으면 아무것도 막지 않는다. 끄기: NGG_GUARD=0
 d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
 [ "${NGG_GUARD:-1}" = "0" ] && exit 0
-root="${CWD:-$PWD}"; conf="$root/.grounded.toml"
+find_root; root="$NGG_ROOT"; conf="$root/.grounded.toml"          # cwd 가 아니라 저장소 루트다(common.sh)
 
 # block <머리> <내용> [항목]. 항목이 있으면 사람에게 한 번만 허용하는 법을 알린다.
 block() { { t pg.prefix "$1"; off_bad; echo "$2"; [ -z "${3:-}" ] || allow_hint "$3"; } >&2; exit 2; }
@@ -95,7 +95,7 @@ case "$TOOL_NAME" in
     printf '%s' "$COMMAND" | grep -qE '(^|[;&|]|\s)(rm|git[[:space:]]+rm|mv)\b' || exit 0
     while IFS= read -r tok; do
       [ -n "$tok" ] || continue
-      case "$tok" in /*) f="$tok";; *) f="$root/$tok";; esac
+      case "$tok" in /*) f="$tok";; *) f="${CWD:-$root}/$tok";; esac          # 상대 경로는 셸이 있는 곳 기준
       if guarded "$f" && [ -f "$f" ]; then
         block "$(tn pg.appendrm)" "$(t line.cmd "$COMMAND"; t line.target "$tok"; tn pg.conf "$paths")"
       fi
