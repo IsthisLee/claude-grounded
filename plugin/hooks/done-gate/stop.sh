@@ -19,7 +19,7 @@ d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in; s=$(state_
 [ "${NGG_DONE:-1}" = "0" ] && exit 0
 ch="$s/changed"; [ -s "$ch" ] || exit 0
 
-root="${CWD:-$PWD}"
+find_root; root="$NGG_ROOT"          # cwd 가 아니라 저장소 루트다(common.sh)
 CODE_RE='\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|swift|c|h|cc|cpp|cs|php|scala|ex|exs|sh|bash|sql|vue|svelte)$'
 
 # 이 저장소 안의 코드 파일만 센다. 다른 곳의 파일을 근거로 검사하지 않는다.

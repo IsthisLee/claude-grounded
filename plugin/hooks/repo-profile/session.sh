@@ -11,7 +11,7 @@
 # 모델을 부르지 않고 파일만 읽는다. 비밀 파일의 값은 읽지 않는다. 끄기: NGG_PROFILE=0
 d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
 [ "${NGG_PROFILE:-1}" = "0" ] && exit 0
-root="${CWD:-$PWD}"; cd "$root" 2>/dev/null || exit 0
+find_root; root="$NGG_ROOT"; cd "$root" 2>/dev/null || exit 0          # cwd 가 아니라 저장소 루트다(common.sh)
 
 name=$(basename "$root")
 branch=$(git -C "$root" rev-parse --abbrev-ref HEAD 2>/dev/null || true)

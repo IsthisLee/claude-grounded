@@ -443,4 +443,11 @@ up25 '문장 가운데 grounded allow ti.skip 이라고 적었다'
 up25 'grounded allow R2b, ti.nope'
 [ -s "$AF" ]; r=$?; check 1 "$r" "허용: 근거 규칙과 없는 이름은 받지 않는다"
 
+# 26. 저장소 루트는 cwd 가 아니다. 하위 폴더에 들어가 있어도 루트의 disabled_rules 를 읽는다.
+#     훅 입력의 cwd 는 Claude 가 cd 하면 따라간다(공식 hooks 문서).
+mkdir -p "$P24/sub"; conf24 "R0, R1"
+printf '{"session_id":"t26","hook_event_name":"UserPromptSubmit","cwd":"%s","prompt":"이 디렉터리에 package.json 있어?"}' "$P24/sub" | NGG_STATE="$K24" "$W/prompt.sh"
+printf '{"session_id":"t26","hook_event_name":"Stop","stop_hook_active":false,"cwd":"%s","last_assistant_message":"%s"}' "$P24/sub" "$NOFILE" \
+  | NGG_STATE="$K24" "$W/stop.sh" 2>/dev/null; check 0 $? "루트: 하위 폴더에서도 루트의 disabled_rules 로 규칙을 끈다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

@@ -103,4 +103,9 @@ bash_ "$P" "git commit --no-verify -m x" | NGG_STATE="$AL" "$W/pre.sh" 2>/dev/nu
 bash_ "$P" "git commit --no-verify -m x" | NGG_STATE="$AL" "$W/pre.sh" 2>"$T/eal"; check 2 $? "허용: 두 번째는 막는다"
 grep -q 'grounded allow pg.noverify' "$T/eal"; check 0 $? "허용: 막을 때 사람이 허용하는 법을 알린다"
 
+# 저장소 루트는 cwd 가 아니다. 하위 폴더에 들어가 있어도 루트의 .grounded.toml 을 쓴다.
+edit "$P/src" Edit "$P/supabase/migrations/0001_init.sql" | "$W/pre.sh" 2>/dev/null; check 2 $? "루트: 하위 폴더에서도 append-only 수정을 막는다"
+bash_ "$P/supabase" "rm migrations/0001_init.sql" | "$W/pre.sh" 2>/dev/null; check 2 $? "루트: 하위 폴더 기준 상대 경로 삭제도 막는다"
+bash_ "$P/src" "git commit --no-verify -m x" | "$W/pre.sh" 2>/dev/null; check 2 $? "루트: 하위 폴더에서도 --no-verify 를 막는다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

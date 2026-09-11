@@ -18,7 +18,7 @@
 d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
 [ "${NGG_DONE:-1}" = "0" ] && exit 0
 [ "$TOOL_NAME" = "Bash" ] || exit 0
-root="${CWD:-$PWD}"
+find_root; root="$NGG_ROOT"          # 설정과 git 은 저장소 루트, 명령 안의 상대 경로는 cwd 기준
 
 # 도구 호출마다 도는 파일이다. 글자로도 없으면 파이썬을 띄우지 않는다.
 # grep 대신 case 로 거른다. 프로세스를 하나 덜 띄워 PR 이 아닌 명령의 비용이 그대로다.
@@ -29,7 +29,7 @@ if [ "$pr_cmd" = 1 ]; then
   CODE_RE='\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|swift|c|h|cc|cpp|cs|php|scala|ex|exs|sh|bash|sql|vue|svelte)$'
   # 막을 때만 한 줄을 찍는다. "files<TAB>개수<TAB>기준" 또는 "nobase". 통과면 아무것도 찍지 않는다.
   v=$(printf '%s' "$COMMAND" | py -c 'import os, re, shlex, subprocess, sys
-root, code_re = sys.argv[1], re.compile(sys.argv[2])
+root, code_re, cwd = sys.argv[1], re.compile(sys.argv[2]), sys.argv[3]
 cmd = sys.stdin.read().replace("\\\n", " ")        # 줄 이음은 셸처럼 지운다
 # heredoc 본문을 먼저 떼어 둔다. shlex 는 heredoc 을 모르고, 본문의 작은따옴표 하나에 죽는다.
 docs = []
@@ -73,7 +73,7 @@ elif bfile == "-":
     if not docs: sys.exit(0)        # 파이프로 넘긴 본문은 볼 수 없다
     text = "\n".join(docs)
 elif bfile:
-    p = bfile if os.path.isabs(bfile) else os.path.join(root, bfile)
+    p = bfile if os.path.isabs(bfile) else os.path.join(cwd, bfile)        # 셸이 있는 곳 기준
     try: text = open(p, encoding="utf-8", errors="replace").read()
     except OSError: sys.exit(0)
 else:
@@ -97,7 +97,7 @@ for c in cands:
     n = sum(1 for f in out.splitlines() if code_re.search(f))
     if n == 0: sys.exit(0)
     print("files\t%d\t%s" % (n, c)); sys.exit(0)
-print("nobase")' "$root" "$CODE_RE" 2>/dev/null) || v=""
+print("nobase")' "$root" "$CODE_RE" "${CWD:-$PWD}" 2>/dev/null) || v=""
   case "$v" in
     files*|nobase)
       item_off done.pr && exit 0

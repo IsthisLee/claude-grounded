@@ -2459,3 +2459,109 @@ for h, _ in cases:
     print(h, round(statistics.median(res["old"][h]), 1), round(statistics.median(res["new"][h]), 1))
 PY
 ```
+
+## V39 공식·인기 플러그인과 비교해 근본부터 점검했다
+
+### 무엇과 비교했나
+
+공식 마켓플레이스(`anthropics/claude-plugins-official`)의 `plugins/` 아래 플러그인들이 어떤 구성 요소를 쓰는지 셌다. 53개 디렉터리 가운데 스킬이 18, 커맨드가 14, MCP가 14, 에이전트가 8, 훅이 6이다. 훅을 쓰는 것은 claude-security, security-guidance, hookify, ralph-loop, 출력 스타일 둘뿐이다. 저장소에 테스트를 둔 것은 security-guidance 하나다.
+
+스타 2,000개 이상인 플러그인 저장소도 구성 요소를 셌다.
+
+```
+obra/superpowers                     plugin.json=1 mkt=1 hooks.json=1[SessionStart,] skills=14 agents=0 cmds=0 mcp=0 test/eval-files=77
+thedotmack/claude-mem                plugin.json=3 mkt=1 hooks.json=3[PostToolUse,PreToolUse,SessionEnd,SessionStart,Stop,SubagentStop,UserPromptSubmit,] skills=30 agents=0 cmds=1 mcp=1 test/eval-files=410
+JuliusBrussee/caveman                plugin.json=1 mkt=1 hooks.json=0[] skills=24 agents=6 cmds=7 mcp=0 test/eval-files=302
+jarrodwatts/claude-hud               plugin.json=1 mkt=1 hooks.json=0[] skills=0 agents=0 cmds=2 mcp=0 test/eval-files=42
+OthmanAdi/planning-with-files        plugin.json=1 mkt=1 hooks.json=1[PostToolUse,PreCompact,PreToolUse,SessionStart,Stop,UserPromptSubmit,] skills=18 agents=0 cmds=17 mcp=0 test/eval-files=79
+parcadei/Continuous-Claude-v3        plugin.json=1 mkt=0 hooks.json=0[] skills=160 agents=33 cmds=0 mcp=0 test/eval-files=37
+agenticnotetaking/arscontexta        plugin.json=1 mkt=1 hooks.json=1[PostToolUse,SessionStart,] skills=26 agents=1 cmds=0 mcp=0 test/eval-files=0
+trailofbits/skills                   plugin.json=45 mkt=1 hooks.json=3[PreToolUse,SessionEnd,SessionStart,Stop,SubagentStop,] skills=83 agents=33 cmds=8 mcp=2 test/eval-files=460
+wshobson/agents                      plugin.json=92 mkt=1 hooks.json=2[PostToolUse,PreToolUse,] skills=183 agents=202 cmds=105 mcp=0 test/eval-files=39
+```
+
+인기 플러그인의 대부분은 작업 방법을 가르치는 스킬 묶음이다. 훅으로 무언가를 강제하는 것은 적고, 강제하는 쪽(claude-mem, planning-with-files)도 기록과 상태 유지에 훅을 쓴다. 상위권은 대체로 테스트를 많이 둔다.
+
+공식 플러그인 레퍼런스에서 이 플러그인이 쓰지 않는 기능도 확인했다. `userConfig`(설치할 때 사용자 설정을 받아 `CLAUDE_PLUGIN_OPTION_<KEY>`로 넘긴다), `CLAUDE_PROJECT_DIR`(세션을 연 폴더), 훅의 `if` 필드(권한 규칙 문법으로 훅이 돌 조건을 거른다), `displayName`·`$schema`다.
+
+### 찾은 결함 둘
+
+공식 hooks 문서는 훅 입력의 `cwd`를 이렇게 적는다. "Current working directory when the hook is invoked (follows `cd` commands...)". 그런데 게이트들은 `.grounded.toml`을 cwd에서만 찾았다. 서브에이전트의 입력에는 `agent_id`가 붙는데, `post.sh`는 편집 기록을 `agent-<id>` 폴더에 적고 턴 끝의 `stop.sh`는 메인 폴더만 읽었다. 둘 다 지금 훅에 그 입력을 넣어 실제로 새는지 봤다.
+
+```
+=== 기준선: cwd = 저장소 루트
+  stop: exit 2 · 2 check-run · Completion gate: the check failed (exit 1). This turn cannot end. - Command: ech
+=== A. cwd = 하위 폴더 (cd pkg/api 뒤), 루트의 코드를 고침
+  stop: exit 0 · 0 check-run · 
+=== A2. cwd = 하위 폴더, 그 폴더 안의 코드를 고침
+  stop: exit 0 · 0 check-run · Completion gate: 1 code file(s) changed, but no check command was found. Add tes
+=== E. 서브에이전트가 코드를 고치고, 메인 턴이 끝남
+  main stop: exit 0 · 0 check-run · 
+agent-sub1 
+=== A3. 커밋 전 전체 검사: 루트 vs 하위 폴더
+  root: exit 2
+  sub:  exit 0
+```
+
+**하위 폴더로 `cd`하면 턴 끝 검사도 커밋 전 검사도 돌지 않고 통과했다.** 서브에이전트가 고친 코드도 검사 없이 지나갔다. 이 플러그인이 막겠다고 약속한 바로 그 상황이다.
+
+문서의 전제가 실제 세션에서도 맞는지, 훅 입력을 그대로 적는 임시 플러그인을 걸고 haiku 세션에서 확인했다.
+
+```
+PreToolUse tool=Bash agent_id=no cwd=<proj> arg=cd sub && pwd
+PreToolUse tool=Bash agent_id=no cwd=<proj>/sub arg=pwd
+PreToolUse tool=Agent agent_id=no cwd=<proj>/sub arg=
+PreToolUse tool=Write agent_id=yes cwd=<proj>/sub arg=<proj>/sub/note.txt
+PostToolUse tool=Write agent_id=yes cwd=<proj>/sub arg=<proj>/sub/note.txt
+```
+
+### 고친 것
+
+- **루트 찾기(`find_root`).** cwd에서 위로 올라가며 `.grounded.toml`이나 `.git`이 있는 첫 폴더를 루트로 쓴다. `.git`에서 멈추므로 다른 저장소나 워크트리 바깥의 설정을 빌려 쓰지 않는다. 세션을 연 폴더(`CLAUDE_PROJECT_DIR`) 위로는 올라가지 않는다. 파라미터 확장만 써서 프로세스를 띄우지 않는다. 완료 게이트 둘, 근거 게이트, 프로젝트 가드, 저장소 프로필, `disabled_rules`를 읽는 공용 함수가 이것을 쓴다.
+- **명령 안의 상대 경로는 cwd 기준 그대로다.** `rm` 대상과 `--body-file`은 셸이 있는 곳 기준으로 푼다. 루트 기준으로 풀면 다른 파일을 읽는다.
+- **서브에이전트의 편집을 세션 폴더에 적는다.** 메인 턴 끝의 검사가 그것까지 본다.
+
+테스트를 먼저 넣었다. 새 케이스 13건 중 10건이 구현 전에 실패했다.
+
+```
+=== done-gate
+❌ 루트: 하위 폴더에 있어도 저장소 설정으로 검사한다 (기대=2 실측=0)
+❌ 루트: 루트의 검사 명령을 돌린다 (기대=0 실측=1)
+❌ 루트: 하위 폴더에서 커밋해도 전체 검사를 돌린다 (기대=2 실측=0)
+❌ 서브에이전트: 서브에이전트의 편집도 메인 턴 끝에 검사한다 (기대=2 실측=0)
+=== project-guard
+❌ 루트: 하위 폴더에서도 append-only 수정을 막는다 (기대=2 실측=0)
+❌ 루트: 하위 폴더 기준 상대 경로 삭제도 막는다 (기대=2 실측=0)
+❌ 루트: 하위 폴더에서도 --no-verify 를 막는다 (기대=2 실측=0)
+=== no-guess-gate
+❌ 루트: 하위 폴더에서도 루트의 disabled_rules 로 규칙을 끈다 (기대=0 실측=2)
+=== test-integrity
+❌ 루트: 하위 폴더에서도 루트의 disabled_rules 를 읽는다 (기대=0 실측=2)
+=== repo-profile
+❌ 루트: 하위 폴더에서 열어도 루트의 설정을 싣는다 (기대=0 실측=1)
+```
+
+나머지 셋은 처음부터 통과하는 경계 케이스다. `.git` 경계를 넘지 않는 것, 하위 폴더의 `--body-file`을 그 폴더 기준으로 읽는 것, 본문에 Bash라는 글자가 든 Edit을 끝까지 검사하는 것이다.
+
+```
+lib: 전부 통과 · checks=21
+no-guess-gate: 실패 0건 · checks=150
+done-gate: 실패 0건 · checks=78
+test-integrity: 실패 0건 · checks=65
+project-guard: 실패 0건 · checks=41
+repo-profile: 실패 0건 · checks=23
+skills-unit: 실패 0건 · checks=5
+attack-surface: 전부 통과 · checks=9
+invariants: 전부 통과 · checks=17
+합계 checks=409
+$ shellcheck -x -s bash plugin/hooks/*/*.sh tests/*.sh tests/*/*.sh
+shellcheck exit 0
+$ tests/fuzz.sh
+실행 240회 · 실패 0건
+```
+
+### 하지 않은 것
+
+- **`userConfig`로 설정을 옮기지 않았다.** 저장소 설정을 파일에 두는 것은 팀이 PR에서 보게 하려는 설계다. 언어나 판정기 모델 같은 사용자 수준 설정은 옮길 수 있지만 이번 범위에 넣지 않았다.
+- **멀티 하네스(Codex·Cursor 등)는 범위 밖이다.** 인기 플러그인들의 흐름이지만 이 플러그인의 게이트는 Claude Code의 훅 이벤트에 묶여 있다.
+- **훅의 `if` 필드는 쓰지 않는다.** 실제 세션에서 동작은 확인했다(`Bash(git *)`는 `git status`에만, `Bash(rm *)`는 `echo hi && rm b.txt`에만 걸렸다). 하지만 `if`를 쓰려면 `hooks.json`을 여러 줄로 쪼개야 하고, `if`를 모르는 옛 버전에서는 훅이 몇 배로 돈다. 같은 절감은 스크립트 안의 빠른 경로로 얻는다(V40).
