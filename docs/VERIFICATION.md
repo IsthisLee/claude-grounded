@@ -2350,3 +2350,26 @@ Source=1 | Reduce hallucinations=5 | Best practices=3 | Kent Beck=4 | EvilGenie=
 ```
 
 각각 한 번씩 돌린 결과다. 모델 출력은 매번 달라서 두 번으로 늘 그렇다고 말할 수는 없다. 가장 작은 모델(haiku)에서 확인했다.
+
+## V37 CI 를 PR 마다 한 벌로, Windows fuzz 는 main 에서만
+
+PR #5의 체크에 run이 두 개(`34578581469`, `34578585719`) 있었고 각각 세 OS를 돌렸다. 워크플로가 `push`와 `pull_request`에 브랜치 조건 없이 걸려 있어서, PR 브랜치에 푸시하면 두 이벤트가 다 온다.
+
+가장 느린 것은 Windows 작업이었다. PR #4의 두 Windows 작업에서 단계별로 쟀다.
+
+```
+PR#4 windows job 103191966529: 결정적 단위 테스트 (=168s 견고성 퍼징 (모델 호=443s total=624s
+PR#4 windows job 103191975340: 결정적 단위 테스트 (=207s 견고성 퍼징 (모델 호=524s total=744s
+```
+
+PR #6의 Windows 작업도 11분 47초와 13분 1초였다(`gh pr checks 6`). macOS와 리눅스는 2~5분이었다.
+
+바꾼 것은 셋이다.
+
+- `push`는 main에서만 돈다. PR은 `pull_request`가 맡는다.
+- `concurrency`로 같은 PR에 새로 푸시하면 앞 실행을 취소한다. main은 끝까지 돌린다.
+- fuzz 단계에 `if: runner.os != 'Windows' || github.event_name == 'push'`를 걸었다. PR에서는 리눅스·macOS만 fuzz를 돌리고, main에 올라가면 Windows까지 돌린다.
+
+대가는 하나다. Windows에서만 나는 fuzz 실패는 머지 뒤 main의 실행에서야 보인다. 단위 테스트는 PR에서도 세 OS 모두 돈다.
+
+`actionlint`는 로컬에 없어 이 변경을 올리는 PR에서 CI의 리눅스 작업이 본다. 효과도 그 PR의 실행에서 잰다.
