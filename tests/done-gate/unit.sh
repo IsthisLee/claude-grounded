@@ -293,4 +293,17 @@ printf '%s' "$(commit tm "$PM" "git commit -m x")" | NGG_STATE="$SM" "$W/pre.sh"
 printf 'fast_test_command = "true"\ntest_command = "exit 1"\ndisabled_rules = "done.pr"\n' > "$PM/.grounded.toml"
 printf '%s' "$(commit tm "$PM" "git commit -m x")" | NGG_STATE="$SM" "$W/pre.sh" 2>/dev/null; check 2 $? "끄기: done.pr 만 끄면 커밋 전 검사는 그대로다"
 
+# 17. 한 번만 허용하기. 허용 목록은 prompt.sh 가 사람의 프롬프트에서만 적는다. 여기서는 그 결과를 둔다.
+mkdir -p "$T/prs/state/a1"; printf 'done.pr\n' > "$T/prs/state/a1/allow"
+prrun a1 "$PRC" "gh pr create --title t --body '통과'"; check 0 $? "허용: done.pr 을 허용하면 PR 이 한 번 열린다"
+prrun a1 "$PRC" "gh pr create --title t --body '통과'"; check 2 $? "허용: 두 번째는 막는다"
+grep -q 'grounded allow done.pr' "$T/epr"; check 0 $? "허용: 막을 때 사람이 허용하는 법을 알린다"
+
+PW=$(newproj pallow); SW="$T/sallow"
+printf 'test_command = "exit 1"\n' > "$PW/.grounded.toml"
+mkdir -p "$SW/state/tw"; printf 'done.turn\n' > "$SW/state/tw/allow"
+printf '%s' "$(post tw "$PW" "$PW/src/a.ts")" | NGG_STATE="$SW" "$W/post.sh"
+printf '%s' "$(stop tw "$PW")" | NGG_STATE="$SW" "$W/stop.sh" 2>/dev/null; check 0 $? "허용: done.turn 을 허용하면 검사가 실패해도 턴이 한 번 끝난다"
+printf '%s' "$(stop tw "$PW")" | NGG_STATE="$SW" "$W/stop.sh" 2>/dev/null; check 2 $? "허용: 다음 턴 끝에서는 다시 막는다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

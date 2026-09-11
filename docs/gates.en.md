@@ -73,6 +73,23 @@ The fact is recorded in three places.
 
 The file is read only right before a gate blocks or runs a check, so tool calls that pass straight through pay nothing.
 
+## Letting one through
+
+Disabling a check in the file keeps it off. To get past a single false positive, write this on its own line in your next prompt:
+
+```
+grounded allow ti.skip
+```
+
+That check passes **once** within the turn, and the allowance is gone. An unused allowance is cleared by the next prompt too. When a gate blocks, it tells you what to write, item name included.
+
+- **Only a human can grant it.** The `UserPromptSubmit` hook reads it from your prompt alone. The model writing the same text in its answer does nothing, and background task notifications do not count as your prompt.
+- **It must start the line.** Mentioning it mid-sentence is a quote. Case does not matter; comma-separate several.
+- **Only the gate items in the table above.** The evidence gate's `R0`–`R5` are not covered; that gate has its own exemption for saying why something cannot be checked.
+- Each pass is logged to `events.log` as `allowed=[ti.skip]`.
+
+The idea comes from Probity's `enforceTdd`: "reply in the session asking for the change to be let through, and it's allowed on the next attempt."
+
 ## Completion gate: the check must pass
 
 A turn that changed code files does not end until your project's check actually runs. This is the mechanism the official docs prescribe:

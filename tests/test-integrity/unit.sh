@@ -151,4 +151,14 @@ offc ti.skp
 edit "$Q" "$Q/src/a.test.ts" "$SKIP_OLD" "$SKIP_NEW" | NGG_STATE="$T/tis" "$W/pre.sh" 2>"$T/eoff"; check 2 $? "끄기: 없는 이름은 아무것도 끄지 않는다"
 grep -q 'ti.skp' "$T/eoff"; check 0 $? "끄기: 없는 이름을 막을 때 알린다"
 
+# 한 번만 허용하기. 허용 목록은 prompt.sh 가 사람의 프롬프트에서만 적는다. 여기서는 그 결과를 둔다.
+rm -f "$Q/.grounded.toml"; AL="$T/allow"; mkdir -p "$AL/state/ti"
+printf 'ti.skip\n' > "$AL/state/ti/allow"
+edit "$Q" "$Q/src/a.test.ts" "$SKIP_OLD" "$SKIP_NEW" | NGG_STATE="$AL" "$W/pre.sh" 2>/dev/null; check 0 $? "허용: 허용한 항목은 한 번 통과한다"
+grep -q 'allowed=\[ti.skip\]' "$AL/state/events.log"; check 0 $? "허용: 통과시킨 사실이 events.log 에 남는다"
+edit "$Q" "$Q/src/a.test.ts" "$SKIP_OLD" "$SKIP_NEW" | NGG_STATE="$AL" "$W/pre.sh" 2>"$T/eal"; check 2 $? "허용: 두 번째는 막는다(한 번 쓰면 사라진다)"
+grep -q 'grounded allow ti.skip' "$T/eal"; check 0 $? "허용: 막을 때 사람이 허용하는 법을 알린다"
+printf 'ti.rm\n' > "$AL/state/ti/allow"
+edit "$Q" "$Q/src/a.test.ts" "$SKIP_OLD" "$SKIP_NEW" | NGG_STATE="$AL" "$W/pre.sh" 2>/dev/null; check 2 $? "허용: 다른 항목의 허용으로는 통과하지 않는다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

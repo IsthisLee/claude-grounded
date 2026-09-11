@@ -125,6 +125,7 @@ Hit a false positive? [Open an issue](../../issues/new?template=false-positive.m
 | Off for me only | Same, with `--scope local` |
 | Semantic judge only | `NGG_JUDGE=0` |
 | One rule or check only | `disabled_rules = "R2b, done.pr"` in `.grounded.toml` |
+| Get past one false positive | `grounded allow ti.skip` on its own line in your next prompt |
 | Every hook, not just this plugin | `"disableAllHooks": true` in settings |
 | Raise the 8-block cap | `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` |
 | Remove entirely | `claude plugin uninstall grounded@claude-grounded` |

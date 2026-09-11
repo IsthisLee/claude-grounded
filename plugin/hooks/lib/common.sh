@@ -69,4 +69,16 @@ off_bad() { local tok bad=""
     case " r0 r1 r2a r2b r3 r4 r5 $NGG_ITEMS " in *" $(lc "$tok") "*) ;; *) bad="$bad $tok";; esac
   done
   [ -z "$bad" ] || t ngg.offbad "${bad# }"; }
+
+# 한 번만 허용하기. 사람이 프롬프트에 "grounded allow <이름>" 을 한 줄로 쓰면 prompt.sh 가
+# 이 파일에 적는다. 게이트는 막기 직전에 보고, 있으면 그 줄을 지우고 한 번 통과시킨다.
+# 설정으로 끄는 것과 달리 오탐 한 건만 넘긴다. 허용은 UserPromptSubmit 에서만 들어오므로
+# 모델이 쓴 글로는 풀리지 않는다. 같은 턴의 서브에이전트도 쓰도록 세션 폴더에 둔다.
+allow_file() { printf '%s/state/%s/allow' "$(state_root "${d:-$NGG_LIB}")" "$SESSION_ID"; }
+allow_once() { local f; f=$(allow_file)
+  [ -s "$f" ] && grep -qFx "$1" "$f" || return 1
+  { grep -vFx "$1" "$f" || true; } > "$f.tmp" && mv "$f.tmp" "$f"
+  echo "$HOOK_EVENT_NAME${AGENT_ID:+/agent} allowed=[$1] tool=$TOOL_NAME" >> "$(state_root "${d:-$NGG_LIB}")/state/events.log"
+  return 0; }
+allow_hint() { t line.allow "$1"; }
 state_dir() { local d; d="$(state_root "$1")/state/$SESSION_ID"; [ -n "$AGENT_ID" ] && d="$d/agent-$AGENT_ID"; mkdir -p "$d"; printf '%s' "$d"; }

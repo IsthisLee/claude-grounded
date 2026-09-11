@@ -427,4 +427,20 @@ conf24 "R0, R1"
 printf '{"session_id":"t24b","hook_event_name":"Stop","stop_hook_active":false,"cwd":"%s","last_assistant_message":"%s"}' "$T" "$NOFILE" \
   | NGG_STATE="$T/k24b" "$W/stop.sh" 2>/dev/null; check 2 $? "규칙 끄기: cwd 가 다르면 그 설정을 쓰지 않는다"
 
+# 25. 한 번만 허용하기. 사람이 프롬프트에 "grounded allow <이름>" 을 한 줄로 쓰면 그 턴에 한 번 통과한다.
+#     설정으로 끄는 것과 달리 오탐 한 건만 넘긴다. 허용은 사용자 프롬프트에서만 들어온다.
+K25="$T/k25"; AF="$K25/state/t25/allow"
+up25() { printf '{"session_id":"t25","hook_event_name":"UserPromptSubmit","cwd":"%s","prompt":"%s"}' "$T" "$1" | NGG_STATE="$K25" "$W/prompt.sh"; }
+up25 '테스트 픽스처라서 괜찮다\ngrounded allow ti.skip'
+grep -qx 'ti.skip' "$AF" 2>/dev/null; check 0 $? "허용: 프롬프트의 grounded allow 줄을 적어 둔다"
+up25 'GROUNDED ALLOW done.pr, ti.rm'
+grep -qx 'done.pr' "$AF" 2>/dev/null && grep -qx 'ti.rm' "$AF"; check 0 $? "허용: 대소문자를 가리지 않고 여럿을 받는다"
+grep -qx 'ti.skip' "$AF" 2>/dev/null; r=$?; check 1 "$r" "허용: 새 프롬프트가 오면 지난 허용은 사라진다"
+printf '{"session_id":"t25","hook_event_name":"UserPromptSubmit","cwd":"%s","prompt":"<task-notification>x</task-notification>"}' "$T" | NGG_STATE="$K25" "$W/prompt.sh"
+grep -qx 'done.pr' "$AF" 2>/dev/null; check 0 $? "허용: 백그라운드 알림은 사람의 프롬프트가 아니라 허용을 지우지 않는다"
+up25 '문장 가운데 grounded allow ti.skip 이라고 적었다'
+[ -s "$AF" ]; r=$?; check 1 "$r" "허용: 줄 첫머리가 아니면 허용이 아니다"
+up25 'grounded allow R2b, ti.nope'
+[ -s "$AF" ]; r=$?; check 1 "$r" "허용: 근거 규칙과 없는 이름은 받지 않는다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

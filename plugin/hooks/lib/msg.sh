@@ -64,6 +64,7 @@ msg_ko() { case "$1" in
   line.cmd)      M="- 명령: %s" ;;
   line.file)     M="- 파일: %s" ;;
   line.target)   M="- 대상: %s" ;;
+  line.allow)    M="- 사람이 이번 한 번만 넘기려면 다음 프롬프트에 grounded allow %s 를 한 줄로 쓴다. 한 번 쓰면 사라진다." ;;
 
   rp.head)       M="[grounded 프로필] %s" ;;
   rp.branch)     M="  (브랜치 %s)" ;;
@@ -135,6 +136,7 @@ msg_en() { case "$1" in
   line.cmd)      M="- Command: %s" ;;
   line.file)     M="- File: %s" ;;
   line.target)   M="- Target: %s" ;;
+  line.allow)    M="- To let this through once, a human writes grounded allow %s on its own line in the next prompt. It is used up after one pass." ;;
 
   rp.head)       M="[grounded profile] %s" ;;
   rp.branch)     M="  (branch %s)" ;;

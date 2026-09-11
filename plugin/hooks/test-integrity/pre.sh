@@ -54,7 +54,8 @@ for stmt in re.split(r"[;&|\n]+", t):
 
 count() { printf '%s' "$2" | grep -oE "$1" | grep -c . || true; }
 
-block() { { t ti.prefix "$1"; off_bad; echo "$2"; t ti.advice; } >&2; exit 2; }
+# block <항목> <머리> <내용>. 항목 이름은 사람에게 허용하는 법을 알릴 때 쓴다.
+block() { local it="$1"; shift; { t ti.prefix "$1"; off_bad; echo "$2"; t ti.advice; allow_hint "$it"; } >&2; exit 2; }
 
 case "$TOOL_NAME" in
   Bash)
@@ -64,7 +65,8 @@ case "$TOOL_NAME" in
       [ -n "$tok" ] || continue
       if is_test "$tok"; then
         item_off ti.rm && exit 0          # 항목 하나만 끄기
-        block "$(tn ti.rm)" "$(t line.cmd "$COMMAND"; tn line.target "$tok")"
+        allow_once ti.rm && exit 0        # 한 번만 허용하기
+        block ti.rm "$(tn ti.rm)" "$(t line.cmd "$COMMAND"; tn line.target "$tok")"
       fi
     done <<EOF
 $(rm_targets "$COMMAND")
@@ -77,8 +79,8 @@ EOF
         cb=$(cat "$FILE_PATH" 2>/dev/null); ca="$CONTENT"
       else cb="$OLD_STRING"; ca="$NEW_STRING"; fi
       eb=$(count "$EXCLUDE" "$cb"); ea=$(count "$EXCLUDE" "$ca")
-      if [ "$ea" -gt "$eb" ] && ! item_off ti.exclude; then
-        block "$(tn ti.exclude "$eb" "$ea")" "$(t line.file "$FILE_PATH"; tn ti.excludehint)"
+      if [ "$ea" -gt "$eb" ] && ! item_off ti.exclude && ! allow_once ti.exclude; then
+        block ti.exclude "$(tn ti.exclude "$eb" "$ea")" "$(t line.file "$FILE_PATH"; tn ti.excludehint)"
       fi
       exit 0
     fi
@@ -94,13 +96,13 @@ else
 fi
 
 db=$(count "$DISABLE" "$before"); da=$(count "$DISABLE" "$after")
-if [ "$da" -gt "$db" ] && ! item_off ti.skip; then
+if [ "$da" -gt "$db" ] && ! item_off ti.skip && ! allow_once ti.skip; then
   added=$(printf '%s' "$after" | grep -oE "$DISABLE" | sort -u | tr '\n' ' ')
-  block "$(tn ti.disable "$db" "$da")" "$(t line.file "$FILE_PATH"; tn ti.markers "$added")"
+  block ti.skip "$(tn ti.disable "$db" "$da")" "$(t line.file "$FILE_PATH"; tn ti.markers "$added")"
 fi
 
 ab=$(count "$ASSERT" "$before"); aa=$(count "$ASSERT" "$after")
-if [ "$aa" -lt "$ab" ] && ! item_off ti.assert; then
-  block "$(tn ti.assert "$ab" "$aa")" "$(tn line.file "$FILE_PATH")"
+if [ "$aa" -lt "$ab" ] && ! item_off ti.assert && ! allow_once ti.assert; then
+  block ti.assert "$(tn ti.assert "$ab" "$aa")" "$(tn line.file "$FILE_PATH")"
 fi
 exit 0
