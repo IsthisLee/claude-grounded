@@ -2316,3 +2316,37 @@ exit 0
 
 - 스킬은 모델이 지시를 읽고 따르는 것이라, 표를 보여 주고 확인을 받은 뒤 한 줄만 고치는 순서를 단위 테스트가 보장하지 못한다. `tests/skills-unit.sh`는 정의만 본다. 이 커맨드를 실제 세션에서 돌려 보지는 않았다.
 - 게이트 상세 문서의 근거 표에 R2a·R5가 빠진 것은 이번에 고치지 않았다.
+
+## V36 /grounded:config 를 처음으로 돌려 봤다
+
+V35는 "이 커맨드를 실제 세션에서 돌려 보지는 않았다"로 끝났다. 인수 테스트(`tests/acceptance.sh`)와 같은 방식으로 격리한 빈 프로젝트에서 돌렸다. `-p` 모드에는 답할 사람이 없으므로 두 가지만 봤다. 표를 제대로 보여 주는가, 그리고 확인 없이 설정 파일을 고치지 않는가.
+
+```
+# .grounded.toml: test_command = "true", disabled_rules = "R2b"
+$ claude -p "/grounded:config" --plugin-dir plugin \
+    --allowedTools 'Read,Glob,Grep,Bash,Edit,Write,AskUserQuestion' \
+    --model haiku --max-turns 20 --setting-sources "" --output-format json
+```
+
+### 첫 실행(20초)
+
+```
+toml before=7498c080a783 after=7498c080a783 UNCHANGED
+R0=1 R2b=2 R5=1 done.turn=1 done.commit=1 done.pr=1 ti.skip=1 ti.exclude=1 pg.noverify=1 grounded allow=1 Reduce hallucinations=0 Kent Beck=0 EvilGenie=0
+| Gate | Name | Blocks | Current State |
+```
+
+현재 상태(R2b만 OFF)는 맞았고 설정 파일도 그대로였다. 그런데 **출처 열이 없었다.** 이 커맨드를 둔 이유가 끄기 전에 규칙의 출처를 보여 주는 것이다. 스킬은 출처를 표의 열 가운데 하나로만 적었고, 모델이 그 열을 줄였다.
+
+### 고친 뒤(25초)
+
+스킬에 다섯 열(Gate, Name, Blocks, Source, On/Off)을 못 박고 출처 열을 빼지 말라고 적은 뒤 같은 조건으로 다시 돌렸다.
+
+```
+toml before=7498c080a783 after=7498c080a783 UNCHANGED
+Source=1 | Reduce hallucinations=5 | Best practices=3 | Kent Beck=4 | EvilGenie=1 | PostToolUseFailure=1 | No external source=1 | done.pr=1 | pg.noverify=1 | grounded allow=1 |
+| Gate | Name | Blocks | Source | On/Off |
+| Evidence | `R0` | Answering about this repo's state without running a tool | Reduce hallucinations | **ON** |
+```
+
+각각 한 번씩 돌린 결과다. 모델 출력은 매번 달라서 두 번으로 늘 그렇다고 말할 수는 없다. 가장 작은 모델(haiku)에서 확인했다.
