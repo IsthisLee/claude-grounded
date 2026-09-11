@@ -165,6 +165,8 @@ The gates run on their own. What needs your judgment about *when* and *what it c
 | `/grounded:status` | Measures and reports what every gate is actually doing |
 | `/grounded:auto` | Explore → plan → implement → review → ship, in order |
 
+**The commands answer in whatever language you write in.** `SKILL.md` cannot branch on locale, so it is written in English with an instruction in the body to reply in the user's language — the same principle `msg.sh` applies to the gate's own sentences.
+
 **More commands are absent than present.** Planning is built-in plan mode, exploration is the built-in Explore agent, review is `/code-review`, run-and-see is `/verify`, looping is `/goal`. An audit cut 23 candidates down to these 7. Nothing here duplicates something that already exists.
 
 ## Sources
