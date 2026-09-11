@@ -19,7 +19,9 @@ Check the environment too. If `NGG_DONE`, `NGG_TESTGUARD`, `NGG_GUARD` or `NGG_J
 
 ## 2. Show every item
 
-One table: gate, name, what it blocks, where the rule comes from, and whether it is on right now. Use these rows.
+One table with five columns: **Gate, Name, Blocks, Source, On/Off.** Use these rows and copy the Source text as written.
+
+**Never drop the Source column.** It is the reason this command exists: I should see where a rule comes from before I switch it off. A table without it is not the table this command promises.
 
 | Gate | Name | Blocks | Source |
 |---|---|---|---|
