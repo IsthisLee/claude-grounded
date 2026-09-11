@@ -39,9 +39,9 @@ Claude Code 세션 안에서 두 줄.
 
 **당신의 `settings.json`과 `CLAUDE.md`는 한 글자도 바뀌지 않는다.** 설치하면 평소와 똑같다. 게이트는 걸릴 때만 나타난다.
 
-턴마다 약 326ms가 붙는다. 훅별 실측은 [상세 문서](docs/gates.ko.md#얼마나-느려지나)에 있다.
+턴마다 약 256ms가 붙는다. 훅별 실측은 [상세 문서](docs/gates.ko.md#얼마나-느려지나)에 있다.
 
-필요한 것은 `bash`와 `python3`다. **macOS · Linux · Windows 셋 다 CI에서 매번 검사한다.** Windows는 Git Bash가 있어야 한다.
+필요한 것은 `bash`와 `python3`다. **macOS · Linux · Windows 셋 다 CI에서 매번 단위 테스트를 돌린다.** 망가진 입력을 던지는 fuzz는 리눅스·macOS에서는 매번, Windows에서는 main에 올라갈 때 돈다. Windows는 Git Bash가 있어야 한다.
 
 ## 무엇이 막히나
 
@@ -122,6 +122,7 @@ Claude가 이런 메시지를 받는다.
 | 이 저장소에서만 끄기 | `claude plugin disable grounded@claude-grounded --scope project` |
 | 나만 끄기 | 같은 명령에 `--scope local` |
 | 의미 판정만 끄기 | `NGG_JUDGE=0` |
+| 강제할 검사를 표로 보고 고르기 | `/grounded:config`. 항목마다 출처를 보여 주고 고른 것만 끈다 |
 | 규칙·검사 하나만 끄기 | `.grounded.toml`에 `disabled_rules = "R2b, done.pr"` |
 | 오탐 한 건만 넘기기 | 다음 프롬프트에 한 줄로 `grounded allow ti.skip` |
 | 훅 전부 끄기(이 플러그인만이 아니라) | 설정에 `"disableAllHooks": true` |
@@ -135,14 +136,14 @@ Claude가 이런 메시지를 받는다.
 | 문서 | 내용 |
 |---|---|
 | [게이트와 커맨드 상세](docs/gates.ko.md) | 게이트 넷이 무엇을 어떻게 막는지, 커맨드 여덟, 끄는 법, 근거 문서 |
-| [검증 기록](docs/VERIFICATION.md) | 모든 주장의 실행 명령과 출력 원문. V1부터 V16까지 |
+| [검증 기록](docs/VERIFICATION.md) | 모든 주장의 실행 명령과 출력 원문 |
 | [기여](CONTRIBUTING.md) · [보안](SECURITY.md) · [변경 이력](CHANGELOG.md) | |
 
 근거는 [Reduce hallucinations](https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations), [Best practices](https://code.claude.com/docs/en/best-practices), [Hooks](https://code.claude.com/docs/en/hooks), 그리고 Kent Beck의 [Augmented Coding](https://newsletter.kentbeck.com/p/augmented-coding-beyond-the-vibes)과 Simon Willison의 [Agentic Engineering Patterns](https://simonwillison.net/guides/agentic-engineering-patterns/)다. 규칙마다 어느 문장에서 왔는지 [상세 문서](docs/gates.ko.md)에 적었다.
 
 ## 비슷한 도구
 
-이 공간에는 도구가 여럿이고, 대부분 **도구 호출을 막는다**(`PreToolUse`). 이쪽이 막는 것은 **근거 없이 끝나는 턴**이다(`Stop`). 겹치지 않아 같이 써도 된다.
+이 공간에는 도구가 여럿이고, 대부분 **도구 호출을 막는다**(`PreToolUse`). 이쪽도 테스트 무력화, 근거 없는 PR, 커밋 전 검사 실패는 도구 호출 단계에서 막는다. 그래도 중심은 **근거 없이 끝나는 턴**이다(`Stop`). 막는 것이 서로 달라 같이 써도 된다.
 
 | 도구 | 무엇을 막나 | 어디서 |
 |---|---|---|
@@ -150,7 +151,7 @@ Claude가 이런 메시지를 받는다.
 | [Probity](https://github.com/nizos/probity) · [TDD Guard](https://github.com/nizos/tdd-guard) | TDD 위반과 금지 패턴 | 실행 전 |
 | [failproofai](https://github.com/FailproofAI/failproofai) | 실행을 기록하고 규칙을 강제 | 실행 전후 |
 | [Stop That Shit](https://github.com/lennney/stop-that-shit) | 요청하지 않은 해시·체크섬·범위 확장 (Codex·GPT) | 실행 전 |
-| **claude-grounded** | **근거 없는 결론, 거짓 완료, 테스트 무력화** | **턴이 끝나는 순간** |
+| **claude-grounded** | **근거 없는 결론, 거짓 완료, 근거 없는 PR, 테스트 무력화** | **턴이 끝나는 순간과 실행 전** |
 
 설명은 각 저장소가 스스로 적은 설명문을 옮긴 것이다.
 

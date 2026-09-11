@@ -201,24 +201,28 @@ append-only 경로: supabase/migrations
 
 ## 얼마나 느려지나
 
-설치하면 매 턴에 비용이 붙는다. 숨기지 않고 적는다. macOS, bash 3.2, python 3.13 에서 잰 값이다.
+설치하면 매 턴에 비용이 붙는다. 숨기지 않고 적는다. macOS(arm64), bash 3.2, python 3.13 에서 훅마다 같은 입력으로 20회씩 돌린 중앙값이다. 측정 스크립트는 [V38](VERIFICATION.md)에 있다.
 
 | 훅 | 언제 도나 | 실측 |
 |---|---|---|
-| `no-guess-gate/prompt.sh` | 턴마다 1회 | 72ms |
-| `no-guess-gate/stop.sh` | 턴 끝 | 199ms |
-| `done-gate/stop.sh` | 턴 끝 | 55ms |
-| `no-guess-gate/pre.sh` | 도구 호출마다 | 20ms |
-| `no-guess-gate/bashres.sh` | Bash 호출마다 | 23ms |
-| `test-integrity/pre.sh` | 파일 편집마다 | 71ms |
-| `project-guard/pre.sh` | 파일 편집마다 | 46ms |
-| `repo-profile/session.sh` | 세션 1회 | 160ms |
+| `no-guess-gate/prompt.sh` | 턴마다 1회 | 51ms |
+| `no-guess-gate/stop.sh` | 턴 끝 | 161ms |
+| `done-gate/stop.sh` | 턴 끝 | 44ms |
+| `no-guess-gate/pre.sh` | 도구 호출마다 | 17ms |
+| `test-integrity/pre.sh` | Edit·Write·Bash마다 | 50ms |
+| `project-guard/pre.sh` | Edit·Write·Bash마다 | 44ms |
+| `done-gate/pre.sh` | Bash마다 | 43ms |
+| `no-guess-gate/bashres.sh` | Bash마다 | 17ms |
+| `done-gate/post.sh` | Edit·Write마다 | 44ms |
+| `repo-profile/session.sh` | 세션 1회 | 65ms |
 
-**턴마다 붙는 바닥은 약 326ms**(`prompt` + `stop` 둘)이고, 도구를 쓸 때마다 20ms, 파일을 고칠 때마다 117ms가 더 붙는다. 세션을 열 때 160ms가 한 번 든다.
+**턴마다 붙는 바닥은 약 256ms**(`prompt` + `stop` 둘)다. 도구를 쓸 때 더 붙는 비용은 도구마다 다르다. Bash 한 번에 약 170ms, Edit·Write 한 번에 약 155ms, 그 밖의 도구 한 번에 17ms다. 세션을 열 때 65ms가 한 번 든다.
 
-짧은 프롬프트 하나로 세션 전체를 재면 훅 없이 1,416ms, 켜고 2,367ms였다(각 3회 중앙값). 차이의 대부분이 위 훅들이고, 나머지는 프로필이 컨텍스트에 싣는 스무 줄 남짓의 토큰이다.
+처음 잰 V28에서는 바닥이 326ms였다. 같은 스크립트로 v1.5.0을 번갈아 재니 258ms가 나왔다. 숫자가 줄어든 것은 코드 때문이 아니고 측정 조건이 달라서다. 1.6.0에서 기능을 넷 더했지만 훅별 차이는 5ms 안이었다.
 
-비용의 대부분은 파이썬 기동이다. `stop.sh` 는 파이썬을 3회 부르고 기동만 회당 26.9ms다. 하나로 합치면 50ms 안팎을 줄일 수 있지만, 판정의 입력을 만드는 자리라 아직 손대지 않았다.
+짧은 프롬프트 하나로 세션 전체를 재면 훅 없이 1,416ms, 켜고 2,367ms였다(V28, 각 3회 중앙값). 이 값은 다시 재지 않았다.
+
+비용의 대부분은 파이썬 기동이다. `stop.sh` 는 파이썬을 3회 부르고 기동만 회당 26.9ms다(V28). 하나로 합치면 50ms 안팎을 줄일 수 있지만, 판정의 입력을 만드는 자리라 아직 손대지 않았다.
 
 느리면 `NGG_PROFILE=0` 으로 프로필을 끄고, 게이트별로 `NGG_DONE=0`·`NGG_TESTGUARD=0`·`NGG_GUARD=0` 을 쓸 수 있다.
 ## 커맨드 여덟

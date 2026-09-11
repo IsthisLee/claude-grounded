@@ -2373,3 +2373,89 @@ PR #6의 Windows 작업도 11분 47초와 13분 1초였다(`gh pr checks 6`). ma
 대가는 하나다. Windows에서만 나는 fuzz 실패는 머지 뒤 main의 실행에서야 보인다. 단위 테스트는 PR에서도 세 OS 모두 돈다.
 
 `actionlint`는 로컬에 없어 이 변경을 올리는 PR에서 CI의 리눅스 작업이 본다. 효과도 그 PR의 실행에서 잰다.
+
+## V38 README 점검과 비용 재측정
+
+### CI 변경의 효과 (V37 후속)
+
+PR #7(`34583128449`)은 `pull_request` 한 벌만 돌았다. 머지 뒤 main의 실행(`34583609021`, push)은 Windows fuzz까지 돌았다.
+
+```
+--- PR #7 (pull_request)
+unit (ubuntu-latest) success 147s | actionlint=success 견고성 퍼징 (모델=success
+unit (macos-latest) success 288s | actionlint=skipped 견고성 퍼징 (모델=success
+unit (windows-latest) success 232s | actionlint=skipped 견고성 퍼징 (모델=skipped
+--- main (push)
+unit (macos-latest) success 313s | fuzz=success
+unit (ubuntu-latest) success 170s | fuzz=success
+unit (windows-latest) success 609s | fuzz=success
+```
+
+PR에서 Windows 작업은 11~13분에서 3분 52초가 됐다. `actionlint`도 처음으로 돌아 통과했다.
+
+### README
+
+README를 코드와 대조해 낡은 곳 넷을 찾았다. 검증 기록을 "V1부터 V16까지"라고 적었지만 실제로는 V37까지 있었다. "비슷한 도구" 절은 grounded가 턴 끝(`Stop`)에서만 막는다고 소개했는데 `hooks.json`에는 `PreToolUse` 훅이 넷 걸려 있다. 끄기 표에는 `/grounded:config`가 없었다. CI 문장은 Windows fuzz가 PR에서 빠진 지금 동작과 맞지 않았다. 숫자는 맞았다. 커맨드 8, 파일 25, 게이트 넷, 규칙 일곱이다.
+
+### 비용
+
+README의 "턴마다 약 326ms"는 V28에서 잰 값이다. V28은 입력과 스크립트를 남기지 않았다. 표에서도 `done-gate/pre.sh`와 `post.sh`가 빠져 있었다. 이번에는 `hooks.json`에 걸린 훅 열 개를 전부, v1.5.0과 지금 main을 번갈아 20회씩 돌렸다. 두 판을 번갈아 돌리면 기계의 부하 변화가 한쪽에만 몰리지 않는다.
+
+```
+env: Darwin arm64 · GNU bash, version 3.2.57(1)-release (arm · Python 3.13.7 · /bin/bash
+hook                         when                 v1.5.0     HEAD   (median of 20, ms)
+no-guess-gate/prompt.sh      턴마다 1회                 51.3     50.8
+no-guess-gate/stop.sh        턴 끝                   162.7    161.3
+done-gate/stop.sh            턴 끝                    43.6     43.7
+no-guess-gate/pre.sh         도구 호출마다                17.6     17.2
+test-integrity/pre.sh        Edit·Write·Bash마다      54.2     49.7
+project-guard/pre.sh         Edit·Write·Bash마다      44.3     44.2
+done-gate/pre.sh             Bash마다                 41.6     42.5
+no-guess-gate/bashres.sh     Bash마다                 16.7     16.8
+done-gate/post.sh            Edit·Write마다           43.0     44.0
+repo-profile/session.sh      세션 1회                  67.1     65.0
+old: 턴 바닥(prompt+stop 둘)=258ms · Bash 1회=174ms · Edit 1회=159ms · 그 밖의 도구 1회=18ms
+new: 턴 바닥(prompt+stop 둘)=256ms · Bash 1회=170ms · Edit 1회=155ms · 그 밖의 도구 1회=17ms
+```
+
+오늘 조건에서 v1.5.0의 바닥이 258ms로 나왔다. 326ms에서 줄어든 것은 코드 때문이 아니고 측정 조건이 달라서다. 1.6.0에서 기능 넷을 더했지만 훅별 차이는 5ms 안이다.
+
+도구마다 붙는 비용은 matcher 기준으로 다시 셌다. `test-integrity`와 `project-guard`는 `Edit|Write|Bash`에 걸리고 `done-gate/pre.sh`와 `bashres.sh`는 Bash에, `done-gate/post.sh`는 `Edit|Write`에 걸린다. 그래서 Bash 한 번은 약 170ms, Edit·Write 한 번은 약 155ms다. 이전 문서는 "도구마다 20ms, 편집마다 117ms"라고 적었다. Bash에 걸리는 훅을 빼고 센 값이었다.
+
+세션 전체(`claude -p`로 잰 1,416ms 대 2,367ms)는 다시 재지 않았다.
+
+측정 스크립트다. 입력은 통과하는 경로를 골랐다. 판정기는 `NGG_JUDGE=0`으로 껐다.
+
+```bash
+SP=$(mktemp -d); R="$PWD"; mkdir -p "$SP/old" "$SP/new"
+git archive v1.5.0 plugin/hooks | tar -x -C "$SP/old"; git archive HEAD plugin/hooks | tar -x -C "$SP/new"
+python3 - "$SP" "$R" <<'PY'
+import json, os, statistics, subprocess, sys, time
+SP, R = sys.argv[1], sys.argv[2]
+def j(ev, **kw): return json.dumps(dict(session_id="perf", hook_event_name=ev, cwd=R, **kw), ensure_ascii=False).encode()
+edit = dict(tool_name="Edit", tool_input=dict(file_path=R+"/README.md", old_string="a", new_string="b"))
+bash = dict(tool_name="Bash", tool_input=dict(command="ls -la"))
+cases = [
+ ("no-guess-gate/prompt.sh",  j("UserPromptSubmit", prompt="2 더하기 2는?")),
+ ("no-guess-gate/stop.sh",    j("Stop", stop_hook_active=False, last_assistant_message="4입니다.")),
+ ("done-gate/stop.sh",        j("Stop", stop_hook_active=False, last_assistant_message="4입니다.")),
+ ("no-guess-gate/pre.sh",     j("PreToolUse", tool_name="Read", tool_input=dict(file_path=R+"/README.md"))),
+ ("test-integrity/pre.sh",    j("PreToolUse", **edit)),
+ ("project-guard/pre.sh",     j("PreToolUse", **edit)),
+ ("done-gate/pre.sh",         j("PreToolUse", **bash)),
+ ("no-guess-gate/bashres.sh", j("PostToolUse", tool_response={}, **bash)),
+ ("done-gate/post.sh",        j("PostToolUse", **edit)),
+ ("repo-profile/session.sh",  j("SessionStart", source="startup")),
+]
+res = {v: {h: [] for h, _ in cases} for v in ("old", "new")}
+for i in range(20):
+    for h, inp in cases:
+        for v in (("old", "new") if i % 2 == 0 else ("new", "old")):
+            env = dict(os.environ, NGG_STATE=f"{SP}/state-{v}", NGG_JUDGE="0")
+            t = time.perf_counter()
+            subprocess.run([f"{SP}/{v}/plugin/hooks/{h}"], input=inp, capture_output=True, env=env, cwd=R)
+            res[v][h].append((time.perf_counter() - t) * 1000)
+for h, _ in cases:
+    print(h, round(statistics.median(res["old"][h]), 1), round(statistics.median(res["new"][h]), 1))
+PY
+```

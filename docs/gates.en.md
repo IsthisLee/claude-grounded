@@ -189,24 +189,28 @@ The docs are explicit that this event's stdout becomes context: "The exceptions 
 
 ## What it costs
 
-Installing this adds time to every turn. Here are the numbers, measured on macOS with bash 3.2 and python 3.13.
+Installing this adds time to every turn. Here are the numbers: the median of 20 runs per hook on the same input, on macOS (arm64) with bash 3.2 and python 3.13. The script is in [V38](VERIFICATION.md).
 
 | Hook | Runs | Measured |
 |---|---|---|
-| `no-guess-gate/prompt.sh` | once per turn | 72ms |
-| `no-guess-gate/stop.sh` | end of turn | 199ms |
-| `done-gate/stop.sh` | end of turn | 55ms |
-| `no-guess-gate/pre.sh` | per tool call | 20ms |
-| `no-guess-gate/bashres.sh` | per Bash call | 23ms |
-| `test-integrity/pre.sh` | per file edit | 71ms |
-| `project-guard/pre.sh` | per file edit | 46ms |
-| `repo-profile/session.sh` | once per session | 160ms |
+| `no-guess-gate/prompt.sh` | once per turn | 51ms |
+| `no-guess-gate/stop.sh` | end of turn | 161ms |
+| `done-gate/stop.sh` | end of turn | 44ms |
+| `no-guess-gate/pre.sh` | per tool call | 17ms |
+| `test-integrity/pre.sh` | per Edit, Write or Bash call | 50ms |
+| `project-guard/pre.sh` | per Edit, Write or Bash call | 44ms |
+| `done-gate/pre.sh` | per Bash call | 43ms |
+| `no-guess-gate/bashres.sh` | per Bash call | 17ms |
+| `done-gate/post.sh` | per Edit or Write call | 44ms |
+| `repo-profile/session.sh` | once per session | 65ms |
 
-**The per-turn floor is about 326ms** (`prompt` plus both `stop` hooks), plus 20ms per tool call and 117ms per file edit. Opening a session costs 160ms once.
+**The per-turn floor is about 256ms** (`prompt` plus both `stop` hooks). What a tool call adds depends on the tool: about 170ms per Bash call, about 155ms per Edit or Write, 17ms for any other tool. Opening a session costs 65ms once.
 
-Timing a whole session on one short prompt: 1,416ms without hooks, 2,367ms with them (median of 3 each). Most of the gap is the hooks above; the rest is the twenty-odd lines the repo profile puts in context.
+The first measurement (V28) put the floor at 326ms. Running v1.5.0 through the same script today gives 258ms, so the drop comes from the measuring conditions, not the code. 1.6.0 added four features and no hook moved by more than 5ms.
 
-Most of the cost is Python startup. `stop.sh` invokes Python three times and startup alone is 26.9ms each. Folding them into one call would save roughly 50ms, but that code builds the input the rules judge, so it is untouched for now.
+Timing a whole session on one short prompt: 1,416ms without hooks, 2,367ms with them (V28, median of 3 each). That has not been re-measured.
+
+Most of the cost is Python startup. `stop.sh` invokes Python three times and startup alone is 26.9ms each (V28). Folding them into one call would save roughly 50ms, but that code builds the input the rules judge, so it is untouched for now.
 
 If it feels slow, turn the profile off with `NGG_PROFILE=0`, or disable gates individually with `NGG_DONE=0`, `NGG_TESTGUARD=0`, `NGG_GUARD=0`.
 ## Eight commands
