@@ -221,7 +221,7 @@ append-only 경로: supabase/migrations
 비용의 대부분은 파이썬 기동이다. `stop.sh` 는 파이썬을 3회 부르고 기동만 회당 26.9ms다. 하나로 합치면 50ms 안팎을 줄일 수 있지만, 판정의 입력을 만드는 자리라 아직 손대지 않았다.
 
 느리면 `NGG_PROFILE=0` 으로 프로필을 끄고, 게이트별로 `NGG_DONE=0`·`NGG_TESTGUARD=0`·`NGG_GUARD=0` 을 쓸 수 있다.
-## 커맨드 일곱
+## 커맨드 여덟
 
 게이트는 저절로 돌지만, 언제 할지와 비용을 내가 정해야 하는 일은 커맨드로 둔다. 전부 **내가 쳐야만** 돈다(`disable-model-invocation: true`). 공식 문서가 그렇게 권한다. "Use `disable-model-invocation: true` for workflows with side effects that you want to trigger manually."
 
@@ -234,10 +234,11 @@ append-only 경로: supabase/migrations
 | `/grounded:handoff` | 다음 세션이 읽을 인수인계를 쓴다 |
 | `/grounded:status` | 게이트 상태를 전부 실측해 보고한다 |
 | `/grounded:auto` | 탐색 → 계획 → 구현 → 검토 → 배포를 순서대로 |
+| `/grounded:config` | 게이트 항목마다 무엇을 막고 어디서 온 규칙인지 보여 주고, 끌 것을 골라 `disabled_rules`에 적는다 |
 
 **커맨드는 내가 쓴 언어로 답한다.** `SKILL.md`는 로케일로 가를 수 없는 파일이라 영어로 쓰고, 본문에 사용자의 언어로 답하라는 지시를 박아 두었다. 게이트 문장이 `msg.sh`에서 갈리는 것과 같은 원칙이다.
 
-**없는 커맨드가 더 많다.** 계획은 내장 plan mode가, 탐색은 내장 Explore가, 리뷰는 `/code-review`가, 실행 확인은 `/verify`가, 반복은 `/goal`이 이미 한다. 전수 조사에서 23개 후보를 7개로 줄인 결과다. 같은 일을 하는 것을 새로 만들지 않는다.
+**없는 커맨드가 더 많다.** 계획은 내장 plan mode가, 탐색은 내장 Explore가, 리뷰는 `/code-review`가, 실행 확인은 `/verify`가, 반복은 `/goal`이 이미 한다. 전수 조사에서 23개 후보를 7개로 줄였고, 검사를 고르는 `config`를 뒤에 더했다. 같은 일을 하는 것을 새로 만들지 않는다.
 
 ## 근거
 

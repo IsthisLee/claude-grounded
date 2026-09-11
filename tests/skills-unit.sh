@@ -12,7 +12,7 @@ check() { if [ "$1" = "$2" ]; then echo "✅ $3"; else echo "❌ $3 (기대=$1 �
 python3 - "$G" <<'PY'
 import os, re, sys
 root = sys.argv[1]
-want = {"spec","init","tdd","ship","handoff","status","auto"}
+want = {"spec","init","tdd","ship","handoff","status","auto","config"}
 found = {d for d in os.listdir(root) if os.path.isdir(os.path.join(root, d))}
 assert found == want, f"스킬 목록 불일치: {sorted(found)}"
 for name in sorted(want):
@@ -30,7 +30,7 @@ for name in sorted(want):
     assert len(body.strip()) >= 400, f"{name}: 본문이 너무 짧다({len(body.strip())}자)"
     assert body.lstrip().startswith("# "), f"{name}: 본문이 제목으로 시작하지 않는다"
 PY
-check 0 $? "스킬 일곱: 폴더명·name 일치, 사용자 전용, description, allowed-tools, 본문"
+check 0 $? "스킬 여덟: 폴더명·name 일치, 사용자 전용, description, allowed-tools, 본문"
 
 # 인자를 받는 스킬은 $ARGUMENTS를 실제로 쓴다
 for n in spec tdd ship auto; do
@@ -68,6 +68,6 @@ for name in sorted(os.listdir(root)):
     assert re.search(r"language I am writing to you in", t), \
         f"{name}: 사용자의 언어로 답하라는 줄이 없다"
 SKILLLANG
-check 0 $? "스킬 일곱: 영어로 쓰고 사용자 언어로 답하라고 지시한다"
+check 0 $? "스킬 여덟: 영어로 쓰고 사용자 언어로 답하라고 지시한다"
 
 echo; echo "실패 ${fail}건"; exit "$fail"

@@ -74,7 +74,7 @@ else bad "plugin/ 파일 수가 문서와 다르다(실제 ${n_pl}개)"; fi
 
 # 문서가 적어 둔 개수가 실제와 같은지. 숫자는 조용히 낡는다.
 n_sk=$(find "$R/plugin/skills" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')
-if [ "$n_sk" = 7 ]; then ok "커맨드가 일곱이다"; else bad "커맨드가 일곱이 아니다(${n_sk}개). 문서를 고쳐라"; fi
+if [ "$n_sk" = 8 ]; then ok "커맨드가 여덟이다"; else bad "커맨드가 여덟이 아니다(${n_sk}개). 문서를 고쳐라"; fi
 # 훅 모듈은 커밋된 .sh 를 가진 디렉터리다. 디렉터리를 그냥 세면 py_compile 이 만든
 # __pycache__ 까지 잡힌다. 파일 수 검사와 같은 이유로 git 이 아는 것만 본다.
 n_gate=$(git -C "$R" ls-files "plugin/hooks/*/*.sh" | sed 's|.*/hooks/||; s|/.*||' | grep -v '^lib$' | sort -u | wc -l | tr -d ' ')
