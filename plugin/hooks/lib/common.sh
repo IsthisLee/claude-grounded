@@ -62,6 +62,24 @@ find_root() { local d="${CWD:-$PWD}" p
     d="$p"
   done; }
 
+# 빠른 경로용. 입력에서 tool_name 값만 파라미터 확장으로 뽑아 QT 에 담는다(프로세스 0개).
+# no-guess-gate/pre.sh 의 _jstr 와 같은 안전 조건이다. "tool_name" 이 정확히 한 번 나오고 값이
+# 식별자 꼴일 때만 답한다. 아니면 실패하고, 부른 쪽은 파이썬을 쓰는 느린 경로로 간다.
+# 8KB 를 넘으면 쓰지 않는다. ${IN#*패턴} 은 입력 길이의 제곱으로 느려질 수 있고,
+# 이 훅들은 Edit·Write 의 긴 본문도 받는다.
+# QT 는 이 파일을 읽는 훅들이 쓴다. 파일이 갈려 있어 shellcheck 가 쓰임을 못 본다.
+# shellcheck disable=SC2034
+quick_tool() { local r
+  QT=""
+  [ "${#IN}" -lt 8192 ] || return 1
+  r="${IN#*\"tool_name\"}"
+  [ "$r" != "$IN" ] || return 1
+  case "$r" in *'"tool_name"'*) return 1;; esac
+  r="${r#*:}"; while :; do case "$r" in " "*|"	"*) r="${r#?}";; *) break;; esac; done
+  case "$r" in "\""*) r="${r#\"}";; *) return 1;; esac
+  r="${r%%\"*}"; case "$r" in ""|*[!A-Za-z0-9_.-]*) return 1;; esac
+  QT="$r"; }
+
 # 항목 하나만 끄기. .grounded.toml 의 disabled_rules 한 줄에 근거 게이트의 규칙(R0~R5)과
 # 다른 게이트의 항목이 같이 온다. 환경변수는 한 사람 셸에만 있어 팀이 모르므로 파일에 둔다.
 # 막기 직전에만 부른다. 이 파일은 도구 호출마다 읽히므로 걸린 것이 없으면 설정을 읽지 않는다.

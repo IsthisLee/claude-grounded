@@ -11,7 +11,12 @@
 # TDD는 테스트를 먼저 쓰고 고치는 방법론이라 그것까지 막으면 문서가 권하는 바와 반대로 간다.
 #
 # 끄기: NGG_TESTGUARD=0
-d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
+d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"
+IN=$(cat)
+# 빠른 경로. 이 훅은 Bash 호출마다 돈다. Bash 에서 보는 것은 테스트 파일 삭제뿐이라, 입력에 삭제
+# 글자가 없으면 파이썬을 띄우지 않고 끝낸다(V40). 도구 이름이 애매하면 느린 경로로 간다.
+if quick_tool && [ "$QT" = Bash ]; then case "$IN" in *rm[[:space:]\"\\]*) ;; *) exit 0;; esac; fi
+read_in
 [ "${NGG_TESTGUARD:-1}" = "0" ] && exit 0
 
 TESTPATH='(\.(test|spec)\.[a-z]+$|(^|/)__tests__/|(^|/)tests?/|(^|/)test_[^/]+\.py$|_test\.(go|py|rb|ex)$|(^|/)spec/)'

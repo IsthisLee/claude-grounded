@@ -209,14 +209,14 @@ append-only 경로: supabase/migrations
 | `no-guess-gate/stop.sh` | 턴 끝 | 161ms |
 | `done-gate/stop.sh` | 턴 끝 | 44ms |
 | `no-guess-gate/pre.sh` | 도구 호출마다 | 17ms |
-| `test-integrity/pre.sh` | Edit·Write·Bash마다 | 50ms |
-| `project-guard/pre.sh` | Edit·Write·Bash마다 | 44ms |
-| `done-gate/pre.sh` | Bash마다 | 43ms |
+| `test-integrity/pre.sh` | Edit·Write·Bash마다 | 46ms. 삭제 글자가 없는 Bash는 12ms |
+| `project-guard/pre.sh` | Edit·Write·Bash마다 | 41ms. 삭제·이동·커밋 글자가 없는 Bash는 13ms |
+| `done-gate/pre.sh` | Bash마다 | 커밋·PR 생성이 아니면 12ms |
 | `no-guess-gate/bashres.sh` | Bash마다 | 17ms |
 | `done-gate/post.sh` | Edit·Write마다 | 44ms |
 | `repo-profile/session.sh` | 세션 1회 | 65ms |
 
-**턴마다 붙는 바닥은 약 256ms**(`prompt` + `stop` 둘)다. 도구를 쓸 때 더 붙는 비용은 도구마다 다르다. Bash 한 번에 약 170ms, Edit·Write 한 번에 약 155ms, 그 밖의 도구 한 번에 17ms다. 세션을 열 때 65ms가 한 번 든다.
+**턴마다 붙는 바닥은 약 256ms**(`prompt` + `stop` 둘)다. 도구를 쓸 때 더 붙는 비용은 도구마다 다르다. Bash 한 번에 약 70ms다. 삭제·이동·커밋·PR 생성 명령이면 훅이 끝까지 검사해서 약 170ms가 된다. Edit·Write 한 번에 약 155ms, 그 밖의 도구 한 번에 17ms다. Bash 쪽 훅 셋은 도구 이름과 관련 글자를 먼저 보고 관계없는 명령에서는 파이썬을 띄우지 않는다(V40). 세션을 열 때 65ms가 한 번 든다.
 
 처음 잰 V28에서는 바닥이 326ms였다. 같은 스크립트로 v1.5.0을 번갈아 재니 258ms가 나왔다. 숫자가 줄어든 것은 코드 때문이 아니고 측정 조건이 달라서다. 1.6.0에서 기능을 넷 더했지만 훅별 차이는 5ms 안이었다.
 

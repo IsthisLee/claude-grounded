@@ -11,7 +11,12 @@
 # 설정: 저장소 루트 .grounded.toml
 #   append_only = "supabase/migrations, db/migrate"
 # 설정이 없으면 아무것도 막지 않는다. 끄기: NGG_GUARD=0
-d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
+d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"
+IN=$(cat)
+# 빠른 경로. 이 훅은 Bash 호출마다 돈다. Bash 에서 보는 것은 삭제·이동과 --no-verify 커밋뿐이라,
+# 그 글자가 없으면 파이썬을 띄우지 않고 끝낸다(V40). 도구 이름이 애매하면 느린 경로로 간다.
+if quick_tool && [ "$QT" = Bash ]; then case "$IN" in *rm[[:space:]\"\\]*|*mv[[:space:]\"\\]*|*commit*) ;; *) exit 0;; esac; fi
+read_in
 [ "${NGG_GUARD:-1}" = "0" ] && exit 0
 find_root; root="$NGG_ROOT"; conf="$root/.grounded.toml"          # cwd 가 아니라 저장소 루트다(common.sh)
 

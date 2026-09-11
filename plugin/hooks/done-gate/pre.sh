@@ -15,7 +15,12 @@
 #    fast_test_command으로 나누지 않았다면 stop.sh가 이미 전체를 돌렸으니 여기서는 아무것도 하지 않는다.
 #
 # 끄기: NGG_DONE=0 · 제한 시간: DONE_FULL_TIMEOUT 초(기본 600)
-d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
+d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"
+IN=$(cat)
+# 빠른 경로. 이 훅은 Bash 호출마다 돌지만 보는 것은 커밋과 PR 생성뿐이다. 그 글자가 없으면
+# 파이썬을 띄우지 않고 끝낸다(V40). 도구 이름이 애매하면 느린 경로로 간다.
+if quick_tool && [ "$QT" = Bash ]; then case "$IN" in *commit*|*create*) ;; *) exit 0;; esac; fi
+read_in
 [ "${NGG_DONE:-1}" = "0" ] && exit 0
 [ "$TOOL_NAME" = "Bash" ] || exit 0
 find_root; root="$NGG_ROOT"          # 설정과 git 은 저장소 루트, 명령 안의 상대 경로는 cwd 기준
