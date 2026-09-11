@@ -97,4 +97,10 @@ bash_ "$PX" "git commit --no-verify -m x" | NGG_STATE="$T/pgs" "$W/pre.sh" 2>/de
 grep -q 'off=\[pg.noverify\]' "$T/pgs/state/events.log"; check 0 $? "끄기: 끈 사실이 events.log 에 남는다"
 edit "$PX" Edit "$PX/supabase/migrations/0001.sql" | NGG_STATE="$T/pgs" "$W/pre.sh" 2>/dev/null; check 2 $? "끄기: pg.noverify 만 끄면 append-only 는 그대로다"
 
+# 한 번만 허용하기. 허용 목록은 prompt.sh 가 사람의 프롬프트에서만 적는다. 여기서는 그 결과를 둔다.
+AL="$T/allow"; mkdir -p "$AL/state/pg"; printf 'pg.noverify\n' > "$AL/state/pg/allow"
+bash_ "$P" "git commit --no-verify -m x" | NGG_STATE="$AL" "$W/pre.sh" 2>/dev/null; check 0 $? "허용: pg.noverify 를 허용하면 한 번 통과한다"
+bash_ "$P" "git commit --no-verify -m x" | NGG_STATE="$AL" "$W/pre.sh" 2>"$T/eal"; check 2 $? "허용: 두 번째는 막는다"
+grep -q 'grounded allow pg.noverify' "$T/eal"; check 0 $? "허용: 막을 때 사람이 허용하는 법을 알린다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

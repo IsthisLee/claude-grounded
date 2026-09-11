@@ -123,6 +123,7 @@ Claude가 이런 메시지를 받는다.
 | 나만 끄기 | 같은 명령에 `--scope local` |
 | 의미 판정만 끄기 | `NGG_JUDGE=0` |
 | 규칙·검사 하나만 끄기 | `.grounded.toml`에 `disabled_rules = "R2b, done.pr"` |
+| 오탐 한 건만 넘기기 | 다음 프롬프트에 한 줄로 `grounded allow ti.skip` |
 | 훅 전부 끄기(이 플러그인만이 아니라) | 설정에 `"disableAllHooks": true` |
 | 8회 상한을 올리기 | 환경변수 `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` |
 | 완전히 지우기 | `claude plugin uninstall grounded@claude-grounded` |

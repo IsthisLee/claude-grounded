@@ -15,7 +15,8 @@ d="$(cd "$(dirname "$0")" && pwd)"; . "$d/../lib/common.sh"; read_in
 [ "${NGG_GUARD:-1}" = "0" ] && exit 0
 root="${CWD:-$PWD}"; conf="$root/.grounded.toml"
 
-block() { { t pg.prefix "$1"; off_bad; echo "$2"; } >&2; exit 2; }
+# block <머리> <내용> [항목]. 항목이 있으면 사람에게 한 번만 허용하는 법을 알린다.
+block() { { t pg.prefix "$1"; off_bad; echo "$2"; [ -z "${3:-}" ] || allow_hint "$3"; } >&2; exit 2; }
 # 명령에서 파일 인자를 뽑는다. 따옴표로 감싼 경로(공백이 든 파일명은 반드시 그렇다)를 살린다.
 # 따옴표 안의 공백은 구분자가 아니므로 셸과 같은 방식으로 쪼갠다.
 # 삭제 명령의 인자만 뽑는다. 명령 어디엔가 rm 이 있고 다른 문장에 경로가 있다고 짝지으면
@@ -64,8 +65,8 @@ for stmt in re.split(r"[;&|\n]+", t):
     if "--no-verify" in toks[2:] or "-n" in toks[2:]:
         print("yes"); break' | grep -q yes
 }
-if [ "$TOOL_NAME" = "Bash" ] && has_hooks && skips_hooks "$COMMAND" && ! item_off pg.noverify; then
-  block "$(tn pg.noverify)" "$(t line.cmd "$COMMAND"; tn pg.noverifyt)"
+if [ "$TOOL_NAME" = "Bash" ] && has_hooks && skips_hooks "$COMMAND" && ! item_off pg.noverify && ! allow_once pg.noverify; then
+  block "$(tn pg.noverify)" "$(t line.cmd "$COMMAND"; tn pg.noverifyt)" pg.noverify
 fi
 
 [ -f "$conf" ] || exit 0

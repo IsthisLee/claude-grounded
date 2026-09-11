@@ -101,12 +101,14 @@ print("nobase")' "$root" "$CODE_RE" 2>/dev/null) || v=""
   case "$v" in
     files*|nobase)
       item_off done.pr && exit 0
+      allow_once done.pr && exit 0
       {
         t done.prhead
         off_bad
         if [ "$v" = nobase ]; then t done.prnobase
         else t done.prfiles "$(printf '%s' "$v" | cut -f2)" "$(printf '%s' "$v" | cut -f3)"; fi
         t done.prfix
+        allow_hint done.pr
       } >&2
       exit 2 ;;
   esac
@@ -134,6 +136,7 @@ while kill -0 "$pid" 2>/dev/null; do
 done
 wait "$pid"; rc=$?
 [ "$rc" -eq 0 ] && exit 0
+allow_once done.commit && exit 0
 {
   t done.prehead "$rc"
   off_bad
@@ -141,5 +144,6 @@ wait "$pid"; rc=$?
   t done.tail
   tail -n 40 "$out" | sed 's/^/    /'
   t done.fixshort
+  allow_hint done.commit
 } >&2
 exit 2

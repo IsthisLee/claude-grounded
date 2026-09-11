@@ -98,6 +98,7 @@ if [ "$rc" -eq 0 ]; then
   exit 0
 fi
 
+allow_once done.turn && exit 0          # 한 번만 허용하기
 {
   t done.failhead "$rc"
   off_bad
@@ -107,5 +108,6 @@ fi
   tail -n 40 "$out" | sed 's/^/    /'
   t done.fixcode
   t done.setup
+  allow_hint done.turn
 } >&2
 exit 2
