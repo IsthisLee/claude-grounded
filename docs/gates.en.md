@@ -36,26 +36,42 @@ The regex floor is free and the model is consulted rarely. Moving to a prompt ho
 
 If it fails or times out, the block stands. Each verdict is logged to `${CLAUDE_PLUGIN_DATA}/state/events.log` as `judge=released|kept|failed` with the elapsed seconds.
 
-## Disabling one rule
+## Disabling one item
 
-Regex doesn't read intent, and in some repos one rule fires far more often than it should. Turning the whole gate off to escape it takes the other six down with it.
+Regex doesn't read intent, and in some repos one rule fires far more often than it should. Turning the whole gate off to escape it takes every other check in that gate down with it.
 
-Name the rule in `.grounded.toml` and only that one drops out.
+Name it in `.grounded.toml` and only that one drops out.
 
 ```toml
-# R2b fires on every design discussion in this repo
-disabled_rules = "R2b"
+# R2b fires on every design discussion here, and PRs get a separate human review
+disabled_rules = "R2b, done.pr"
 ```
 
-Comma-separate several; case doesn't matter. The names are `R0`, `R1`, `R2a`, `R2b`, `R3`, `R4`, `R5`.
+Comma-separate several; case doesn't matter. These are the names:
 
-**Putting it in a file rather than an env var is the whole point.** `NGG_JUDGE=0` in someone's shell is invisible to the rest of the team. `.grounded.toml` is committed, so it shows up in the pull request and the reason lives in the same commit. This does not make switching a rule off easier; it makes switching one off **visible**.
+| Gate | Name | What stops |
+|---|---|---|
+| Evidence | `R0`, `R1`, `R2a`, `R2b`, `R3`, `R4`, `R5` | That one rule |
+| Completion | `done.turn` | The check at the end of a turn that changed code |
+| | `done.commit` | The full check right before a commit |
+| | `done.pr` | The evidence check on a PR body |
+| Test integrity | `ti.skip` | Blocking added disable markers |
+| | `ti.assert` | Blocking fewer assertions |
+| | `ti.rm` | Blocking test file deletion |
+| | `ti.exclude` | Blocking new exclusions in runner config |
+| Project guard | `pg.noverify` | Blocking `--no-verify` commits |
+
+Append-only has no name: without `append_only` it is already off.
+
+**Putting it in a file rather than an env var is the whole point.** An env var like `NGG_DONE=0` switches off every check in that gate at once, and in someone's shell it is invisible to the rest of the team. `.grounded.toml` is committed, so it shows up in the pull request and the reason lives in the same commit. This does not make switching something off easier; it makes switching it off **visible**. The env vars stay as an emergency switch.
 
 The fact is recorded in three places.
 
-- `off=[R2b]` in `events.log`
-- The repo profile loads `Disabled rules: R2b` into context every session
-- Naming a rule that doesn't exist is reported on stderr when the gate blocks. Believing a rule is off when it isn't is the worst state to be in
+- `off=[R2b]` or `off=[done.pr]` in `events.log`
+- The repo profile loads `Disabled rules: R2b, done.pr` into context every session
+- Naming something that doesn't exist is reported on stderr whenever any gate blocks. Believing a check is off when it isn't is the worst state to be in
+
+The file is read only right before a gate blocks or runs a check, so tool calls that pass straight through pay nothing.
 
 ## Completion gate: the check must pass
 
@@ -109,7 +125,7 @@ The base is `--base` if given, otherwise the first that exists of `origin/HEAD` 
 
 A one-line code fix is in scope too. That clashes with the habit of opening small fixes with a title alone; the choice here is that a code change carries one block of check output. Docs-only PRs are not affected.
 
-Disable it with `NGG_DONE=0`, same as the rest of the completion gate.
+To switch off this check alone, add `done.pr` to `disabled_rules`. `NGG_DONE=0` turns off the whole completion gate.
 
 ## Test-integrity gate: fix the code, not the test
 

@@ -129,4 +129,26 @@ bash_ "$P" 'rm -rf /tmp/xyz' | "$W/pre.sh" 2>/dev/null; check 0 $? "문장 분�
 bash_ "$P" 'echo hi; rm src/a.test.ts' | "$W/pre.sh" 2>/dev/null; check 2 $? "문장 분리: 진짜 삭제는 여전히 막는다"
 bash_ "$P" 'rm -rf build && git rm src/a.test.ts' | "$W/pre.sh" 2>/dev/null; check 2 $? "문장 분리: 뒤쪽 git rm 도 잡는다"
 
+# 항목 하나만 끄기. NGG_TESTGUARD=0 은 넷을 한꺼번에 끄고 팀에 보이지 않는다.
+Q="$T/off"; mkdir -p "$Q/src" "$Q/tests"
+offc() { printf 'disabled_rules = "%s"\n' "$1" > "$Q/.grounded.toml"; }
+# 무력화 표기가 든 픽스처는 실행할 때 만든다. 소스에 그 글자를 적으면 이 파일을 고칠 때
+# 설치된 테스트 무결성 게이트가 픽스처를 무력화로 읽고 편집을 막는다. 실제로 막혔다.
+SKIP_OLD="it('w', () => { expect(x).toBe(1) })"; SKIP_NEW=$(printf '%s' "$SKIP_OLD" | sed 's/^it/&.skip/')
+offc ti.skip
+edit "$Q" "$Q/src/a.test.ts" "$SKIP_OLD" "$SKIP_NEW" | NGG_STATE="$T/tis" "$W/pre.sh" 2>/dev/null; check 0 $? "끄기: ti.skip 을 끄면 무력화 표기를 막지 않는다"
+grep -q 'off=\[ti.skip\]' "$T/tis/state/events.log"; check 0 $? "끄기: 끈 사실이 events.log 에 남는다"
+edit "$Q" "$Q/src/a.test.ts" "expect(a).toBe(1); expect(b).toBe(2);" "expect(a).toBe(1);" | NGG_STATE="$T/tis" "$W/pre.sh" 2>/dev/null; check 2 $? "끄기: ti.skip 만 끄면 단언 감소는 그대로 막는다"
+offc ti.assert
+edit "$Q" "$Q/src/a.test.ts" "expect(a).toBe(1); expect(b).toBe(2);" "expect(a).toBe(1);" | NGG_STATE="$T/tis" "$W/pre.sh" 2>/dev/null; check 0 $? "끄기: ti.assert 를 끄면 단언 감소를 막지 않는다"
+offc ti.rm
+bash_ "$Q" "rm tests/x_test.go" | NGG_STATE="$T/tis" "$W/pre.sh" 2>/dev/null; check 0 $? "끄기: ti.rm 을 끄면 테스트 삭제를 막지 않는다"
+offc ti.exclude
+edit "$Q" "$Q/vitest.config.ts" 'export default { test: {} }' 'export default { test: { exclude: ["src/auth/**"] } }' \
+  | NGG_STATE="$T/tis" "$W/pre.sh" 2>/dev/null; check 0 $? "끄기: ti.exclude 를 끄면 러너 설정의 제외를 막지 않는다"
+# 오타는 조용히 넘어가면 안 된다. 껐다고 믿는데 안 꺼진 상태가 제일 나쁘다.
+offc ti.skp
+edit "$Q" "$Q/src/a.test.ts" "$SKIP_OLD" "$SKIP_NEW" | NGG_STATE="$T/tis" "$W/pre.sh" 2>"$T/eoff"; check 2 $? "끄기: 없는 이름은 아무것도 끄지 않는다"
+grep -q 'ti.skp' "$T/eoff"; check 0 $? "끄기: 없는 이름을 막을 때 알린다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

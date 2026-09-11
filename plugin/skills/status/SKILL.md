@@ -22,6 +22,6 @@ Report what claude-grounded is actually doing in this repo. **Measure all of it.
 
 One table. Per gate: **on / idle for lack of config / off**, and the evidence for that.
 
-If there are blocks on record, count them by rule and show that too. Call out any rule that looks like it is producing false positives, and mention two things they can do about it: disable that one rule with `disabled_rules` in `.grounded.toml`, or open an issue so the rule itself gets fixed.
+If there are blocks on record, count them by rule and show that too. Call out any rule that looks like it is producing false positives, and mention two things they can do about it: disable that one rule or check with `disabled_rules` in `.grounded.toml` (rules `R0`–`R5`, or gate items such as `done.pr` and `ti.exclude`), or open an issue so the rule itself gets fixed.
 
-If `events.log` shows `off=[...]`, say which rules this repo has disabled and since when, based on the log — not on the config file alone.
+If `events.log` shows `off=[...]`, say which rules or checks this repo has disabled and since when, based on the log — not on the config file alone.

@@ -417,6 +417,11 @@ mk24 "$NOFILE" | NGG_STATE="$K24" "$W/stop.sh" 2>"$T/e24b"; check 2 $? "규칙 �
 grep -q 'R9' "$T/e24b"; check 0 $? "규칙 끄기: 없는 이름을 stderr 로 알린다"
 grep -q 'off?=\[R9\]' "$K24/state/events.log"; check 0 $? "규칙 끄기: 없는 이름도 events.log 에 남는다"
 
+# 다른 게이트의 항목 이름은 근거 게이트가 모르는 이름이 아니다. 없는 이름으로 알리면 오탐이다.
+conf24 "done.pr"
+mk24 "$NOFILE" | NGG_STATE="$K24" "$W/stop.sh" 2>"$T/e24c"; check 2 $? "항목 끄기: 다른 게이트의 항목은 근거 규칙을 끄지 않는다"
+grep -q 'done.pr' "$T/e24c"; r=$?; check 1 "$r" "항목 끄기: 다른 게이트의 항목을 없는 이름으로 알리지 않는다"
+
 # 다른 저장소의 설정을 읽어서는 안 된다.
 conf24 "R0, R1"
 printf '{"session_id":"t24b","hook_event_name":"Stop","stop_hook_active":false,"cwd":"%s","last_assistant_message":"%s"}' "$T" "$NOFILE" \

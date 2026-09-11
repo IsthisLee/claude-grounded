@@ -100,8 +100,10 @@ for c in cands:
 print("nobase")' "$root" "$CODE_RE" 2>/dev/null) || v=""
   case "$v" in
     files*|nobase)
+      item_off done.pr && exit 0
       {
         t done.prhead
+        off_bad
         if [ "$v" = nobase ]; then t done.prnobase
         else t done.prfiles "$(printf '%s' "$v" | cut -f2)" "$(printf '%s' "$v" | cut -f3)"; fi
         t done.prfix
@@ -118,6 +120,8 @@ fast=$(sed -n 's/^[[:space:]]*fast_test_command[[:space:]]*=[[:space:]]*"\(.*\)"
 [ -n "$fast" ] || exit 0                      # 나누지 않았으면 stop.sh가 이미 전체를 돌렸다
 full=$(sed -n 's/^[[:space:]]*test_command[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$conf" | head -1)
 [ -n "$full" ] || exit 0
+# 항목 하나만 끄기(done.commit). 전체 검사를 돌리기 전에 본다.
+item_off done.commit && exit 0
 
 out=$(mktemp); trap 'rm -f "$out"' EXIT
 to="${DONE_FULL_TIMEOUT:-600}"
@@ -132,6 +136,7 @@ wait "$pid"; rc=$?
 [ "$rc" -eq 0 ] && exit 0
 {
   t done.prehead "$rc"
+  off_bad
   t done.preran "$full"
   t done.tail
   tail -n 40 "$out" | sed 's/^/    /'
