@@ -4,7 +4,7 @@ Claude Code 공식 문서가 권하는 것을 **부탁이 아니라 장치**로 
 
 ## 지금 설치된 것
 
-파일 24개다. 실제로 도는 것은 훅 열과 커맨드 일곱뿐이다.
+파일 25개다. 실제로 도는 것은 훅 열과 커맨드 여덟뿐이다.
 
 | 게이트 | 무엇을 막나 | 끄기 |
 |---|---|---|
@@ -17,11 +17,13 @@ Claude Code 공식 문서가 권하는 것을 **부탁이 아니라 장치**로 
 
 세션마다 저장소 사실을 컨텍스트에 싣는 프로필도 있다(`NGG_PROFILE=0`).
 
-## 커맨드 일곱
+## 커맨드 여덟
 
 전부 **직접 쳐야만** 돈다. Claude가 알아서 부르지 않는다.
 
-`/grounded:init` · `spec` · `tdd` · `ship` · `handoff` · `status` · `auto`
+`/grounded:init` · `config` · `spec` · `tdd` · `ship` · `handoff` · `status` · `auto`
+
+어떤 검사를 강제할지 고르려면 `/grounded:config`를 친다. 항목마다 출처를 보여 주고 고른 것만 끈다.
 
 막힌 이유가 궁금하면 `/grounded:status`가 최근 판정을 보여 준다.
 
@@ -61,7 +63,7 @@ claude plugin disable grounded@claude-grounded --scope project
 
 Turns what the Claude Code docs *recommend* into something the tool *enforces*. Your `settings.json` and `CLAUDE.md` are not touched.
 
-24 files. Four gates run on `Stop` and `PreToolUse`, plus a session repo profile and seven user-only commands.
+25 files. Four gates run on `Stop` and `PreToolUse`, plus a session repo profile and eight user-only commands. Pick which checks to enforce with `/grounded:config`.
 
 | Gate | Blocks | Off switch |
 |---|---|---|

@@ -20,7 +20,7 @@ claude-grounded는 그 한 번을 없앤다. Claude Code 공식 문서가 권하
 
 한 번도 부탁하지 않았는데 매번 그렇게 된다. **잊어도 된다는 것이 요점이다.**
 
-> **로드맵이 전부 배포됐다.** 게이트 넷, 저장소 프로필, 커맨드 일곱. 이 문서는 있는 것만 적는다.
+> **로드맵이 전부 배포됐다.** 게이트 넷, 저장소 프로필, 커맨드 여덟. 이 문서는 있는 것만 적는다.
 
 <p align="center"><img src="docs/demo.svg" alt="근거 없는 답이 막히고, 실측한 뒤 다시 답하는 화면" width="760"></p>
 
@@ -35,7 +35,7 @@ Claude Code 세션 안에서 두 줄.
 /plugin install grounded@claude-grounded
 ```
 
-받는 것은 `plugin/` 24개 파일뿐이고 릴리스 태그는 서명돼 있다. 확인하는 법은 [SECURITY.md](SECURITY.md#설치할-것을-직접-확인하는-법)에 있다.
+받는 것은 `plugin/` 25개 파일뿐이고 릴리스 태그는 서명돼 있다. 확인하는 법은 [SECURITY.md](SECURITY.md#설치할-것을-직접-확인하는-법)에 있다.
 
 **당신의 `settings.json`과 `CLAUDE.md`는 한 글자도 바뀌지 않는다.** 설치하면 평소와 똑같다. 게이트는 걸릴 때만 나타난다.
 
@@ -134,7 +134,7 @@ Claude가 이런 메시지를 받는다.
 
 | 문서 | 내용 |
 |---|---|
-| [게이트와 커맨드 상세](docs/gates.ko.md) | 게이트 넷이 무엇을 어떻게 막는지, 커맨드 일곱, 끄는 법, 근거 문서 |
+| [게이트와 커맨드 상세](docs/gates.ko.md) | 게이트 넷이 무엇을 어떻게 막는지, 커맨드 여덟, 끄는 법, 근거 문서 |
 | [검증 기록](docs/VERIFICATION.md) | 모든 주장의 실행 명령과 출력 원문. V1부터 V16까지 |
 | [기여](CONTRIBUTING.md) · [보안](SECURITY.md) · [변경 이력](CHANGELOG.md) | |
 

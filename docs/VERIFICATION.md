@@ -2279,3 +2279,40 @@ $ tests/fuzz.sh
 
 - 허용 한 번은 명령 하나 단위다. `rm a.test.ts b.test.ts`처럼 테스트 파일 여럿을 지우는 명령 하나가 `ti.rm` 허용 한 번으로 통과한다.
 - 막을 때 내보내는 허용법은 모델도 읽는다. 모델이 사용자에게 허용을 부탁할 수는 있지만, 허용 자체는 사람이 프롬프트에 써야 한다.
+
+## V35 강제할 검사를 고르는 커맨드
+
+V33에서 항목 하나만 끌 수 있게 됐지만, 어떤 이름이 무엇을 막는지는 문서를 찾아 읽어야 알 수 있었다. `/grounded:config`는 게이트 항목마다 무엇을 막고 어디서 온 규칙인지 표로 보여 주고, 끌 것을 `AskUserQuestion`으로 고르게 한 뒤 `disabled_rules` 한 줄만 고친다.
+
+기본값은 전부 켜짐으로 둔다. Probity는 설정이 없으면 행동을 막고 규칙을 사용자가 써야 켜진다. 이 플러그인은 설치하면 바로 동작한다는 것이 약속이라 그 방향을 따르지 않았다.
+
+### RED
+
+```
+AssertionError: 스킬 목록 불일치: ['auto', 'handoff', 'init', 'ship', 'spec', 'status', 'tdd']
+❌ 스킬 여덟: 폴더명·name 일치, 사용자 전용, description, allowed-tools, 본문 (기대=0 실측=1)
+❌ 커맨드가 여덟이 아니다(7개). 문서를 고쳐라
+```
+
+### GREEN
+
+```
+$ for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do tests/$g/unit.sh || exit 1; done && tests/skills-unit.sh && tests/attack-surface.sh && tests/invariants.sh
+exit 0
+체크 합계: 396 · ❌ 0
+✅ plugin/ 파일 수가 문서와 같다(25개)
+✅ 커맨드가 여덟이다
+$ shellcheck -x -s bash plugin/hooks/*/*.sh tests/*.sh tests/*/*.sh
+exit 0
+```
+
+체크 수는 그대로다. 스킬 정의 검사와 불변식 검사가 기대값만 바뀌었다.
+
+### 출처를 다시 찾은 것
+
+항목마다 출처를 적으려다 게이트 상세 문서의 근거 표에 R2a와 R5가 빠져 있는 것을 알았다. CHANGELOG와 이 기록에서 찾았다. R2a는 공식 Reduce hallucinations의 "Allow Claude to say I don't know"에 맞춰 좁힌 규칙이고(V4), R5는 공식 훅 문서의 `PostToolUseFailure` 이벤트 위에 만든 규칙이다(V20). `pg.noverify`는 외부 문서 출처가 없어서 표에도 그렇게 적었다.
+
+### 약한 곳
+
+- 스킬은 모델이 지시를 읽고 따르는 것이라, 표를 보여 주고 확인을 받은 뒤 한 줄만 고치는 순서를 단위 테스트가 보장하지 못한다. `tests/skills-unit.sh`는 정의만 본다. 이 커맨드를 실제 세션에서 돌려 보지는 않았다.
+- 게이트 상세 문서의 근거 표에 R2a·R5가 빠진 것은 이번에 고치지 않았다.

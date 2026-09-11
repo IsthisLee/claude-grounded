@@ -20,7 +20,7 @@ claude-grounded removes that tenth one. It turns what the Claude Code docs *reco
 
 You never asked for any of it, and it happens every time. **The point is that you get to forget.**
 
-> **The whole roadmap ships:** four gates, the repo profile, and seven commands. This document describes only what is real.
+> **The whole roadmap ships:** four gates, the repo profile, and eight commands. This document describes only what is real.
 
 <p align="center"><img src="docs/demo.svg" alt="An ungrounded answer is blocked, then the model measures and answers again" width="760"></p>
 
@@ -35,7 +35,7 @@ Two lines inside a Claude Code session.
 /plugin install grounded@claude-grounded
 ```
 
-You receive 24 files under `plugin/`, and release tags are signed. [SECURITY.en.md](SECURITY.en.md#checking-for-yourself-what-you-are-installing) shows how to check.
+You receive 25 files under `plugin/`, and release tags are signed. [SECURITY.en.md](SECURITY.en.md#checking-for-yourself-what-you-are-installing) shows how to check.
 
 **Your `settings.json` and `CLAUDE.md` are not touched.** After installing, everything looks the same. The gate only shows up when it fires.
 
@@ -136,7 +136,7 @@ State lives in `~/.claude/plugins/data/grounded-inline/` and is safe to delete. 
 
 | Document | What's in it |
 |---|---|
-| [Gates and commands in detail](docs/gates.en.md) | What each gate blocks, the seven commands, how to disable, which doc grounds it |
+| [Gates and commands in detail](docs/gates.en.md) | What each gate blocks, the eight commands, how to disable, which doc grounds it |
 | [Verification log](docs/VERIFICATION.md) | Every claim with the exact command and its raw output, V1 through V16 |
 | [Contributing](CONTRIBUTING.en.md) · [Security](SECURITY.en.md) · [Changelog](CHANGELOG.md) | |
 

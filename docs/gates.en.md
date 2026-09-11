@@ -209,9 +209,9 @@ Timing a whole session on one short prompt: 1,416ms without hooks, 2,367ms with 
 Most of the cost is Python startup. `stop.sh` invokes Python three times and startup alone is 26.9ms each. Folding them into one call would save roughly 50ms, but that code builds the input the rules judge, so it is untouched for now.
 
 If it feels slow, turn the profile off with `NGG_PROFILE=0`, or disable gates individually with `NGG_DONE=0`, `NGG_TESTGUARD=0`, `NGG_GUARD=0`.
-## Seven commands
+## Eight commands
 
-The gates run on their own. What needs your judgment about *when* and *what it costs* stays a command. All seven are **user-invoked only** (`disable-model-invocation: true`), as the docs advise: "Use `disable-model-invocation: true` for workflows with side effects that you want to trigger manually."
+The gates run on their own. What needs your judgment about *when* and *what it costs* stays a command. All eight are **user-invoked only** (`disable-model-invocation: true`), as the docs advise: "Use `disable-model-invocation: true` for workflows with side effects that you want to trigger manually."
 
 | Command | What it does |
 |---|---|
@@ -222,10 +222,11 @@ The gates run on their own. What needs your judgment about *when* and *what it c
 | `/grounded:handoff` | Writes a handoff for the next session |
 | `/grounded:status` | Measures and reports what every gate is actually doing |
 | `/grounded:auto` | Explore → plan → implement → review → ship, in order |
+| `/grounded:config` | Shows every gate item with what it blocks and where it comes from, then writes your picks to `disabled_rules` |
 
 **The commands answer in whatever language you write in.** `SKILL.md` cannot branch on locale, so it is written in English with an instruction in the body to reply in the user's language — the same principle `msg.sh` applies to the gate's own sentences.
 
-**More commands are absent than present.** Planning is built-in plan mode, exploration is the built-in Explore agent, review is `/code-review`, run-and-see is `/verify`, looping is `/goal`. An audit cut 23 candidates down to these 7. Nothing here duplicates something that already exists.
+**More commands are absent than present.** Planning is built-in plan mode, exploration is the built-in Explore agent, review is `/code-review`, run-and-see is `/verify`, looping is `/goal`. An audit cut 23 candidates down to 7, and `config` for picking checks came later. Nothing here duplicates something that already exists.
 
 ## Sources
 

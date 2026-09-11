@@ -29,10 +29,10 @@ cd claude-grounded
 git tag -v v1.4.1        # should print Good "git" signature
 ```
 
-**Only `plugin/` ships.** 24 files, of which ten hooks and seven skills actually run. Tests, docs, and CI never reach the installed copy.
+**Only `plugin/` ships.** 25 files, of which ten hooks and eight skills actually run. Tests, docs, and CI never reach the installed copy.
 
 ```bash
-git ls-files plugin | wc -l          # 24
+git ls-files plugin | wc -l          # 25
 cat plugin/hooks/hooks.json          # every event and what it runs
 ```
 
