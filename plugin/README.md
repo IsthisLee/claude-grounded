@@ -9,9 +9,9 @@ Claude Code 공식 문서가 권하는 것을 **부탁이 아니라 장치**로 
 | 게이트 | 무엇을 막나 | 끄기 |
 |---|---|---|
 | 근거 | 도구를 안 쓰고 상태를 단정하거나, 확인을 미루거나, 실패한 명령을 통과라고 주장하는 턴(R0~R5) | `.grounded.toml`의 `disabled_rules`로 규칙별, `NGG_JUDGE=0`은 의미 판정만 |
-| 완료 | 코드를 고친 턴이 저장소 검사를 통과하지 않은 채 끝나는 것, 돌린 명령과 출력 없이 여는 PR | `NGG_DONE=0` |
-| 테스트 무결성 | `.skip` 추가, 단언 감소, 테스트 파일 삭제, 러너 설정에 제외 추가 | `NGG_TESTGUARD=0` |
-| 프로젝트 가드 | `append_only` 경로의 기존 파일 수정·삭제, 커밋 훅을 건너뛰는 `--no-verify` 커밋 | `NGG_GUARD=0` |
+| 완료 | 코드를 고친 턴이 저장소 검사를 통과하지 않은 채 끝나는 것, 돌린 명령과 출력 없이 여는 PR | `disabled_rules`에 `done.turn`·`done.commit`·`done.pr`, 전체는 `NGG_DONE=0` |
+| 테스트 무결성 | `.skip` 추가, 단언 감소, 테스트 파일 삭제, 러너 설정에 제외 추가 | `disabled_rules`에 `ti.skip`·`ti.assert`·`ti.rm`·`ti.exclude`, 전체는 `NGG_TESTGUARD=0` |
+| 프로젝트 가드 | `append_only` 경로의 기존 파일 수정·삭제, 커밋 훅을 건너뛰는 `--no-verify` 커밋 | `disabled_rules`에 `pg.noverify`, 전체는 `NGG_GUARD=0` |
 
 세션마다 저장소 사실을 컨텍스트에 싣는 프로필도 있다(`NGG_PROFILE=0`).
 
@@ -63,10 +63,10 @@ Turns what the Claude Code docs *recommend* into something the tool *enforces*. 
 
 | Gate | Blocks | Off switch |
 |---|---|---|
-| Evidence | Asserting state with no tool call, deferring, or claiming a failed command passed (R0–R5) | `NGG_JUDGE=0` for the semantic judge only |
-| Completion | A turn that changed code ending before the repo check passes, and a PR opened with no command output in its body | `NGG_DONE=0` |
-| Test integrity | Adding `.skip`, dropping assertions, deleting tests, adding runner-config exclusions | `NGG_TESTGUARD=0` |
-| Project guard | Editing or deleting existing files under `append_only`, commits that skip the commit hooks | `NGG_GUARD=0` |
+| Evidence | Asserting state with no tool call, deferring, or claiming a failed command passed (R0–R5) | `R0`–`R5` in `disabled_rules`; `NGG_JUDGE=0` for the semantic judge only |
+| Completion | A turn that changed code ending before the repo check passes, and a PR opened with no command output in its body | `done.turn`, `done.commit`, `done.pr` in `disabled_rules`; `NGG_DONE=0` for all |
+| Test integrity | Adding `.skip`, dropping assertions, deleting tests, adding runner-config exclusions | `ti.skip`, `ti.assert`, `ti.rm`, `ti.exclude` in `disabled_rules`; `NGG_TESTGUARD=0` for all |
+| Project guard | Editing or deleting existing files under `append_only`, commits that skip the commit hooks | `pg.noverify` in `disabled_rules`; `NGG_GUARD=0` for all |
 
 Start with `/grounded:init`. Ask `/grounded:status` when something blocks you.
 

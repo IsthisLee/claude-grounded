@@ -71,7 +71,9 @@ if [ -n "$v" ] && [ -f "$ngg_conf" ]; then
   for tok in $(printf '%s' "$dr" | tr ',' ' '); do
     case "$(printf '%s' "$tok" | LC_ALL=C tr '[:upper:]' '[:lower:]')" in
       r0) R=R0;; r1) R=R1;; r2a) R=R2a;; r2b) R=R2b;; r3) R=R3;; r4) R=R4;; r5) R=R5;;
-      *) offbad="$offbad $tok"; continue;;
+      # 다른 게이트의 항목(done.pr 등)은 같은 줄에 온다. 모르는 이름으로 알리면 오탐이다.
+      *) case " $NGG_ITEMS " in *" $(lc "$tok") "*) continue;; esac
+         offbad="$offbad $tok"; continue;;
     esac
     off="$off $R"
   done

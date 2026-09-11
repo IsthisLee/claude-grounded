@@ -54,7 +54,7 @@ for stmt in re.split(r"[;&|\n]+", t):
 
 count() { printf '%s' "$2" | grep -oE "$1" | grep -c . || true; }
 
-block() { { t ti.prefix "$1"; echo "$2"; t ti.advice; } >&2; exit 2; }
+block() { { t ti.prefix "$1"; off_bad; echo "$2"; t ti.advice; } >&2; exit 2; }
 
 case "$TOOL_NAME" in
   Bash)
@@ -62,7 +62,10 @@ case "$TOOL_NAME" in
     printf '%s' "$COMMAND" | grep -qE '(^|[;&|]|\s)(rm|git[[:space:]]+rm)\b' || exit 0
     while IFS= read -r tok; do
       [ -n "$tok" ] || continue
-      is_test "$tok" && block "$(tn ti.rm)" "$(t line.cmd "$COMMAND"; tn line.target "$tok")"
+      if is_test "$tok"; then
+        item_off ti.rm && exit 0          # 항목 하나만 끄기
+        block "$(tn ti.rm)" "$(t line.cmd "$COMMAND"; tn line.target "$tok")"
+      fi
     done <<EOF
 $(rm_targets "$COMMAND")
 EOF
@@ -74,7 +77,7 @@ EOF
         cb=$(cat "$FILE_PATH" 2>/dev/null); ca="$CONTENT"
       else cb="$OLD_STRING"; ca="$NEW_STRING"; fi
       eb=$(count "$EXCLUDE" "$cb"); ea=$(count "$EXCLUDE" "$ca")
-      if [ "$ea" -gt "$eb" ]; then
+      if [ "$ea" -gt "$eb" ] && ! item_off ti.exclude; then
         block "$(tn ti.exclude "$eb" "$ea")" "$(t line.file "$FILE_PATH"; tn ti.excludehint)"
       fi
       exit 0
@@ -91,13 +94,13 @@ else
 fi
 
 db=$(count "$DISABLE" "$before"); da=$(count "$DISABLE" "$after")
-if [ "$da" -gt "$db" ]; then
+if [ "$da" -gt "$db" ] && ! item_off ti.skip; then
   added=$(printf '%s' "$after" | grep -oE "$DISABLE" | sort -u | tr '\n' ' ')
   block "$(tn ti.disable "$db" "$da")" "$(t line.file "$FILE_PATH"; tn ti.markers "$added")"
 fi
 
 ab=$(count "$ASSERT" "$before"); aa=$(count "$ASSERT" "$after")
-if [ "$aa" -lt "$ab" ]; then
+if [ "$aa" -lt "$ab" ] && ! item_off ti.assert; then
   block "$(tn ti.assert "$ab" "$aa")" "$(tn line.file "$FILE_PATH")"
 fi
 exit 0

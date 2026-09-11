@@ -5,14 +5,14 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 ## 검사 명령
 
 - `tests/lib/unit.sh` — 메시지 카탈로그 21건. 두 언어의 키가 맞는지, 언어 결정 순서가 맞는지, 카탈로그가 사라져도 조용히 통과하지 않는지 본다.
-- `tests/no-guess-gate/unit.sh` — 근거 게이트 141건. 모델을 부르지 않는다.
-- `tests/done-gate/unit.sh` — 완료 게이트 60건. PR 본문 근거 21건 포함.
-- `tests/test-integrity/unit.sh` — 테스트 무결성 50건.
-- `tests/project-guard/unit.sh` — 프로젝트 가드 32건.
+- `tests/no-guess-gate/unit.sh` — 근거 게이트 143건. 모델을 부르지 않는다.
+- `tests/done-gate/unit.sh` — 완료 게이트 67건. PR 본문 근거 21건 포함.
+- `tests/test-integrity/unit.sh` — 테스트 무결성 58건.
+- `tests/project-guard/unit.sh` — 프로젝트 가드 35건.
 - `tests/repo-profile/unit.sh` — 저장소 프로필 22건.
 - `tests/skills-unit.sh` — 스킬 정의 5건.
 - `tests/attack-surface.sh` — SECURITY.md가 적은 공격면과 코드가 맞는지 9건.
-- `tests/invariants.sh` — 매니페스트·CHANGELOG·문서의 숫자, 셸 인용, 하네스의 카탈로그 복사, 메시지 키 커버리지 17건.  **합계 357건.**
+- `tests/invariants.sh` — 매니페스트·CHANGELOG·문서의 숫자, 셸 인용, 하네스의 카탈로그 복사, 메시지 키 커버리지 17건.  **합계 377건.**
 - `tests/fuzz.sh` — 망가진 입력을 열 훅에 던져 조용히 통과하지 않는지 본다. 모델을 부르지 않는다.
 - `tests/no-guess-gate/selftest.sh` — 실제 프롬프트 회귀 12케이스. Haiku를 부르고 몇 분 걸린다.
 - `tests/no-guess-gate/ab.sh` — 게이트 켠 채와 끈 채를 비교해 효과를 잰다. `SET=hard`가 압박 프롬프트.
@@ -41,7 +41,7 @@ Claude Code 공식 best practices와 검증된 문서의 권고를 **훅으로 �
 - `plugin/hooks/lib/common.sh` — 모든 훅이 공유하는 입력 파서와 메시지 함수 `t`·`tn`. `no-guess-gate/pre.sh`는 도구 호출마다 돌아 파라미터 확장만 쓰는 빠른 경로가 따로 있다.
 - `plugin/hooks/lib/msg.sh` — 사람과 모델에게 나가는 문장 46개를 한국어와 영어로 담는다. 차단이 일어날 때만 읽는다. **훅 안에 문장을 직접 쓰지 않는다.** 한쪽 언어에만 넣으면 `tests/lib/unit.sh`가 잡는다.
 - `plugin/hooks/no-guess-gate/stop.sh` — 규칙 R0~R5와 면제 다섯. `judge.py`가 R2a·R2b만 걸렸을 때 의견인지 상태 주장인지 작은 모델에게 묻는다(`NGG_JUDGE_MODEL`, 기본 haiku).
-- `.grounded.toml` 이 읽는 키는 넷이다. `test_command`·`fast_test_command`(완료 게이트), `append_only`(프로젝트 가드), `disabled_rules`(근거 게이트의 규칙별 끄기). **파서는 한 줄에 키 하나다.** macOS 기본 파이썬(3.9)에 `tomllib` 이 없어 온전한 TOML 파서를 쓰지 않는다.
+- `.grounded.toml` 이 읽는 키는 넷이다. `test_command`·`fast_test_command`(완료 게이트), `append_only`(프로젝트 가드), `disabled_rules`(근거 게이트의 규칙과 다른 게이트의 항목을 하나씩 끄기. 이름 목록은 `common.sh`의 `NGG_ITEMS`). **파서는 한 줄에 키 하나다.** macOS 기본 파이썬(3.9)에 `tomllib` 이 없어 온전한 TOML 파서를 쓰지 않는다.
 - `plugin/hooks/done-gate/` — 코드를 고친 턴에 저장소 검사를 돌린다. 이 저장소의 `.grounded.toml`이 자기 테스트를 가리킨다.
 - `plugin/hooks/test-integrity/` — 테스트 무력화 편집, 테스트 파일 삭제, 러너 설정의 제외 추가를 막는다.
 - `plugin/hooks/project-guard/` — `append_only` 경로의 기존 파일 수정·삭제와 `--no-verify` 커밋을 막는다.

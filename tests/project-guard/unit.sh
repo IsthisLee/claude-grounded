@@ -90,4 +90,11 @@ bash_ "$P" 'git commit --no-verify -m x' | "$W/pre.sh" 2>/dev/null; check 2 $? "
 bash_ "$P" 'echo hi; git commit --no-verify -m x' | "$W/pre.sh" 2>/dev/null; check 2 $? "인용: 뒤 문장의 진짜 사용도 막는다"
 bash_ "$P" 'git commit -m x' | "$W/pre.sh" 2>/dev/null; check 0 $? "인용: 평범한 커밋은 통과"
 
+# 항목 하나만 끄기. NGG_GUARD=0 은 append-only 까지 같이 끈다.
+PX="$T/off"; mkdir -p "$PX/supabase/migrations"; printf 'x\n' > "$PX/supabase/migrations/0001.sql"
+printf 'append_only = "supabase/migrations"\ndisabled_rules = "pg.noverify"\n' > "$PX/.grounded.toml"
+bash_ "$PX" "git commit --no-verify -m x" | NGG_STATE="$T/pgs" "$W/pre.sh" 2>/dev/null; check 0 $? "끄기: pg.noverify 를 끄면 --no-verify 를 막지 않는다"
+grep -q 'off=\[pg.noverify\]' "$T/pgs/state/events.log"; check 0 $? "끄기: 끈 사실이 events.log 에 남는다"
+edit "$PX" Edit "$PX/supabase/migrations/0001.sql" | NGG_STATE="$T/pgs" "$W/pre.sh" 2>/dev/null; check 2 $? "끄기: pg.noverify 만 끄면 append-only 는 그대로다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

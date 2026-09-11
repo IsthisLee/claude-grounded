@@ -45,4 +45,28 @@ tn() { [ -n "${NGG_MSG_LOADED:-}" ] || {
 t() { tn "$@"; echo; }
 
 state_root() { printf '%s' "${NGG_STATE:-$1}"; }
+
+# 항목 하나만 끄기. .grounded.toml 의 disabled_rules 한 줄에 근거 게이트의 규칙(R0~R5)과
+# 다른 게이트의 항목이 같이 온다. 환경변수는 한 사람 셸에만 있어 팀이 모르므로 파일에 둔다.
+# 막기 직전에만 부른다. 이 파일은 도구 호출마다 읽히므로 걸린 것이 없으면 설정을 읽지 않는다.
+NGG_ITEMS="done.turn done.commit done.pr ti.skip ti.assert ti.rm ti.exclude pg.noverify"
+off_list() { local conf="${CWD:-$PWD}/.grounded.toml"; [ -f "$conf" ] || return 0
+  sed -n 's/^[[:space:]]*disabled_rules[[:space:]]*=[[:space:]]*"\(.*\)"[[:space:]]*$/\1/p' "$conf" | head -1 | tr ',' ' '; }
+lc() { printf '%s' "$1" | LC_ALL=C tr '[:upper:]' '[:lower:]'; }
+# item_off <이름> — 꺼져 있으면 끈 사실을 events.log 에 남기고 0 을 돌려준다.
+# 남기지 않으면 왜 안 막았는지 나중에 알 수 없다. /grounded:status 가 이 줄을 읽는다.
+item_off() { local tok sd
+  for tok in $(off_list); do
+    [ "$(lc "$tok")" = "$1" ] || continue
+    sd="$(state_root "${d:-$NGG_LIB}")/state"
+    mkdir -p "$sd" 2>/dev/null && echo "$HOOK_EVENT_NAME${AGENT_ID:+/agent} off=[$1] tool=$TOOL_NAME" >> "$sd/events.log"
+    return 0
+  done
+  return 1; }
+# 막을 때 부른다. 없는 이름이 있으면 알린다. 껐다고 믿는데 안 꺼진 상태가 제일 나쁘다.
+off_bad() { local tok bad=""
+  for tok in $(off_list); do
+    case " r0 r1 r2a r2b r3 r4 r5 $NGG_ITEMS " in *" $(lc "$tok") "*) ;; *) bad="$bad $tok";; esac
+  done
+  [ -z "$bad" ] || t ngg.offbad "${bad# }"; }
 state_dir() { local d; d="$(state_root "$1")/state/$SESSION_ID"; [ -n "$AGENT_ID" ] && d="$d/agent-$AGENT_ID"; mkdir -p "$d"; printf '%s' "$d"; }

@@ -51,6 +51,8 @@ print(n)' "$root" "$CODE_RE" < "$ch" 2>/dev/null || echo 0)
   [ -z "$code" ] && code=0
 fi
 [ "${code:-0}" -gt 0 ] || exit 0
+# 항목 하나만 끄기(done.turn). 검사를 돌리기 전에 본다. 꺼져 있으면 돌릴 이유가 없다.
+item_off done.turn && exit 0
 
 note() { t done.prefix "$1" >&2; }
 
@@ -98,6 +100,7 @@ fi
 
 {
   t done.failhead "$rc"
+  off_bad
   t done.ran "$cmd" "$src"
   t done.files "$code" "$n"
   t done.tail

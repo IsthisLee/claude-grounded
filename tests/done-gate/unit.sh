@@ -270,4 +270,27 @@ printf '%s' "$(pr p15 "$PRC" "gh pr create --title t --body 'passed'")" | NGG_LA
 grep -q 'Completion gate' "$T/epr-en"; check 0 $? "PR en: 영어 머리글"
 nohangul "$(cat "$T/epr-en")"; check 0 $? "PR en: 한글이 섞이지 않는다"
 
+# 16. 항목 하나만 끄기. disabled_rules 가 근거 게이트 밖의 항목 이름도 받는다.
+#     환경변수 NGG_DONE=0 은 세 검사를 한꺼번에 끄고 팀에 보이지 않는다.
+PO=$(newrepo proff src/a.ts)
+printf 'disabled_rules = "done.pr"\n' > "$PO/.grounded.toml"
+prrun q1 "$PO" "gh pr create --title t --body '통과'"; check 0 $? "끄기: done.pr 을 끄면 PR 본문을 보지 않는다"
+grep -q 'off=\[done.pr\]' "$T/prs/state/events.log"; check 0 $? "끄기: 끈 사실이 events.log 에 남는다"
+# 오타는 조용히 넘어가면 안 된다. 껐다고 믿는데 안 꺼진 상태가 제일 나쁘다.
+printf 'disabled_rules = "done.pt"\n' > "$PO/.grounded.toml"
+prrun q2 "$PO" "gh pr create --title t --body '통과'"; check 2 $? "끄기: 없는 이름은 아무것도 끄지 않는다"
+grep -q 'done.pt' "$T/epr"; check 0 $? "끄기: 없는 이름을 막을 때 알린다"
+
+PT=$(newproj pturn); ST="$T/sturn"
+printf 'test_command = "exit 1"\ndisabled_rules = "done.turn"\n' > "$PT/.grounded.toml"
+printf '%s' "$(post tt "$PT" "$PT/src/a.ts")" | NGG_STATE="$ST" "$W/post.sh"
+printf '%s' "$(stop tt "$PT")" | NGG_STATE="$ST" "$W/stop.sh" 2>/dev/null; check 0 $? "끄기: done.turn 을 끄면 턴 끝 검사를 돌리지 않는다"
+
+PM=$(newproj pcommit); SM="$T/scommit"
+printf 'fast_test_command = "true"\ntest_command = "exit 1"\ndisabled_rules = "done.commit"\n' > "$PM/.grounded.toml"
+printf '%s' "$(commit tm "$PM" "git commit -m x")" | NGG_STATE="$SM" "$W/pre.sh" 2>/dev/null; check 0 $? "끄기: done.commit 을 끄면 커밋 전 검사를 돌리지 않는다"
+# 한 항목을 끈 것이 다른 항목까지 끄면 안 된다.
+printf 'fast_test_command = "true"\ntest_command = "exit 1"\ndisabled_rules = "done.pr"\n' > "$PM/.grounded.toml"
+printf '%s' "$(commit tm "$PM" "git commit -m x")" | NGG_STATE="$SM" "$W/pre.sh" 2>/dev/null; check 2 $? "끄기: done.pr 만 끄면 커밋 전 검사는 그대로다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"
