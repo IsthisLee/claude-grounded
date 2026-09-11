@@ -39,6 +39,10 @@ msg_ko() { case "$1" in
   done.prehead)  M="완료 게이트: 커밋 전 전체 검사가 실패했다(exit %s). 커밋할 수 없다." ;;
   done.preran)   M="- 돌린 명령: %s   (.grounded.toml test_command)" ;;
   done.fixshort) M="테스트를 고쳐서 통과시키지 마라. 코드를 고쳐라." ;;
+  done.prhead)   M="완료 게이트: PR 본문에 근거가 없다. 이 PR을 열 수 없다." ;;
+  done.prfiles)  M="- 이 브랜치가 바꾼 코드 파일: %s개 (기준: %s)" ;;
+  done.prnobase) M="- 기준 브랜치를 찾지 못해 코드를 바꿨는지 가리지 못했다. 본문만 보고 판정했다." ;;
+  done.prfix)    M="본문에 실제로 돌린 검사 명령과 그 출력을 코드 블록(\`\`\`)으로 붙여라. 화면을 바꿨으면 스크린샷을 넣어라. 통과했다는 말만으로는 근거가 되지 않는다. 돌리지 않은 출력을 지어내지 마라." ;;
 
   ti.prefix)     M="테스트 무결성 게이트: %s" ;;
   ti.advice)     M="테스트가 아니라 코드를 고쳐라. 요구가 바뀌어 테스트가 틀린 것이면, 무엇이 바뀌어 그 테스트가 이제 틀렸는지 밝히고 확인받아라." ;;
@@ -106,6 +110,10 @@ msg_en() { case "$1" in
   done.prehead)  M="Completion gate: the pre-commit full check failed (exit %s). This commit cannot go through." ;;
   done.preran)   M="- Command: %s   (.grounded.toml test_command)" ;;
   done.fixshort) M="Do not make it pass by editing the test. Fix the code." ;;
+  done.prhead)   M="Completion gate: the PR body carries no evidence. This PR cannot be opened." ;;
+  done.prfiles)  M="- Code files this branch changes: %s (against %s)" ;;
+  done.prnobase) M="- No base branch was found, so it is unknown whether code changed. Judged on the body alone." ;;
+  done.prfix)    M="Paste the check command you actually ran and its output into the body as a code block (\`\`\`). If the screen changed, add a screenshot. Saying it passed is not evidence. Do not make up output you did not run." ;;
 
   ti.prefix)     M="Test-integrity gate: %s" ;;
   ti.advice)     M="Fix the code, not the test. If the requirement changed and the test is now wrong, say what changed and get that confirmed first." ;;

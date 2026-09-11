@@ -86,6 +86,31 @@ Disable with `NGG_DONE=0`; the timeout is `DONE_TIMEOUT` (default 180s).
 
 This repo eats its own dog food: its `.grounded.toml` points at its own test suites, so changing a hook makes the hook check itself.
 
+### No evidence, no PR
+
+Right before `gh pr create`, the gate reads the body. Without the command you ran and its output, the PR does not open. That is exactly what the official docs name as evidence:
+
+> "Have Claude show evidence rather than asserting success: the test output, the command it ran and what it returned, or a screenshot of the result."
+
+What counts is a **closed code block** (both the opening and the closing fence) or an **image**. The body is read from `--body`, `--body-file`, or a heredoc passed with `-F -`, including the `--body "$(cat <<'EOF' … EOF)"` shape agents usually write.
+
+| Case | Verdict |
+|---|---|
+| The body has a code block or an image | Passes |
+| The body only says "all tests pass" | Blocked |
+| No code files changed against the base branch (docs only) | Passes |
+| The body is not in the command (`--fill`, `--web`) | Passes. It never blocks on what it cannot see |
+| `gh pr create` appears inside a commit message or a doc | Passes. Quoting is not using |
+| No base branch found | It cannot tell whether code changed, so it judges the body alone |
+
+The base is `--base` if given, otherwise the first that exists of `origin/HEAD` → `origin/main` → `origin/master` → `main` → `master`. Local git only; nothing goes over the network.
+
+**It checks the form only.** It cannot tell whether the pasted output came from a real run; it stops at telling a blocked model not to make output up. It does not look at `gh pr edit --body` either.
+
+A one-line code fix is in scope too. That clashes with the habit of opening small fixes with a title alone; the choice here is that a code change carries one block of check output. Docs-only PRs are not affected.
+
+Disable it with `NGG_DONE=0`, same as the rest of the completion gate.
+
 ## Test-integrity gate: fix the code, not the test
 
 This blocks exactly what Kent Beck called cheating.
