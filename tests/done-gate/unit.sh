@@ -330,4 +330,13 @@ printf 'test_command = "exit 1"\n' > "$PE/.grounded.toml"
 printf '{"session_id":"ag","hook_event_name":"PostToolUse","cwd":"%s","agent_id":"sub1","tool_name":"Edit","tool_input":{"file_path":"%s"}}' "$PE" "$PE/src/a.ts" | NGG_STATE="$SE" "$W/post.sh"
 printf '%s' "$(stop ag "$PE")" | NGG_STATE="$SE" "$W/stop.sh" 2>/dev/null; check 2 $? "서브에이전트: 서브에이전트의 편집도 메인 턴 끝에 검사한다"
 
+# 20. 빠른 경로. pre.sh 는 Bash 호출마다 돌지만 보는 것은 커밋과 PR 생성뿐이다. 그 글자가 없으면
+#     파이썬을 띄우지 않는다. 불리면 소리를 내는 가짜 python3 를 PATH 앞에 두고 확인한다.
+# 훅은 파이썬의 stderr 를 버린다. 그래서 가짜 python3 는 불린 사실을 파일로 남긴다.
+FB="$T/fakebin"; mkdir -p "$FB"; printf '#!/usr/bin/env bash\necho called >> "%s/called"\nexit 97\n' "$FB" > "$FB/python3"; chmod +x "$FB/python3"
+rm -f "$FB/called"; printf '%s' "$(commit fp "$PB" "ls -la && npm test")" | PATH="$FB:$PATH" NGG_STATE="$SB" "$W/pre.sh" 2>/dev/null; check 0 $? "빠른 경로: 관계없는 Bash 명령은 파이썬 없이 통과한다"
+[ -e "$FB/called" ]; r=$?; check 1 "$r" "빠른 경로: 관계없는 Bash 명령에는 파이썬을 띄우지 않는다"
+rm -f "$FB/called"; printf '%s' "$(commit fp "$PB" "git commit -m x")" | PATH="$FB:$PATH" NGG_STATE="$SB" "$W/pre.sh" 2>/dev/null
+[ -e "$FB/called" ]; check 0 $? "빠른 경로: 커밋 명령은 끝까지 검사한다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

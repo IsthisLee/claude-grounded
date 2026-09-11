@@ -197,14 +197,14 @@ Installing this adds time to every turn. Here are the numbers: the median of 20 
 | `no-guess-gate/stop.sh` | end of turn | 161ms |
 | `done-gate/stop.sh` | end of turn | 44ms |
 | `no-guess-gate/pre.sh` | per tool call | 17ms |
-| `test-integrity/pre.sh` | per Edit, Write or Bash call | 50ms |
-| `project-guard/pre.sh` | per Edit, Write or Bash call | 44ms |
-| `done-gate/pre.sh` | per Bash call | 43ms |
+| `test-integrity/pre.sh` | per Edit, Write or Bash call | 46ms; 12ms for a Bash call with no delete in it |
+| `project-guard/pre.sh` | per Edit, Write or Bash call | 41ms; 13ms for a Bash call with no delete, move or commit in it |
+| `done-gate/pre.sh` | per Bash call | 12ms unless it is a commit or a PR |
 | `no-guess-gate/bashres.sh` | per Bash call | 17ms |
 | `done-gate/post.sh` | per Edit or Write call | 44ms |
 | `repo-profile/session.sh` | once per session | 65ms |
 
-**The per-turn floor is about 256ms** (`prompt` plus both `stop` hooks). What a tool call adds depends on the tool: about 170ms per Bash call, about 155ms per Edit or Write, 17ms for any other tool. Opening a session costs 65ms once.
+**The per-turn floor is about 256ms** (`prompt` plus both `stop` hooks). What a tool call adds depends on the tool: about 70ms per Bash call, or about 170ms when the command deletes, moves, commits or opens a PR and the hooks check it all the way; about 155ms per Edit or Write; 17ms for any other tool. The three Bash-side hooks look at the tool name and the relevant words first, and skip Python for commands that do not concern them (V40). Opening a session costs 65ms once.
 
 The first measurement (V28) put the floor at 326ms. Running v1.5.0 through the same script today gives 258ms, so the drop comes from the measuring conditions, not the code. 1.6.0 added four features and no hook moved by more than 5ms.
 

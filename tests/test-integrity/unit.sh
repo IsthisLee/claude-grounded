@@ -168,4 +168,13 @@ edit "$Q/src/deep" "$Q/src/a.test.ts" "$SKIP_OLD" "$SKIP_NEW" | NGG_STATE="$T/ti
 rm -f "$Q/.grounded.toml"
 edit "$Q" "$Q/src/a.test.ts" "run('Bash')" "$SKIP_NEW run('Bash')" | "$W/pre.sh" 2>/dev/null; check 2 $? "빠른 경로: 본문에 Bash 가 있어도 Edit 은 끝까지 검사한다"
 
+# 빠른 경로. 이 훅은 Bash 호출마다 돈다. Bash 에서 보는 것은 테스트 파일 삭제뿐이라, 삭제 글자가 없으면
+# 파이썬을 띄우지 않고 끝낸다. 불리면 소리를 내는 가짜 python3 를 PATH 앞에 두고 확인한다.
+# 훅은 파이썬의 stderr 를 버린다. 그래서 가짜 python3 는 불린 사실을 파일로 남긴다.
+FB="$T/fakebin"; mkdir -p "$FB"; printf '#!/usr/bin/env bash\necho called >> "%s/called"\nexit 97\n' "$FB" > "$FB/python3"; chmod +x "$FB/python3"
+rm -f "$FB/called"; bash_ "$P" "ls -la && npm test" | PATH="$FB:$PATH" "$W/pre.sh" 2>/dev/null; check 0 $? "빠른 경로: 관계없는 Bash 명령은 파이썬 없이 통과한다"
+[ -e "$FB/called" ]; r=$?; check 1 "$r" "빠른 경로: 관계없는 Bash 명령에는 파이썬을 띄우지 않는다"
+rm -f "$FB/called"; bash_ "$P" "rm src/a.test.ts" | PATH="$FB:$PATH" "$W/pre.sh" 2>/dev/null
+[ -e "$FB/called" ]; check 0 $? "빠른 경로: 삭제 명령은 끝까지 검사한다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

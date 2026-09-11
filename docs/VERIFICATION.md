@@ -2565,3 +2565,79 @@ $ tests/fuzz.sh
 - **`userConfig`로 설정을 옮기지 않았다.** 저장소 설정을 파일에 두는 것은 팀이 PR에서 보게 하려는 설계다. 언어나 판정기 모델 같은 사용자 수준 설정은 옮길 수 있지만 이번 범위에 넣지 않았다.
 - **멀티 하네스(Codex·Cursor 등)는 범위 밖이다.** 인기 플러그인들의 흐름이지만 이 플러그인의 게이트는 Claude Code의 훅 이벤트에 묶여 있다.
 - **훅의 `if` 필드는 쓰지 않는다.** 실제 세션에서 동작은 확인했다(`Bash(git *)`는 `git status`에만, `Bash(rm *)`는 `echo hi && rm b.txt`에만 걸렸다). 하지만 `if`를 쓰려면 `hooks.json`을 여러 줄로 쪼개야 하고, `if`를 모르는 옛 버전에서는 훅이 몇 배로 돈다. 같은 절감은 스크립트 안의 빠른 경로로 얻는다(V40).
+
+## V40 관계없는 Bash 명령에서는 파이썬을 띄우지 않는다
+
+V38에서 Bash 한 번에 약 170ms가 붙는다고 쟀다. 대부분은 테스트 무결성·프로젝트 가드·완료 게이트의 `pre.sh`가 매번 파이썬으로 입력을 읽는 비용이었다. 그런데 세 훅이 Bash에서 실제로 보는 것은 삭제·이동·커밋·PR 생성뿐이다.
+
+`common.sh`에 `quick_tool`을 넣었다. 입력의 `tool_name` 값만 파라미터 확장으로 뽑는다. 근거 게이트 `pre.sh`의 `_jstr`와 같은 안전 조건이라 `"tool_name"`이 정확히 한 번 나오고 값이 식별자 꼴일 때만 답한다. 8KB를 넘는 입력에는 쓰지 않는다. `${IN#*패턴}`은 입력 길이의 제곱으로 느려질 수 있고, 이 훅들은 Edit·Write의 긴 본문도 받는다. Bash인데 관련 글자가 없으면 파이썬을 띄우지 않고 끝낸다.
+
+| 훅 | 계속 검사하는 글자 |
+|---|---|
+| `test-integrity/pre.sh` | `rm` |
+| `project-guard/pre.sh` | `rm`, `mv`, `commit` |
+| `done-gate/pre.sh` | `commit`, `create` |
+
+### 측정 도구가 먼저 틀렸다
+
+파이썬이 불리는지 보려고, 불리면 `PYTHON_CALLED`를 stderr에 찍는 가짜 `python3`를 PATH 앞에 뒀다. 그런데 RED에서 관련 명령 쪽 검사까지 실패했다. 훅의 `read_in`이 파이썬의 stderr를 `2>/dev/null`로 버려서 표시가 사라진 것이었다. 그대로 두면 구현 뒤의 "파이썬을 띄우지 않는다" 검사가 아무 뜻 없이 통과한다. 가짜 `python3`가 불린 사실을 파일로 남기게 고치고 RED를 다시 봤다.
+
+```
+=== test-integrity
+✅ 빠른 경로: 본문에 Bash 가 있어도 Edit 은 끝까지 검사한다
+❌ 빠른 경로: 관계없는 Bash 명령은 파이썬 없이 통과한다 (기대=0 실측=1)
+❌ 빠른 경로: 관계없는 Bash 명령에는 파이썬을 띄우지 않는다 (기대=1 실측=0)
+✅ 빠른 경로: 삭제 명령은 끝까지 검사한다
+=== project-guard
+❌ 빠른 경로: 관계없는 Bash 명령은 파이썬 없이 통과한다 (기대=0 실측=1)
+❌ 빠른 경로: 관계없는 Bash 명령에는 파이썬을 띄우지 않는다 (기대=1 실측=0)
+✅ 빠른 경로: 커밋 명령은 끝까지 검사한다
+=== done-gate
+❌ 빠른 경로: 관계없는 Bash 명령은 파이썬 없이 통과한다 (기대=0 실측=1)
+❌ 빠른 경로: 관계없는 Bash 명령에는 파이썬을 띄우지 않는다 (기대=1 실측=0)
+✅ 빠른 경로: 커밋 명령은 끝까지 검사한다
+```
+
+### 절감량
+
+빠른 경로를 넣기 전 판(`fa726ef`)과 넣은 뒤를 같은 입력으로 번갈아 20회씩 돌렸다. 스크립트는 V38과 같다.
+
+```
+hook                     input                before    after   (median of 20, ms)
+test-integrity/pre.sh    Bash ls -la            41.8     11.9
+test-integrity/pre.sh    Bash git status        41.5     12.3
+test-integrity/pre.sh    Edit                   47.9     46.0
+project-guard/pre.sh     Bash ls -la            64.1     12.5
+project-guard/pre.sh     Bash git status        65.5     12.0
+project-guard/pre.sh     Edit                   41.7     41.3
+done-gate/pre.sh         Bash ls -la            40.8     12.3
+done-gate/pre.sh         Bash git status        41.1     12.0
+```
+
+관계없는 Bash 한 번에 붙는 비용은 이제 `no-guess-gate/pre.sh`(17ms)와 `bashres.sh`(17ms)에 세 훅의 약 37ms를 더한 약 70ms다. 삭제·이동·커밋·PR 생성 명령과 Edit·Write는 전처럼 끝까지 검사한다.
+
+### GREEN
+
+```
+lib: 전부 통과 · checks=21
+no-guess-gate: 실패 0건 · checks=150
+done-gate: 실패 0건 · checks=81
+test-integrity: 실패 0건 · checks=68
+project-guard: 실패 0건 · checks=44
+repo-profile: 실패 0건 · checks=23
+skills-unit: 실패 0건 · checks=5
+attack-surface: 전부 통과 · checks=9
+invariants: 전부 통과 · checks=17
+합계 checks=418
+$ shellcheck -x -s bash plugin/hooks/*/*.sh tests/*.sh tests/*/*.sh
+shellcheck exit 0
+$ tests/fuzz.sh
+실행 240회 · 실패 0건
+```
+
+처음 돌린 shellcheck는 `common.sh`의 `QT`를 쓰이지 않는 변수로 봤다(SC2034). 이 파일을 읽는 훅들이 쓰는 변수라, `NGG_L`과 같은 방식으로 이유를 적고 그 경고만 껐다.
+
+### 하지 않은 것
+
+- 훅의 `if` 필드를 쓰면 프로세스조차 띄우지 않을 수 있다. V39에 적은 이유로 쓰지 않았다.
+- Edit·Write 경로는 그대로다. 본문을 파이썬으로 비교해야 해서 빠른 경로가 없다.

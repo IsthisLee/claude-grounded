@@ -108,4 +108,13 @@ edit "$P/src" Edit "$P/supabase/migrations/0001_init.sql" | "$W/pre.sh" 2>/dev/n
 bash_ "$P/supabase" "rm migrations/0001_init.sql" | "$W/pre.sh" 2>/dev/null; check 2 $? "루트: 하위 폴더 기준 상대 경로 삭제도 막는다"
 bash_ "$P/src" "git commit --no-verify -m x" | "$W/pre.sh" 2>/dev/null; check 2 $? "루트: 하위 폴더에서도 --no-verify 를 막는다"
 
+# 빠른 경로. Bash 에서 보는 것은 삭제·이동과 --no-verify 커밋뿐이라, 그 글자가 없으면 파이썬을 띄우지 않는다.
+# 불리면 소리를 내는 가짜 python3 를 PATH 앞에 두고 확인한다.
+# 훅은 파이썬의 stderr 를 버린다. 그래서 가짜 python3 는 불린 사실을 파일로 남긴다.
+FB="$T/fakebin"; mkdir -p "$FB"; printf '#!/usr/bin/env bash\necho called >> "%s/called"\nexit 97\n' "$FB" > "$FB/python3"; chmod +x "$FB/python3"
+rm -f "$FB/called"; bash_ "$P" "ls -la && npm test" | PATH="$FB:$PATH" "$W/pre.sh" 2>/dev/null; check 0 $? "빠른 경로: 관계없는 Bash 명령은 파이썬 없이 통과한다"
+[ -e "$FB/called" ]; r=$?; check 1 "$r" "빠른 경로: 관계없는 Bash 명령에는 파이썬을 띄우지 않는다"
+rm -f "$FB/called"; bash_ "$P" "git commit --no-verify -m x" | PATH="$FB:$PATH" "$W/pre.sh" 2>/dev/null
+[ -e "$FB/called" ]; check 0 $? "빠른 경로: 커밋 명령은 끝까지 검사한다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"
