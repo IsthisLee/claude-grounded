@@ -177,4 +177,97 @@ else
 fi
 symrun "$T/elsewhere/a.js" "$PS"; check 0 $? "심링크: 정말 저장소 밖이면 세지 않는다"
 
+# 15. PR 본문에 근거가 있어야 PR 을 연다.
+#     공식 best practices: "Have Claude show evidence rather than asserting success:
+#     the test output, the command it ran and what it returned, or a screenshot of the result."
+#     입력 JSON 은 printf 로 만든다. 명령에는 따옴표와 개행이 들어가므로 그 문자열만 파이프로
+#     파이썬에 넘겨 이스케이프한다. 파이프는 Git Bash 가 경로를 바꾸지 않는다.
+pr() { local c; c=$(printf '%s' "$3" | python3 -c 'import json,sys; sys.stdout.write(json.dumps(sys.stdin.read(), ensure_ascii=False))')
+  printf '{"session_id":"%s","hook_event_name":"PreToolUse","cwd":"%s","tool_name":"Bash","tool_input":{"command":%s}}' "$1" "$2" "$c"; }
+prrun() { printf '%s' "$(pr "$1" "$2" "$3")" | NGG_STATE="$T/prs" "$W/pre.sh" 2>"$T/epr"; }
+# 사용자 전역 설정(서명, 커밋 훅)이 테스트 저장소에 끼어들지 않게 한다.
+gitc() { local r="$1"; shift; git -C "$r" -c user.name=t -c user.email=t@example.invalid -c commit.gpgsign=false -c core.hooksPath=.nohooks "$@"; }
+newrepo() { local r; r=$(newproj "$1"); git init -q "$r"; gitc "$r" checkout -qb main
+  printf 'x\n' > "$r/README.md"; gitc "$r" add .; gitc "$r" commit -qm init
+  gitc "$r" checkout -qb feat; mkdir -p "$r/$(dirname "$2")"; printf 'x\n' > "$r/$2"
+  gitc "$r" add .; gitc "$r" commit -qm feat; printf '%s' "$r"; }
+PRC=$(newrepo prcode src/a.ts)
+PRD=$(newrepo prdocs docs/guide.md)
+
+prrun p1 "$PRC" "gh pr create --title t --body '테스트 전부 통과했습니다.'"; check 2 $? "PR: 말로만 통과 → exit 2"
+grep -q '완료 게이트' "$T/epr"; check 0 $? "PR: stderr에 완료 게이트 머리글"
+grep -q 'PR' "$T/epr"; check 0 $? "PR: stderr에 무엇을 막았는지"
+
+# 에이전트가 가장 흔히 쓰는 모양. heredoc 본문의 작은따옴표 하나에 셸 파서가 죽으면 안 된다.
+IFS= read -r -d '' c <<'CMD'
+gh pr create --title "t" --body "$(cat <<'EOF'
+## 검증
+
+```
+$ npm test
+Tests: 3 passed
+```
+It's reviewed.
+EOF
+)"
+CMD
+prrun p2 "$PRC" "$c"; check 0 $? "PR: heredoc 본문에 코드 블록 → 통과"
+
+IFS= read -r -d '' c <<'CMD'
+gh pr create --title "t" --body "$(cat <<'EOF'
+## 요약
+It's done. 테스트 전부 통과했습니다.
+EOF
+)"
+CMD
+prrun p3 "$PRC" "$c"; check 2 $? "PR: heredoc 본문에 근거 없음 → exit 2"
+
+# shellcheck disable=SC2016  # 백틱과 $ 는 PR 본문에 들어갈 글자다. 셸이 펼치면 안 된다
+printf '## 검증\n\n```\n$ npm test\nok\n```\n' > "$PRC/body-ok.md"
+printf '## 요약\n통과했습니다.\n' > "$PRC/body-no.md"
+prrun p4 "$PRC" "gh pr create --title t --body-file body-ok.md"; check 0 $? "PR: --body-file 에 코드 블록 → 통과"
+prrun p5 "$PRC" "gh pr create --title t --body-file body-no.md"; check 2 $? "PR: --body-file 에 근거 없음 → exit 2"
+
+IFS= read -r -d '' c <<'CMD'
+gh pr create --title t -F - <<'EOF'
+## 검증
+```
+$ npm test
+ok
+```
+EOF
+CMD
+prrun p6 "$PRC" "$c"; check 0 $? "PR: -F - 로 넘긴 heredoc 에 코드 블록 → 통과"
+
+prrun p7 "$PRC" "gh pr create --title t --body '![화면](shot.png)'"; check 0 $? "PR: 스크린샷 → 통과"
+prrun p8 "$PRC" "git push -u origin HEAD && gh pr create --title t --body '통과'"; check 2 $? "PR: 앞 명령에 이어 붙어도 → exit 2"
+
+# 모르는 것으로 막지 않는다. 본문이 명령에 없으면 볼 수 없다.
+prrun p9 "$PRC" "gh pr create --fill"; check 0 $? "PR: --fill 은 본문을 볼 수 없어 → 통과"
+
+# 인용은 사용이 아니다.
+prrun p10 "$PRC" 'echo "gh pr create --body x" >> notes.md'; check 0 $? "PR: 문서에 적는 것은 사용이 아니다"
+prrun p11 "$PRC" "git commit -m 'docs: gh pr create 게이트'"; check 0 $? "PR: 커밋 메시지에 든 것은 사용이 아니다"
+
+# 코드가 아닌 변경은 대상이 아니다. 완료 게이트의 원칙과 같다.
+prrun p12 "$PRD" "gh pr create --title t --body '오타 수정'"; check 0 $? "PR: 문서만 바꾼 브랜치 → 통과"
+# 기준 브랜치를 못 찾으면 코드인지 가릴 수 없다. 본문만 보고 판정한다.
+PRN=$(newproj prnogit)
+prrun p13 "$PRN" "gh pr create --title t --body '통과'"; check 2 $? "PR: 기준 브랜치를 모르면 본문만 본다 → exit 2"
+
+# 셸은 개행도 문장 구분자로 읽는다. 공백으로 읽으면 둘째 줄의 gh 가 명령 자리에 있다는 걸 놓친다.
+prrun p16 "$PRC" "$(printf 'git push -u origin HEAD\ngh pr create --title t --body %s' "'통과'")"; check 2 $? "PR: 줄을 바꿔 이어 써도 → exit 2"
+# 줄 이음(\)으로 플래그를 다음 줄에 써도 읽어야 한다. 못 읽으면 본문이 없는 것으로 보고 통과시킨다.
+IFS= read -r -d '' c <<'CMD'
+gh pr create --title t \
+  --body-file body-no.md
+CMD
+prrun p17 "$PRC" "$c"; check 2 $? "PR: 줄 이음으로 나눠 쓴 --body-file 도 읽는다 → exit 2"
+
+printf '%s' "$(pr p14 "$PRC" "gh pr create --title t --body '통과'")" | NGG_DONE=0 NGG_STATE="$T/prs" "$W/pre.sh" 2>/dev/null; check 0 $? "PR: NGG_DONE=0 → 통과"
+
+printf '%s' "$(pr p15 "$PRC" "gh pr create --title t --body 'passed'")" | NGG_LANG=en NGG_STATE="$T/prs" "$W/pre.sh" 2>"$T/epr-en"; check 2 $? "PR en: 말로만 통과 → exit 2"
+grep -q 'Completion gate' "$T/epr-en"; check 0 $? "PR en: 영어 머리글"
+nohangul "$(cat "$T/epr-en")"; check 0 $? "PR en: 한글이 섞이지 않는다"
+
 echo; echo "실패 ${fail}건"; exit "$fail"

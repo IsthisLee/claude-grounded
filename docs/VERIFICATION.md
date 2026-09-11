@@ -2057,3 +2057,98 @@ $ python3 -m py_compile hooks/no-guess-gate/judge.py
 ### 검증
 
 단위 320 → 336건 실패 0. `fuzz` exit 0, `shellcheck` exit 0, `claude plugin validate . --strict` 통과, CI 세 OS 전부 초록.
+
+## V32 PR 본문에 근거가 없으면 PR을 열지 못한다
+
+`/grounded:ship`은 PR 본문에 돌린 명령과 출력을 넣으라고 시킨다. 사람이 그 커맨드를 칠 때만 돌아서, 커맨드를 거치지 않고 여는 PR에는 아무것도 걸리지 않았다. 완료 게이트의 `pre.sh`가 `gh pr create` 직전에 본문을 보게 했다. 근거는 공식 best practices의 이 문장이다.
+
+> "Have Claude show evidence rather than asserting success: the test output, the command it ran and what it returned, or a screenshot of the result."
+
+### RED
+
+테스트 19건을 먼저 넣고 돌렸다. 막아야 하는 케이스가 전부 exit 0으로 샜다.
+
+```
+❌ PR: 말로만 통과 → exit 2 (기대=2 실측=0)
+❌ PR: stderr에 완료 게이트 머리글 (기대=0 실측=1)
+❌ PR: stderr에 무엇을 막았는지 (기대=0 실측=1)
+❌ PR: heredoc 본문에 근거 없음 → exit 2 (기대=2 실측=0)
+❌ PR: --body-file 에 근거 없음 → exit 2 (기대=2 실측=0)
+❌ PR: 앞 명령에 이어 붙어도 → exit 2 (기대=2 실측=0)
+❌ PR: 기준 브랜치를 모르면 본문만 본다 → exit 2 (기대=2 실측=0)
+❌ PR en: 말로만 통과 → exit 2 (기대=2 실측=0)
+❌ PR en: 영어 머리글 (기대=0 실측=1)
+실패 9건
+```
+
+구현하기 전에 빠진 경우 둘을 더 찾아 테스트부터 넣었다. 둘째 줄에 쓴 `gh pr create`와 줄 이음(`\`)으로 나눈 `--body-file`이다. 셸 파서가 개행을 공백으로 읽으면 앞의 것을 놓치고, 줄 이음을 지우지 않으면 플래그를 못 읽어 본문이 없는 것으로 보고 통과시킨다.
+
+```
+❌ PR: 줄을 바꿔 이어 써도 → exit 2 (기대=2 실측=0)
+❌ PR: 줄 이음으로 나눠 쓴 --body-file 도 읽는다 → exit 2 (기대=2 실측=0)
+실패 11건
+```
+
+### GREEN
+
+```
+$ tests/done-gate/unit.sh
+실패 0건
+```
+
+완료 게이트 테스트가 39건에서 60건이 됐다.
+
+### 실제로 막힌 문장
+
+코드 파일 둘을 바꾼 브랜치에서, 에이전트가 흔히 쓰는 heredoc 모양으로 근거 없는 본문을 넣었다. 본문의 작은따옴표(`It's`)에 셸 파서가 죽지 않는지도 함께 본 셈이다.
+
+```
+--- NGG_LANG=ko
+완료 게이트: PR 본문에 근거가 없다. 이 PR을 열 수 없다.
+- 이 브랜치가 바꾼 코드 파일: 2개 (기준: main)
+본문에 실제로 돌린 검사 명령과 그 출력을 코드 블록(```)으로 붙여라. 화면을 바꿨으면 스크린샷을 넣어라. 통과했다는 말만으로는 근거가 되지 않는다. 돌리지 않은 출력을 지어내지 마라.
+exit 2
+--- NGG_LANG=en
+Completion gate: the PR body carries no evidence. This PR cannot be opened.
+- Code files this branch changes: 2 (against main)
+Paste the check command you actually ran and its output into the body as a code block (```). If the screen changed, add a screenshot. Saying it passed is not evidence. Do not make up output you did not run.
+exit 2
+```
+
+### 비용
+
+`pre.sh`는 Bash 호출마다 돈다. 처음에는 앞단에서 `grep`으로 걸렀더니 PR이 아닌 명령이 느려졌다. 프로세스를 하나 더 띄우기 때문이다. `case` 패턴 매칭으로 바꾼 뒤로는 HEAD 판과 차이가 없다. `ls -la`를 넣어 각 30회 중앙값을 세 번 번갈아 쟀다.
+
+| 측정 | HEAD 판 | 새 판 |
+|---|---|---|
+| `grep`으로 거를 때 | 40.4 · 42.4 · 42.5ms | 45.6 · 47.2 · 44.2ms |
+| `case`로 거를 때 | 40.2 · 42.3 · 42.7ms | 40.9 · 42.3 · 42.6ms |
+
+PR 경로는 파이썬을 한 번 더 띄우고 git을 부르므로 94.0ms다(20회 중앙값). PR은 드물게 연다.
+
+이 저장소에서 잰 PR 경로는 exit 0이었다. `origin/HEAD...HEAD`에 커밋된 변경이 없어 문서만 바꾼 경우로 읽혔다. 판정은 커밋된 것만 보는데, `gh pr create`가 올리는 것도 커밋이다.
+
+### 약한 곳
+
+- 형식만 본다. 지어낸 출력을 코드 블록에 넣으면 통과한다.
+- 본문을 명령에서 볼 수 없으면(`--fill`, `--web`, 파이프로 넘긴 본문) 막지 않는다. 우회로가 되지만 모르는 것으로 막지 않는 원칙을 따랐다.
+- `gh pr edit --body`는 보지 않는다.
+- 한 줄짜리 코드 수정도 막는다. 작은 수정은 제목만으로 여는 관행과 부딪힌다.
+
+### 검증
+
+```
+$ for g in lib no-guess-gate done-gate test-integrity project-guard repo-profile; do tests/$g/unit.sh || exit 1; done && tests/skills-unit.sh && tests/attack-surface.sh && tests/invariants.sh
+exit 0
+체크 합계: 357 · ❌ 0
+$ shellcheck -x -s bash plugin/hooks/*/*.sh tests/*.sh tests/*/*.sh
+exit 0
+$ claude plugin validate .
+✔ Validation passed
+$ tests/fuzz.sh
+실행 240회 · 실패 0건
+```
+
+단위 336 → 357건 실패 0. 메시지 키는 훅이 부르는 것과 카탈로그가 124줄로 일치한다.
+
+처음 돌린 shellcheck 는 테스트 한 줄에 SC2016 을 냈다. 코드 블록의 백틱을 글자 그대로 파일에 쓰는 줄이라 이유를 적고 그 줄만 껐다.

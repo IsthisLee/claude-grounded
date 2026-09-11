@@ -31,6 +31,8 @@ Willison's anti-pattern warning is the reason this command exists.
 - **What you verified by hand.** If the screen changed, how you looked at it and what you clicked.
 - **A note for the reviewer.** Where to look hardest, and what you are still unsure about.
 
+The completion gate enforces the second item. `gh pr create` is refused when the body has no closed code block and no image, unless the branch changes only non-code files. Paste real output. The gate checks the form, not whether the output is genuine — that part is on you.
+
 ## Last thing
 
 After opening it, ask me whether **I have read that body.** Making someone else read a description you never read yourself is rude.
